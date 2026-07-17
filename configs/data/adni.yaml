@@ -1,0 +1,4 @@
+data:
+  adni:
+    root: null
+    metadata_csv: null

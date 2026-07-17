@@ -1,0 +1,5 @@
+model:
+  name: PADA-3DACB
+  contextual_encoder: false
+  num_classes: 3
+  num_rois: 102

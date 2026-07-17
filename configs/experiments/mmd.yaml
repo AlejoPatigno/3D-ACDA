@@ -1,0 +1,36 @@
+experiment:
+  name: mmd_adni_to_oasis
+  method: mmd
+  source_domain: ADNI
+  target_domain: OASIS
+  seed: 42
+  fold: 0
+
+model:
+  name: PADA-3DACB
+  contextual_encoder: false
+  num_classes: 3
+  num_rois: 102
+
+training:
+  warmup_epochs: 5
+  full_epochs: 50
+  early_stopping: false
+  batch_size: 16
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  checkpoint_every: 5
+  evaluate_source_every: 1
+  evaluate_target_every: 1
+  mixed_precision: true
+  resume: true
+
+monitoring:
+  source_metrics: true
+  target_metrics: true
+  target_metrics_label: "MONITORING ONLY - NOT A TRAINING LOSS"
+
+adaptation:
+  name: mmd
+  weight: null
+  kernel: null

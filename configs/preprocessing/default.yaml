@@ -1,0 +1,41 @@
+preprocessing:
+  target_shape: [128, 128, 128]
+  output_channels: 1
+  normalization: robust
+  interpolation_mode: trilinear
+  align_corners: false
+  output_dtype: float32
+  overwrite: false
+  resume: true
+  continue_on_error: true
+  save_provenance: true
+  save_qc_summary: true
+  dry_run: false
+  fail_on_subject_failure: false
+  compute_source_hash: false
+
+discovery:
+  supported_extensions:
+    - .nii
+    - .nii.gz
+    - .img
+    - .hdr
+    - .mgz
+    - .mgh
+    - .pt
+    - .pth
+    - .npy
+    - .npz
+    - .dcm
+  recursive: true
+
+data:
+  cohort: null
+  input_root: null
+  metadata_csv: null
+  output_root: null
+
+execution:
+  seed: 42
+  number_of_workers: 1
+  progress_every: 10

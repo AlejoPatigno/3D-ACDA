@@ -1,0 +1,37 @@
+verification:
+  expected_spatial_shape: null
+  expected_channels: [1]
+  expected_num_rois: 102
+  allowed_formats: [".nii", ".nii.gz", ".mnc", ".pt", ".npy", ".npz"]
+  supported_tensor_keys: ["image", "mri", "x", "volume", "tensor"]
+  background_label: 0
+
+  affine_atol: 0.001
+  spacing_atol: 0.001
+  bounding_box_atol: 0.01
+  finite_fraction_min: 1.0
+  nonzero_fraction_min: 0.001
+  extreme_abs_value_warning: 1000000.0
+  atlas_overlap_warning_threshold: null
+
+  strict_physical_geometry: false
+  compute_world_bounding_boxes: true
+  compute_file_hashes: false
+
+  generate_overlays: true
+  overlay_sample_size: 30
+  overlay_seed: 42
+  overlay_slices_per_axis: 3
+
+  overwrite_reports: false
+  fail_on_subject_failure: false
+  registration: false
+  resampling: false
+  interpolation: false
+  skull_stripping: false
+  normalization: false
+
+paths:
+  inventory_csv: null
+  atlas_path: null
+  output_dir: null

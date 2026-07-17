@@ -1,0 +1,48 @@
+precompute:
+  expected_spatial_shape: [128, 128, 128]
+  expected_num_rois: 102
+  background_label: 0
+  compute_concepts: true
+  compute_jacobians: true
+  overwrite: false
+  resume: true
+  continue_on_error: true
+  dry_run: false
+  save_sidecars: true
+  save_intermediates: false
+  source_file_hashes: false
+
+atlas:
+  prepared_path: null
+  expected_num_rois: 102
+  drop_background: true
+  eps: 1.0e-8
+  min_voxels_per_roi: 1
+
+concepts:
+  brain_threshold: 0.0
+  low_intensity_percentile: 20.0
+  eps: 1.0e-6
+  normal_class_name: CN
+
+jacobians:
+  enabled: true
+  template_path: null
+  psi: neg_log
+  eps: 1.0e-6
+  n_iterations: 50
+  smooth_displacement_field: true
+  normalize_within_subject: true
+  save_displacement_field: false
+  save_jacobian_volume: false
+
+data:
+  preprocessing_manifest: null
+
+paths:
+  artifact_root: null
+
+execution:
+  seed: 42
+  number_of_workers: 1
+  progress_every: 10

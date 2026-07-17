@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pada3dacb"
+version = "0.1.0"
+description = "Anatomically interpretable domain adaptation for 3D MRI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "LicenseRef-Repository" }
+authors = [
+  { name = "PADA-3DACB contributors" }
+]
+dependencies = [
+  "numpy",
+  "pandas",
+  "PyYAML",
+  "torch",
+  "nibabel",
+  "matplotlib",
+]
+
+[project.optional-dependencies]
+full = [
+  "SimpleITK",
+  "monai",
+  "scikit-learn",
+]
+dev = [
+  "pytest",
+  "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+  "notebooks/archive",
+  "atlas_utils.py",
+  "build_precomputed_artifacts.py",
+  "concept_targets.py",
+  "dataset_contract.py",
+  "helpers.py",
+  "jacobian_utils.py",
+  "losses.py",
+  "model.py",
+  "preprocessing.py",
+  "trainer.py",
+  "wire_and_train.py",
+  "wire_and_train_precomputed.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
