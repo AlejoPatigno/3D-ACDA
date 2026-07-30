@@ -1,0 +1,26 @@
+{
+  "lens": "review-readability",
+  "findings": [
+    {
+      "location": "src/pada3dacb/experiments/cdan.py:45,78,112-131,154-164",
+      "severity": "WARNING",
+      "claim": "CDAN configuration and manifest construction are compressed into long one-line expressions, making the experiment's validation and identity fields difficult to audit or maintain consistently with the surrounding staged experiment modules.",
+      "proof_refs": [
+        "git diff --cached -- src/pada3dacb/experiments/cdan.py shows resolved_dict on line 45 and CDANAdaptationConfig.resolved_dict on line 78 as single-line dictionary literals, load_cdan_config lines 112-131 with dense override parsing and inline constructors, and _manifest lines 154-164 packing many unrelated manifest fields into very long argument lines."
+      ]
+    },
+    {
+      "location": "src/pada3dacb/training/uda_trainer.py:64-81,144-153,181,282-284,315-325,350-353",
+      "severity": "WARNING",
+      "claim": "The central UDA trainer mixes duplicated setup, compact inline dictionaries, an inline lambda, and inconsistent blank-line formatting, which raises maintainability cost in a core training class.",
+      "proof_refs": [
+        "git diff --cached -- src/pada3dacb/training/uda_trainer.py shows CDAN setup assigning adaptation_configuration_hash and resolved_configuration['adaptation'] inside the CDAN branch at lines 72-73 and again unconditionally at lines 78-81; compact CDAN warm metrics at lines 144-153; a one-line warm-stage return at line 181; two blank lines before _combined_parameters at lines 280-282; an inline norm = lambda ... and one-line return at lines 282-284; and compact payload/history metadata updates at lines 315-325 and 350-353."
+      ]
+    }
+  ],
+  "evidence": [
+    "Ran gentle-ai review status --cwd C:/Users/LOQ/Desktop/PADA-3DACB --lineage review-42a3a9305352c48b --contract gentle-ai.review-integration/v1 --next-transition --projection staged; observed authority revision sha256:988c42a193de8f53517d8b74f97832eee73828af57bfe29fe1bea5d315076464, target identity sha256:42a3a9305352c48b8c442a8e0fd615c6ca4c1e43091784f3c83e53f1907db66b, projection staged, and exactly 50 staged src/pada3dacb paths.",
+    "Inspected all 50 staged files with git show :<path>: src/pada3dacb/adaptation/__init__.py; src/pada3dacb/adaptation/base.py; src/pada3dacb/adaptation/cdan.py; src/pada3dacb/adaptation/coral.py; src/pada3dacb/adaptation/domain_discriminator.py; src/pada3dacb/adaptation/gradient_reversal.py; src/pada3dacb/adaptation/mmd.py; src/pada3dacb/adaptation/outputs.py; src/pada3dacb/config.py; src/pada3dacb/data/__init__.py; src/pada3dacb/data/artifact_wiring.py; src/pada3dacb/data/datasets.py; src/pada3dacb/data/loaders.py; src/pada3dacb/data/records.py; src/pada3dacb/data/splits.py; src/pada3dacb/exceptions.py; src/pada3dacb/experiments/__init__.py; src/pada3dacb/experiments/cdan.py; src/pada3dacb/experiments/coral.py; src/pada3dacb/experiments/fold_summary.py; src/pada3dacb/experiments/mmd.py; src/pada3dacb/experiments/prediction_export.py; src/pada3dacb/experiments/run_manifest.py; src/pada3dacb/experiments/runner.py; src/pada3dacb/experiments/source_only.py; src/pada3dacb/losses/__init__.py; src/pada3dacb/losses/anatomical.py; src/pada3dacb/losses/classification.py; src/pada3dacb/losses/concept.py; src/pada3dacb/losses/consistency.py; src/pada3dacb/losses/core_total.py; src/pada3dacb/losses/outputs.py; src/pada3dacb/models/__init__.py; src/pada3dacb/models/attention_aggregation.py; src/pada3dacb/models/checkpoint_migration.py; src/pada3dacb/models/classification_head.py; src/pada3dacb/models/concept_bottleneck.py; src/pada3dacb/models/encoder3d.py; src/pada3dacb/models/model_summary.py; src/pada3dacb/models/pada3dacb.py; src/pada3dacb/models/roi_mask_preparation.py; src/pada3dacb/models/roi_tokenizer.py; src/pada3dacb/training/__init__.py; src/pada3dacb/training/checkpointing.py; src/pada3dacb/training/history.py; src/pada3dacb/training/monitoring.py; src/pada3dacb/training/runtime.py; src/pada3dacb/training/source_only_trainer.py; src/pada3dacb/training/trainer.py; src/pada3dacb/training/uda_trainer.py.",
+    "Ran git diff --cached -- src/pada3dacb/experiments/cdan.py and git diff --cached -- src/pada3dacb/training/uda_trainer.py for line-numbered proof of the readability findings."
+  ]
+}

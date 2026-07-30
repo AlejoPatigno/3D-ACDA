@@ -1,0 +1,32 @@
+{
+  "lens": "review-reliability",
+  "findings": [
+    {
+      "location": "src/pada3dacb/experiments/mmd.py::MMDExperimentRunner._manifest",
+      "severity": "BLOCKER",
+      "claim": "MMD training runs cannot create a run manifest because _manifest constructs create_run_manifest(...) but never returns it; the inherited CORAL run path then passes None into update_run_manifest, which calls manifest.update(...) and will fail before training starts.",
+      "proof_refs": [
+        "git show :src/pada3dacb/experiments/mmd.py showed MMDExperimentRunner._manifest ends after a bare create_run_manifest(...) call with no return statement.",
+        "git diff --cached -- src/pada3dacb/experiments/coral.py showed CORALExperimentRunner.run_fold assigns manifest = self._manifest(...) and then calls update_run_manifest(manifest_path, manifest, \"PENDING\"). MMDExperimentRunner inherits that run_fold.",
+        "git diff --cached -- src/pada3dacb/experiments/run_manifest.py showed update_run_manifest(path, manifest, status, ...) immediately calls manifest.update(updates), requiring a dict."
+      ],
+      "evidence_class": "deterministic",
+      "causal_disposition": "introduced"
+    },
+    {
+      "location": "src/pada3dacb/experiments/cdan.py::CDANExperimentRunner._build_adaptation_method",
+      "severity": "WARNING",
+      "claim": "CDAN discriminator input dimension is derived from aggregator.embedding_dim or a top-level token_dim, but model construction derives the actual embedding/token dimension from model.tokenizer.token_dim. A valid nested tokenizer.token_dim configuration can therefore build a discriminator with the wrong input_dim and fail when conditional_outer_product outputs z_dim * 3 features.",
+      "proof_refs": [
+        "git show :src/pada3dacb/experiments/cdan.py showed _build_adaptation_method computes dim = int(self.config.model.get(\"aggregator\", {}).get(\"embedding_dim\", self.config.model.get(\"token_dim\", 128))) * 3.",
+        "git diff --cached -- src/pada3dacb/models/pada3dacb.py showed build_pada3dacb sets token_dim=int(tokenizer.get(\"token_dim\", 128)) and PADA3DACBOutput.z is produced by AttentionAggregator(token_dim).",
+        "git diff --cached -- src/pada3dacb/adaptation/cdan.py and src/pada3dacb/adaptation/domain_discriminator.py showed conditional_outer_product flattens z with 3 class probabilities, while DomainDiscriminator.forward rejects tensors whose second dimension differs from config.input_dim."
+      ]
+    }
+  ],
+  "evidence": [
+    "Ran exact status command: gentle-ai review status --cwd C:/Users/LOQ/Desktop/PADA-3DACB --lineage review-42a3a9305352c48b --contract gentle-ai.review-integration/v1 --next-transition --projection staged. Observed lineage review-42a3a9305352c48b, revision sha256:988c42a193de8f53517d8b74f97832eee73828af57bfe29fe1bea5d315076464, target sha256:42a3a9305352c48b8c442a8e0fd615c6ca4c1e43091784f3c83e53f1907db66b, projection staged, and exactly 50 src/pada3dacb paths.",
+    "Inspected all 50 staged files using only git diff --cached -- <path> and git show :<path>. Commands run included per-path git diff batches for all 50 status paths plus targeted git show reads for src/pada3dacb/data/artifact_wiring.py, src/pada3dacb/data/datasets.py, src/pada3dacb/data/loaders.py, src/pada3dacb/data/records.py, src/pada3dacb/data/splits.py, src/pada3dacb/experiments/prediction_export.py, src/pada3dacb/experiments/mmd.py, src/pada3dacb/models/roi_mask_preparation.py, and src/pada3dacb/config.py.",
+    "No files were modified by the reviewer; no start/reset/finalize/capture commands were run by the reviewer."
+  ]
+}

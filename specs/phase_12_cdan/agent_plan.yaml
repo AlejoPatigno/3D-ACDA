@@ -1,0 +1,245 @@
+version: 2
+change: phase-12-cdan
+title: "Phase 12 — PADA-3DACB + CDAN"
+artifact_store: hybrid
+allowed_agents:
+  - claude-code
+  - codex
+  - gemini-cli
+  - opencode
+  - kimi
+rules:
+  exactly_one_responsible_agent_per_action: true
+  preserve_uncommitted_work: true
+  no_commit: true
+  no_push: true
+  production_scope: "Phase 12 CDAN only"
+  single_pr_exception: true
+  unresolved_real_run_hyperparameters_remain_blockers: true
+  concurrent_actions_must_not_share_exclusive_file_ownership: true
+  forbid_later_phase_behavior:
+    - entropy_conditioning
+    - randomized_multilinear_projection
+    - pseudo_labels
+    - prototype_alignment
+    - baseline_methods
+    - phase_13_production_files
+    - ContextualROIEncoder
+    - ctx_enc
+    - identity_patch_behavior
+    - preprocessing_reruns
+    - artifact_precomputation_reruns
+    - split_regeneration
+    - per_fold_concept_normalizer_refit
+
+actions:
+  - id: repository-and-memory-audit
+    responsible_agent: opencode
+    dependencies: []
+    status: completed
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/decisions.md
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/decisions.md
+      - engram:sdd/phase-12-cdan/baseline
+
+  - id: write-sdd-specification
+    responsible_agent: claude-code
+    dependencies:
+      - repository-and-memory-audit
+    status: completed
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/requirements.md
+      - specs/phase_12_cdan/design.md
+      - specs/phase_12_cdan/tasks.md
+      - specs/phase_12_cdan/acceptance.md
+      - specs/phase_12_cdan/agent_plan.yaml
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/requirements.md
+      - specs/phase_12_cdan/design.md
+      - specs/phase_12_cdan/tasks.md
+      - specs/phase_12_cdan/acceptance.md
+      - specs/phase_12_cdan/agent_plan.yaml
+      - engram:sdd/phase-12-cdan/action/write-sdd-specification
+
+  - id: independent-spec-review
+    responsible_agent: kimi
+    dependencies:
+      - write-sdd-specification
+    status: pending
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/spec_review.md
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/spec_review.md
+
+  - id: implement-gradient-reversal
+    responsible_agent: codex
+    dependencies:
+      - independent-spec-review
+    status: pending
+    exclusive_file_ownership:
+      - src/pada3dacb/adaptation/gradient_reversal.py
+      - tests/test_gradient_reversal.py
+    may_modify_production_files: true
+    deliverables:
+      - constant finite non-negative GRL implementation or reconciliation
+      - GRL validation and gradient tests
+
+  - id: implement-conditional-cdan
+    responsible_agent: claude-code
+    dependencies:
+      - independent-spec-review
+    status: pending
+    exclusive_file_ownership:
+      - src/pada3dacb/adaptation/cdan.py
+      - tests/test_cdan_conditional_map.py
+      - tests/test_cdan_domain_loss.py
+      - tests/test_cdan_gradients.py
+    may_modify_production_files: true
+    deliverables:
+      - exact outer-product CDAN conditioning and domain-loss implementation or reconciliation
+      - tensor shape/order/loss/gradient tests
+
+  - id: implement-domain-discriminator
+    responsible_agent: gemini-cli
+    dependencies:
+      - independent-spec-review
+    status: pending
+    exclusive_file_ownership:
+      - src/pada3dacb/adaptation/domain_discriminator.py
+      - tests/test_cdan_domain_discriminator.py
+      - tests/test_cdan_resume.py
+    may_modify_production_files: true
+    deliverables:
+      - validated binary domain discriminator implementation or reconciliation
+      - discriminator output/config/provenance tests
+
+  - id: independent-mathematical-verification
+    responsible_agent: kimi
+    dependencies:
+      - implement-gradient-reversal
+      - implement-conditional-cdan
+      - implement-domain-discriminator
+    status: pending
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/mathematical_verification.md
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/mathematical_verification.md
+
+  - id: trainer-integration
+    responsible_agent: opencode
+    dependencies:
+      - independent-mathematical-verification
+    status: pending
+    exclusive_file_ownership:
+      - src/pada3dacb/adaptation/__init__.py
+      - src/pada3dacb/training/uda_trainer.py
+      - tests/test_cdan_warmup.py
+      - tests/test_cdan_trainer.py
+      - tests/test_cdan_loader_cycling.py
+      - tests/test_cdan_no_target_labels.py
+    may_modify_production_files: true
+    deliverables:
+      - warm-up/full-stage CDAN trainer integration or reconciliation
+      - target-label, loader, and trainer behavior tests
+
+  - id: experiment-and-cli-integration
+    responsible_agent: codex
+    dependencies:
+      - trainer-integration
+    status: pending
+    exclusive_file_ownership:
+      - src/pada3dacb/experiments/cdan.py
+      - src/pada3dacb/experiments/__init__.py
+      - scripts/train.py
+      - configs/experiments/cdan.yaml
+      - tests/phase12_helpers.py
+      - tests/test_cdan_config.py
+      - tests/test_cdan_checkpoint_policy.py
+      - tests/test_cdan_cli.py
+      - tests/test_cdan_fold_orchestration.py
+    may_modify_production_files: true
+    deliverables:
+      - CDAN experiment/config/CLI integration or reconciliation
+      - config/hash/checkpoint/CLI/fold tests
+
+  - id: orchestration-and-regression-tests
+    responsible_agent: gemini-cli
+    dependencies:
+      - experiment-and-cli-integration
+    status: pending
+    exclusive_file_ownership:
+      - tests/test_cdan_predictions.py
+      - tests/test_source_only_coral_regression.py
+      - tests/test_mmd_cli.py
+      - tests/test_mmd_gradients.py
+    may_modify_production_files: false
+    deliverables:
+      - prediction-schema coverage
+      - Source-Only/CORAL/MMD regression evidence
+
+  - id: documentation
+    responsible_agent: claude-code
+    dependencies:
+      - orchestration-and-regression-tests
+    status: pending
+    exclusive_file_ownership:
+      - docs/CDAN_EXPERIMENT.md
+      - docs/PHASE12_REPORT.md
+      - docs/IMPLEMENTATION_AUDIT.md
+    may_modify_production_files: false
+    deliverables:
+      - Phase 12 CDAN-only documentation and report updates
+
+  - id: final-scope-and-regression-audit
+    responsible_agent: kimi
+    dependencies:
+      - documentation
+    status: pending
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/final_scope_and_regression_audit.md
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/final_scope_and_regression_audit.md
+
+  - id: final-validation
+    responsible_agent: opencode
+    dependencies:
+      - final-scope-and-regression-audit
+    status: pending
+    exclusive_file_ownership:
+      - specs/phase_12_cdan/final_validation.md
+    may_modify_production_files: false
+    deliverables:
+      - specs/phase_12_cdan/final_validation.md
+
+validation:
+  required_actions_in_order:
+    - repository-and-memory-audit
+    - write-sdd-specification
+    - independent-spec-review
+    - implement-gradient-reversal
+    - implement-conditional-cdan
+    - implement-domain-discriminator
+    - independent-mathematical-verification
+    - trainer-integration
+    - experiment-and-cli-integration
+    - orchestration-and-regression-tests
+    - documentation
+    - final-scope-and-regression-audit
+    - final-validation
+  concurrently_ready_groups:
+    - after: independent-spec-review
+      actions:
+        - implement-gradient-reversal
+        - implement-conditional-cdan
+        - implement-domain-discriminator
+      ownership_collision_check: no_shared_paths_or_globs
+  final_commands:
+    - "python -m pytest tests/test_cdan_conditional_map.py tests/test_gradient_reversal.py tests/test_cdan_domain_discriminator.py tests/test_cdan_domain_loss.py tests/test_cdan_gradients.py"
+    - "python -m pytest tests/test_cdan_warmup.py tests/test_cdan_trainer.py tests/test_cdan_config.py tests/test_cdan_checkpoint_policy.py tests/test_cdan_cli.py tests/test_cdan_no_target_labels.py tests/test_cdan_predictions.py tests/test_cdan_fold_orchestration.py tests/test_cdan_loader_cycling.py tests/test_cdan_resume.py"
+    - "python -m pytest tests/test_source_only_coral_regression.py tests/test_mmd_cli.py tests/test_mmd_gradients.py"

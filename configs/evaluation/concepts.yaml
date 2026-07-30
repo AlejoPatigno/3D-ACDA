@@ -1,0 +1,79 @@
+# Phase 16 Concept Evaluation Configuration
+# All real-run fields MUST be explicitly set; null values cause real-run failure
+
+schema_version: "1.0"
+protocol_version: "1.0"
+analysis_mode: real
+
+# Deterministic defaults. Synthetic tests may override these explicitly.
+defaults:
+  checkpoint_policy: best_source_f1
+  bootstrap_replicates: 10000
+  device: cpu
+
+completed_reuse:
+  approved_output_roots: []
+
+# Fixed class order (immutable)
+class_order:
+  CN: 0
+  MCI: 1
+  AD: 2
+
+# Eligible methods for concept evaluation (PADA-3DACB family only)
+methods:
+  - source_only
+  - coral
+  - mmd
+  - cdan
+  - prototype_pseudo
+
+# Baselines without PADA-3DACB concept head (evaluated for predictive only)
+baselines:
+  - aagn
+  - faster_snn
+
+# Approved directions
+directions:
+  - adni_to_oasis
+  - oasis_to_adni
+
+# Cross-validation folds
+expected_folds: [0, 1, 2, 3, 4]
+
+# Seeds for aggregation
+expected_seeds: [42]
+
+# Checkpoint policies
+checkpoint_policies:
+  primary: best_source_f1
+  sensitivity: last
+
+# Bootstrap configuration
+bootstrap:
+  replicates: 10000
+  seed: 0  # MUST be overridden at CLI for real runs
+  ci_policy: percentile_95_linear
+  stratification: diagnosis_class
+
+# Top-k ROI stability values
+top_k: [5, 10, 20]
+
+# Real evaluation gate (ALL must be resolved for real runs)
+real_evaluation_gate:
+  authorized: false
+  authorized_exports: {resolved: false, sha256: null}
+  concept_normalizer: {resolved: false, sha256: null}
+  atlas_hash: {resolved: false, sha256: null}
+  protocol_approval: {resolved: false, sha256: null}
+
+# Expected hashes for real runs (null = will fail real-run validation)
+concept_normalizer:
+  expected_hash: null
+
+atlas:
+  expected_roi_order_hash: null
+  expected_atlas_hash: null
+
+# Device selection (CLI override)
+device: cpu

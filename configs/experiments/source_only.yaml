@@ -1,34 +1,49 @@
 experiment:
-  name: source_only_adni_to_oasis
+  name: pada3dacb_source_only
+  display_name: PADA-3DACB Source-Only
   method: source_only
   source_domain: ADNI
   target_domain: OASIS
-  seed: 42
-  fold: 0
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
+
+paths:
+  artifact_index: null
+  artifact_root: null
+  split_root: null
+  atlas_metadata: null
+  roi_masks: null
+  output_root: null
 
 model:
+  config: configs/model/pada3dacb.yaml
   name: PADA-3DACB
   contextual_encoder: false
   num_classes: 3
   num_rois: 102
 
 training:
-  warmup_epochs: 5
-  full_epochs: 50
+  config: configs/training/default.yaml
   early_stopping: false
-  batch_size: 16
-  learning_rate: 0.0001
-  weight_decay: 0.0001
-  checkpoint_every: 5
-  evaluate_source_every: 1
-  evaluate_target_every: 1
-  mixed_precision: true
   resume: true
 
-monitoring:
-  source_metrics: true
-  target_metrics: true
-  target_metrics_label: "MONITORING ONLY - NOT A TRAINING LOSS"
+data_loader:
+  batch_size: 16
+  num_workers: 2
+  pin_memory: true
+  persistent_workers: false
+  prefetch_factor: 2
+  drop_last_train: true
+  drop_last_eval: false
 
-adaptation:
-  name: none
+evaluation:
+  source_validation: true
+  target_monitoring: true
+  target_monitoring_label: "MONITORING ONLY — NOT A TRAINING LOSS"
+  export_checkpoints: [best_source_f1, last]
+
+execution:
+  overwrite: false
+  continue_completed_folds: true
+  fail_fast: false
+  device: auto

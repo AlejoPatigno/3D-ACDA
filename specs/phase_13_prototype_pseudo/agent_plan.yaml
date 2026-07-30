@@ -1,0 +1,224 @@
+phase: 13
+change: phase_13_prototype_pseudo
+title: Canonical PADA-3DACB Prototype and Pseudo-Label Adaptation
+artifact_store: hybrid
+execution_mode: auto
+review_budget_lines: 400
+strict_tdd: true
+current_authorized_phase: Phase 13
+next_phase_forbidden: Phase 14
+
+exclusive_file_ownership: true
+notes:
+  - Every atomic action has exactly one responsible agent.
+  - No two active actions may own the same file.
+  - Actions must run in dependency order.
+  - Implementation is blocked until canonical notebook extraction and independent specification review pass.
+
+actions:
+  - id: phase12-closure-and-repository-audit
+    agent: opencode
+    depends_on: []
+    owns:
+      - AGENTS.md
+      - pyproject.toml
+      - .gitignore
+      - specs/phase_13_prototype_pseudo/decisions.md
+      - specs/phase_13_prototype_pseudo/agent_plan.yaml
+    responsibilities:
+      - close Phase 12 in Engram
+      - make ordinary pytest use a repository-local temporary root
+      - run the full regression baseline
+      - inventory canonical notebook symbols
+      - confirm no Phase 13 code existed before authorization
+    status: completed
+
+  - id: canonical-notebook-extraction
+    agent: claude-code
+    depends_on:
+      - phase12-closure-and-repository-audit
+    owns:
+      - specs/phase_13_prototype_pseudo/notebook_extraction.md
+      - specs/phase_13_prototype_pseudo/requirements.md
+      - specs/phase_13_prototype_pseudo/design.md
+      - specs/phase_13_prototype_pseudo/tasks.md
+      - specs/phase_13_prototype_pseudo/acceptance.md
+    responsibilities:
+      - identify active prototype and pseudo-label definitions
+      - extract exact equations, defaults and stage behavior
+      - distinguish active from obsolete definitions
+      - document every unresolved item
+    status: pending
+
+  - id: independent-specification-review
+    agent: kimi
+    depends_on:
+      - canonical-notebook-extraction
+    owns:
+      - specs/phase_13_prototype_pseudo/spec_review.md
+    responsibilities:
+      - verify source traceability
+      - reject invented behavior
+      - verify target-label isolation
+      - verify Phase 13 boundaries
+      - approve or block implementation
+    status: pending
+
+  - id: implement-prototype-adaptation
+    agent: codex
+    depends_on:
+      - independent-specification-review
+    owns:
+      - src/pada3dacb/adaptation/prototype.py
+      - tests/test_prototype_loss.py
+      - tests/test_prototype_construction.py
+      - tests/test_prototype_gradients.py
+    responsibilities:
+      - implement the exact canonical prototype behavior
+      - implement mathematical reference and gradient tests
+    status: pending
+
+  - id: implement-pseudo-label-adaptation
+    agent: codex
+    depends_on:
+      - independent-specification-review
+    owns:
+      - src/pada3dacb/adaptation/pseudo_label.py
+      - tests/test_pseudo_label_selection.py
+      - tests/test_pseudo_label_loss.py
+      - tests/test_pseudo_label_gradients.py
+    responsibilities:
+      - implement canonical confidence selection
+      - implement empty-selection behavior
+      - implement exact loss and gradient tests
+      - prove no stored target label is consumed
+    status: pending
+
+  - id: implement-combined-method
+    agent: codex
+    depends_on:
+      - implement-prototype-adaptation
+      - implement-pseudo-label-adaptation
+    owns:
+      - src/pada3dacb/adaptation/prototype_pseudo.py
+      - tests/test_prototype_pseudo_total.py
+    responsibilities:
+      - compose exact canonical adaptation losses
+      - return typed components and diagnostics
+      - avoid hidden or duplicated weighting
+    status: pending
+
+  - id: independent-mathematical-verification
+    agent: gemini-cli
+    depends_on:
+      - implement-combined-method
+    owns:
+      - tests/test_proposed_method_reference.py
+      - tests/test_proposed_method_edge_cases.py
+    responsibilities:
+      - independently verify equations
+      - verify absent-class behavior
+      - verify confidence boundaries
+      - verify gradient flow
+      - verify no target diagnosis supervision
+    status: pending
+
+  - id: trainer-and-checkpoint-integration
+    agent: opencode
+    depends_on:
+      - independent-mathematical-verification
+    owns:
+      - src/pada3dacb/training/uda_trainer.py
+      - src/pada3dacb/training/checkpointing.py
+      - src/pada3dacb/training/history.py
+      - tests/test_proposed_method_trainer.py
+      - tests/test_proposed_method_warmup.py
+      - tests/test_proposed_method_loader_cycling.py
+      - tests/test_proposed_method_checkpoint_policy.py
+      - tests/test_proposed_method_resume.py
+    responsibilities:
+      - integrate the proposed method without changing prior methods
+      - implement exact warm/full stage behavior
+      - implement required adaptation state resume
+      - preserve source checkpoint selection
+      - add focused trainer/checkpoint/resume tests for this integration slice
+    status: pending
+
+  - id: experiment-cli-and-config-integration
+    agent: opencode
+    depends_on:
+      - trainer-and-checkpoint-integration
+    owns:
+      - src/pada3dacb/experiments/prototype_pseudo.py
+      - src/pada3dacb/experiments/runner.py
+      - src/pada3dacb/experiments/run_manifest.py
+      - src/pada3dacb/experiments/fold_summary.py
+      - scripts/train.py
+      - configs/experiments/prototype_pseudo.yaml
+      - tests/test_proposed_method_config.py
+      - tests/test_proposed_method_cli.py
+      - tests/test_proposed_method_fold_orchestration.py
+    responsibilities:
+      - add runner and CLI
+      - add dry-run and validate-only
+      - add run paths and manifests
+      - block unresolved real-run parameters
+      - add focused config/CLI/fold orchestration tests for this integration slice
+    status: pending
+
+  - id: complete-integration-and-regression-tests
+    agent: codex
+    depends_on:
+      - experiment-cli-and-config-integration
+    owns:
+      - tests/test_proposed_method_no_target_labels.py
+      - tests/test_proposed_method_predictions.py
+      - tests/test_all_previous_methods_regression.py
+      - tests/phase13_helpers.py
+    responsibilities:
+      - complete Phase 13 integration tests
+      - test both directions and all folds
+      - test lifecycle and resume
+      - protect Source-Only, CORAL, MMD and CDAN
+    status: pending
+
+  - id: documentation
+    agent: claude-code
+    depends_on:
+      - complete-integration-and-regression-tests
+    owns:
+      - docs/PROPOSED_METHOD_EXPERIMENT.md
+      - docs/PHASE13_REPORT.md
+      - docs/IMPLEMENTATION_AUDIT.md
+    responsibilities:
+      - document implemented equations and behavior
+      - distinguish notebook-derived and newly engineered infrastructure
+      - document real-run blockers
+      - avoid unverified performance claims
+    status: pending
+
+  - id: final-audit
+    agent: kimi
+    depends_on:
+      - documentation
+    owns:
+      - specs/phase_13_prototype_pseudo/final_audit.md
+    responsibilities:
+      - audit SDD traceability
+      - audit target-label firewall
+      - audit previous-method regressions
+      - audit documentation
+      - verify no Phase 14 work
+    status: pending
+
+  - id: final-validation
+    agent: opencode
+    depends_on:
+      - final-audit
+    owns: []
+    responsibilities:
+      - run complete validation commands
+      - run synthetic CLI lifecycle
+      - write final Engram phase summary
+      - stop before Phase 14
+    status: pending

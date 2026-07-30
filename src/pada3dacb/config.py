@@ -104,6 +104,14 @@ class ModelConfig:
     contextual_encoder: bool = False
     num_classes: int = 3
     num_rois: int = 102
+    input_channels: int = 1
+    encoder: dict[str, Any] = field(default_factory=dict)
+    tokenizer: dict[str, Any] = field(default_factory=dict)
+    token_processing: dict[str, Any] = field(default_factory=dict)
+    aggregator: dict[str, Any] = field(default_factory=dict)
+    classification_head: dict[str, Any] = field(default_factory=dict)
+    concept_bottleneck: dict[str, Any] = field(default_factory=dict)
+    output: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ModelConfig:
@@ -112,16 +120,16 @@ class ModelConfig:
 
 @dataclass
 class TrainingConfig:
-    warmup_epochs: int = 5
-    full_epochs: int = 50
+    warmup_epochs: int = 20
+    full_epochs: int = 30
     early_stopping: bool = False
     batch_size: int = 16
-    learning_rate: float = 0.0001
+    learning_rate: float = 0.0003
     weight_decay: float = 0.0001
     checkpoint_every: int = 5
     evaluate_source_every: int = 1
     evaluate_target_every: int = 1
-    mixed_precision: bool = True
+    mixed_precision: bool = False
     resume: bool = True
 
     @classmethod

@@ -1,34 +1,53 @@
 experiment:
-  name: baseline_adni_to_oasis
+  name: architectural_baselines
+  display_name: Architectural Baselines
   method: baseline
+  baseline_names:
+    - aagn
+    - faster_snn
   source_domain: ADNI
   target_domain: OASIS
-  seed: 42
-  fold: 0
+  n_splits: 5
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
 
-model:
-  name: baseline
-  contextual_encoder: false
-  num_classes: 3
-  num_rois: 102
+paths:
+  artifact_index: null
+  artifact_root: null
+  atlas_metadata: null
+  roi_masks: null
+  output_root: ../../runs
+
+baseline_configs:
+  aagn: ../baselines/aagn.yaml
+  faster_snn: ../baselines/faster_snn.yaml
 
 training:
-  warmup_epochs: 5
-  full_epochs: 50
-  early_stopping: false
-  batch_size: 16
-  learning_rate: 0.0001
+  n_epochs: 25
+  lr: 0.0001
   weight_decay: 0.0001
-  checkpoint_every: 5
-  evaluate_source_every: 1
-  evaluate_target_every: 1
-  mixed_precision: true
-  resume: true
+  batch_size: 2
+  num_workers: 0
+  use_amp: true
+  grad_clip_norm: 1.0
+  device: auto
+  scheduler: cosine
+  label_smoothing: 0.0
+  seed: 42
 
-monitoring:
-  source_metrics: true
-  target_metrics: true
-  target_metrics_label: "MONITORING ONLY - NOT A TRAINING LOSS"
+training_policy:
+  early_stopping: false
+  checkpoint_metric: source_validation/macro_f1
 
-baseline:
-  name: null
+evaluation:
+  target_monitoring: true
+  target_monitoring_label: "MONITORING ONLY — NOT A TRAINING LOSS"
+  export_checkpoints:
+    - best_source_f1
+    - last
+
+execution:
+  sequential: true
+  overwrite: false
+  continue_completed_folds: true
+  fail_fast: false

@@ -1,0 +1,19 @@
+splits:
+  n_splits: 5
+  seed: 42
+  stratify_source: true
+  stratify_target: true
+  target_adaptation_fraction: 0.8
+  overwrite: false
+  dry_run: false
+
+directions:
+  - source: ADNI
+    target: OASIS
+  - source: OASIS
+    target: ADNI
+
+paths:
+  artifact_index: null
+  artifact_root: null
+  split_root: null

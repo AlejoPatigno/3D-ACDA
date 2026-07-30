@@ -1,0 +1,39 @@
+{
+  "lens": "review-resilience",
+  "findings": [
+    {
+      "location": "src/pada3dacb/experiments/run_manifest.py:35",
+      "severity": "WARNING",
+      "claim": "Manifest git provenance is resolved by running git in the process current working directory, not relative to the configured project or output path, so executions launched from another directory can record the wrong commit or no commit.",
+      "proof_refs": [
+        "E2",
+        "E3"
+      ]
+    },
+    {
+      "location": "src/pada3dacb/training/checkpointing.py:28",
+      "severity": "WARNING",
+      "claim": "Checkpoint git provenance has the same current-working-directory dependency, which weakens recovery/debug evidence after resumed or relocated runs.",
+      "proof_refs": [
+        "E2",
+        "E4"
+      ]
+    },
+    {
+      "location": "src/pada3dacb/training/history.py:21",
+      "severity": "WARNING",
+      "claim": "Training history and runtime files are written directly instead of through the repository's atomic write helper, so an interruption during write can leave a partially written CSV/JSON even though checkpoints and manifests use atomic replacement.",
+      "proof_refs": [
+        "E2",
+        "E5"
+      ]
+    }
+  ],
+  "evidence": [
+    "E1: Ran exactly: gentle-ai review status --cwd C:/Users/LOQ/Desktop/PADA-3DACB --lineage review-42a3a9305352c48b --contract gentle-ai.review-integration/v1 --next-transition --projection staged. Observed lineage review-42a3a9305352c48b, revision sha256:988c42a193de8f53517d8b74f97832eee73828af57bfe29fe1bea5d315076464, target sha256:42a3a9305352c48b8c442a8e0fd615c6ca4c1e43091784f3c83e53f1907db66b, projection staged, and exactly 50 src/pada3dacb paths.",
+    "E2: All 50 staged files were inspected using git diff --cached -- <path> and git show :<path>: src/pada3dacb/adaptation/__init__.py, src/pada3dacb/adaptation/base.py, src/pada3dacb/adaptation/cdan.py, src/pada3dacb/adaptation/coral.py, src/pada3dacb/adaptation/domain_discriminator.py, src/pada3dacb/adaptation/gradient_reversal.py, src/pada3dacb/adaptation/mmd.py, src/pada3dacb/adaptation/outputs.py, src/pada3dacb/config.py, src/pada3dacb/data/__init__.py, src/pada3dacb/data/artifact_wiring.py, src/pada3dacb/data/datasets.py, src/pada3dacb/data/loaders.py, src/pada3dacb/data/records.py, src/pada3dacb/data/splits.py, src/pada3dacb/exceptions.py, src/pada3dacb/experiments/__init__.py, src/pada3dacb/experiments/cdan.py, src/pada3dacb/experiments/coral.py, src/pada3dacb/experiments/fold_summary.py, src/pada3dacb/experiments/mmd.py, src/pada3dacb/experiments/prediction_export.py, src/pada3dacb/experiments/run_manifest.py, src/pada3dacb/experiments/runner.py, src/pada3dacb/experiments/source_only.py, src/pada3dacb/losses/__init__.py, src/pada3dacb/losses/anatomical.py, src/pada3dacb/losses/classification.py, src/pada3dacb/losses/concept.py, src/pada3dacb/losses/consistency.py, src/pada3dacb/losses/core_total.py, src/pada3dacb/losses/outputs.py, src/pada3dacb/models/__init__.py, src/pada3dacb/models/attention_aggregation.py, src/pada3dacb/models/checkpoint_migration.py, src/pada3dacb/models/classification_head.py, src/pada3dacb/models/concept_bottleneck.py, src/pada3dacb/models/encoder3d.py, src/pada3dacb/models/model_summary.py, src/pada3dacb/models/pada3dacb.py, src/pada3dacb/models/roi_mask_preparation.py, src/pada3dacb/models/roi_tokenizer.py, src/pada3dacb/training/__init__.py, src/pada3dacb/training/checkpointing.py, src/pada3dacb/training/history.py, src/pada3dacb/training/monitoring.py, src/pada3dacb/training/runtime.py, src/pada3dacb/training/source_only_trainer.py, src/pada3dacb/training/trainer.py, src/pada3dacb/training/uda_trainer.py.",
+    "E3: git show :src/pada3dacb/experiments/run_manifest.py showed git_commit() calls subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], capture_output=True, text=True, timeout=5) with no cwd argument.",
+    "E4: git show :src/pada3dacb/training/checkpointing.py showed _git_commit() calls subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], capture_output=True, text=True, check=True, timeout=5) with no cwd argument.",
+    "E5: git show :src/pada3dacb/training/history.py showed TrainingHistory.flush writes training_history.csv via path.open(\"w\", ...) and runtime.json via write_text(...), while git show :src/pada3dacb/experiments/run_manifest.py and git show :src/pada3dacb/training/checkpointing.py showed atomic replacement helpers for JSON/checkpoints."
+  ]
+}

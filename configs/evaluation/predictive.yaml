@@ -1,0 +1,102 @@
+schema_version: phase15-output-v2
+protocol_version: phase15-statistical-v2
+analysis_mode: real
+
+class_order:
+  CN: 0
+  MCI: 1
+  AD: 2
+
+methods:
+  - source_only
+  - coral
+  - mmd
+  - cdan
+  - prototype_pseudo
+  - aagn
+  - faster_snn
+
+directions:
+  - adni_to_oasis
+  - oasis_to_adni
+
+expected_folds: [0, 1, 2, 3, 4]
+expected_seeds: [42]
+
+method_schema_families:
+  source_only: shared_method
+  coral: shared_method
+  mmd: shared_method
+  cdan: shared_method
+  prototype_pseudo: shared_method
+  aagn: baseline_combined
+  faster_snn: baseline_combined
+
+checkpoint_policies:
+  primary: best_source_f1
+  sensitivity: last
+  target_derived_selection: false
+
+defaults:
+  checkpoint_policy: best_source_f1
+  bootstrap_replicates: 10000
+
+shared_method:
+  schema_version: shared-prediction-v1
+  prediction_pattern: shared/{method}/{direction}/seed_{seed}/fold_{fold}/{role_directory}/{logical_checkpoint}.csv
+  companion_patterns:
+    - shared/{method}/{direction}/seed_{seed}/fold_{fold}/run_manifest.json
+  role_directories:
+    source_oof: source_validation_predictions
+    target_evaluation: target_monitoring_predictions
+  approved_derivation_rules: {}
+
+baseline_combined:
+  schema_version: baseline-prediction-v1
+  prediction_pattern: baselines/{method}/{direction}/seed_{seed}/fold_{fold}/predictions.csv
+  companion_patterns:
+    - baselines/{method}/{direction}/seed_{seed}/fold_{fold}/run_manifest.json
+    - baselines/{method}/{direction}/seed_{seed}/fold_{fold}/fold_result.json
+  approved_derivation_rules: {}
+
+identity_companions:
+  ADNI:
+    relative_path: null
+    sha256: null
+    raw_identifier_field: null
+    subject_hash_field: subject_hash
+    approved: false
+  OASIS:
+    relative_path: null
+    sha256: null
+    raw_identifier_field: null
+    subject_hash_field: subject_hash
+    approved: false
+
+expected_population_companions:
+  adni_to_oasis:
+    source_oof: &closed_population
+      relative_path: null
+      sha256: null
+    target_evaluation: *closed_population
+  oasis_to_adni:
+    source_oof: *closed_population
+    target_evaluation: *closed_population
+
+completed_reuse:
+  approved_output_roots: []
+
+real_evaluation_gate:
+  authorized_exports:
+    sha256: null
+    resolved: false
+  D-14-001:
+    sha256: null
+    resolved: false
+  D-14-002:
+    sha256: null
+    resolved: false
+  protocol_approval:
+    sha256: null
+    resolved: false
+  authorized: false

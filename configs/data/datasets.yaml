@@ -1,0 +1,27 @@
+datasets:
+  expected_spatial_shape: [128, 128, 128]
+  expected_num_rois: 102
+  class_order: [CN, MCI, AD]
+  validate_on_initialization: true
+  validate_tensor_on_access: true
+  include_debug_paths: false
+  source_profile: source_full_artifacts
+  target_adaptation_profile: target_adaptation
+  target_evaluation_profile: target_evaluation
+  supervised_profile: classification_only
+
+artifacts:
+  artifact_index: null
+  artifact_root: null
+  allow_prefix_remap: false
+  old_prefix: null
+  new_prefix: null
+
+dataloader:
+  batch_size: 16
+  num_workers: 2
+  pin_memory: true
+  persistent_workers: false
+  prefetch_factor: 2
+  drop_last_train: true
+  drop_last_eval: false

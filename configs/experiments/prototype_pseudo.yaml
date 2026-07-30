@@ -1,0 +1,57 @@
+experiment:
+  name: pada3dacb_prototype_pseudo
+  display_name: PADA-3DACB
+  method: prototype_pseudo
+  source_domain: ADNI
+  target_domain: OASIS
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
+paths:
+  artifact_index: null
+  artifact_root: null
+  split_root: null
+  atlas_metadata: null
+  roi_masks: null
+  output_root: null
+model:
+  config: configs/model/pada3dacb.yaml
+  name: PADA-3DACB
+  contextual_encoder: false
+  num_classes: 3
+  num_rois: 102
+training:
+  config: configs/training/default.yaml
+  early_stopping: false
+  resume: true
+  n_epochs_warm: 5
+  n_epochs_full: 50
+  lr: 0.0001
+  weight_decay: 0.0001
+adaptation:
+  name: prototype_pseudo
+  feature: z_and_concept_logits
+  active_during_warmup: false
+  prototype:
+    lambda_proto: 1.0
+    proto_margin: 1.0
+    lambda_sep: 0.1
+  pseudo_label:
+    lambda_pl: 0.1
+    tau_p: 0.95
+    probability_source: concept_logits
+data_loader:
+  batch_size: 16
+  num_workers: 2
+  pin_memory: true
+  drop_last_train: true
+  drop_last_eval: false
+evaluation:
+  source_validation: true
+  target_monitoring: true
+  target_monitoring_label: "MONITORING ONLY — NOT A TRAINING LOSS"
+  export_checkpoints: [best_source_f1, last]
+execution:
+  overwrite: false
+  continue_completed_folds: true
+  fail_fast: false
+  device: auto

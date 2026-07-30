@@ -1,0 +1,11 @@
+baseline:
+  id: faster_snn
+  display_name: FasterSNN
+  class_name: FasterSNNBaseline
+  constructor:
+    n_classes: 3
+    base_ch: 16
+    dropout: 0.1
+  requires_roi_masks: false
+  optional_dependencies: []
+  notebook_provenance: notebooks/archive/baselines_original.ipynb:cell-17:575-600

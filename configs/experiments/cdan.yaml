@@ -1,37 +1,57 @@
 experiment:
-  name: cdan_adni_to_oasis
+  name: pada3dacb_cdan
+  display_name: PADA-3DACB + CDAN
   method: cdan
   source_domain: ADNI
   target_domain: OASIS
-  seed: 42
-  fold: 0
-
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
+paths:
+  artifact_index: null
+  artifact_root: null
+  split_root: null
+  atlas_metadata: null
+  roi_masks: null
+  output_root: null
 model:
+  config: configs/model/pada3dacb.yaml
   name: PADA-3DACB
   contextual_encoder: false
   num_classes: 3
   num_rois: 102
-
 training:
-  warmup_epochs: 5
-  full_epochs: 50
+  config: configs/training/default.yaml
   early_stopping: false
-  batch_size: 16
-  learning_rate: 0.0001
-  weight_decay: 0.0001
-  checkpoint_every: 5
-  evaluate_source_every: 1
-  evaluate_target_every: 1
-  mixed_precision: true
   resume: true
-
-monitoring:
-  source_metrics: true
-  target_metrics: true
-  target_metrics_label: "MONITORING ONLY - NOT A TRAINING LOSS"
-
 adaptation:
   name: cdan
+  feature: z
+  probability_source: latent_probabilities
+  conditional_mode: exact_outer_product
   weight: null
-  map: null
-  entropy_conditioning: null
+  active_during_warmup: false
+  grl:
+    schedule: constant
+    coefficient: null
+  domain_labels:
+    source: 0
+    target: 1
+  discriminator:
+    hidden_dims: null
+    activation: relu
+    dropout: null
+    output_dim: 1
+    initialization: pytorch_default
+    optimizer_group:
+      learning_rate: null
+      weight_decay: null
+evaluation:
+  source_validation: true
+  target_monitoring: true
+  target_monitoring_label: "MONITORING ONLY — NOT A TRAINING LOSS"
+  export_checkpoints: [best_source_f1, last]
+execution:
+  overwrite: false
+  continue_completed_folds: true
+  fail_fast: false
+  device: auto

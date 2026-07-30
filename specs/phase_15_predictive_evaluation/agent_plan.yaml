@@ -1,0 +1,413 @@
+version: 2
+change: phase-15-predictive-evaluation
+artifact_language: English
+execution: serial
+conceptual_owner_fallback:
+  requested: claude-code
+  runtime: package-sdd-tasks
+  applies_to_planning_only: true
+review_workload:
+  estimated_remediation_authored_changed_lines: 2600-4000
+  budget_risk: High
+  chained_prs_recommended: true
+  delivery_strategy: blocked-no-pr-native-receipt-1793
+  chain_strategy: pending
+  decision_needed_before_apply: false
+  decision_scope: local-serial-synthetic-remediation-only-no-delivery
+  decision_satisfied_by: [failed-T-15-15-audit, bounded-C-01-through-C-05-remediation, native-receipt-1793-delivery-block]
+  later_slices_require_own_measurement: true
+  implementation_slice_target_changed_lines: "<=400"
+  hard_pre_slice_measurement_gate: true
+  size_exception_authorized: false
+synthetic_apply_gate:
+  requires_only: [failed-T-15-15-audit, current-remediation-slice-pre-measurement-within-budget, strict-red-evidence-before-production]
+  measurement: additions-plus-deletions
+  split_again_if_forecast_or_actual_exceeds_400: true
+  reserve_must_not_be_consumed_silently: true
+  next_slice:
+    id: WU-R17
+    task: T-15-R17
+    exact_paths: [specs/phase_15_predictive_evaluation/remediation_review.md]
+    forecast_range: 80-160
+    hard_forecast_ceiling: 400
+planning_artifact_delivery:
+  exceeds_400_changed_lines: true
+  blocked_by: native-receipt-1793
+  selected_pr_boundary: null
+  size_exception_authorized: false
+  downstream_delivery_decision_required: boundary-or-compression
+  blocks_synthetic_apply: false
+  note: Existing planning artifacts do not fit a single 400-line PR; their separate future delivery decision is downstream and is not an apply prerequisite.
+chain_delivery:
+  strategy: pending
+  planning_only: true
+  no_pr_while_blocked: true
+  tracker_or_child_branches_created: false
+  commits_created: false
+  prs_created: false
+  blocked_by: native-receipt-1793
+administrative_blockers:
+  - id: native-receipt-1793
+    blocks: [tracker-branch, child-branches, planning-artifact-delivery, archive, commit, push, pr, release, publication]
+    does_not_block: [planning-correction, synthetic-implementation, synthetic-verification]
+scientific_gates:
+  real_evaluation_only_blockers:
+    - export-authorization
+    - D-14-001-resolution
+    - D-14-002-resolution
+  real_evaluation_requires:
+    - complete-authorized-immutable-exports
+    - D-14-001-resolution
+    - D-14-002-resolution
+    - hash-bound-independent-statistical-protocol-approval
+scope:
+  prohibited_ownership:
+    - src/pada3dacb/training/**
+    - src/pada3dacb/models/**
+    - src/pada3dacb/losses/**
+    - src/pada3dacb/adaptation/**
+    - src/pada3dacb/data/**
+    - configs/experiments/**
+    - artifacts/runs/**
+    - specs/phase_16/**
+  amendment_rule: A later independently reviewed defect must amend this plan before any prohibited or currently unowned path is edited.
+actions:
+  - id: phase14-closure-and-evaluation-audit
+    agent: opencode
+    depends_on: []
+    responsibility: Bind repository instructions, Phase 14 PASS evidence, seven-method closure, placeholder evaluator boundary, planning decisions, unresolved scientific gates, and receipt #1793 as delivery-only.
+    owned_paths:
+      - AGENTS.md
+      - specs/phase_15_predictive_evaluation/decisions.md
+      - specs/phase_15_predictive_evaluation/phase14_closure_audit.md
+  - id: statistical-protocol-specification
+    agent: claude-code
+    depends_on: [phase14-closure-and-evaluation-audit]
+    responsibility: Maintain the complete repository-facing Phase 15 requirements, design, executable tasks, acceptance criteria, phase15-statistical-v2 protocol, and phase15-output-v2 schema without production edits or invented policy.
+    owned_paths:
+      - specs/phase_15_predictive_evaluation/requirements.md
+      - specs/phase_15_predictive_evaluation/design.md
+      - specs/phase_15_predictive_evaluation/tasks.md
+      - specs/phase_15_predictive_evaluation/acceptance.md
+      - specs/phase_15_predictive_evaluation/statistical_protocol.md
+      - specs/phase_15_predictive_evaluation/output_schema.md
+  - id: independent-statistical-review
+    agent: kimi
+    depends_on: [statistical-protocol-specification]
+    responsibility: Independently verify pseudo-replication controls, checkpoint predeclaration, paired inference, Holm families, undefined behavior, and exact consistency across requirements, acceptance, protocol, schema, and design before implementation.
+    owned_paths:
+      - specs/phase_15_predictive_evaluation/spec_review.md
+  - id: implement-discovery-provenance-aggregation
+    agent: codex
+    depends_on: [independent-statistical-review]
+    requires_only: [failed-T-15-15-audit, current-remediation-slice-pre-measurement-within-budget, strict-red-evidence-before-production]
+    responsibility: Maintain canonical contracts, configured read-only discovery, both export-family readers, provenance/privacy validation, and aggregation. For remediation, own approved supplied identity-companion verification, immediate raw-ID discard/persistence rejection, externally declared expected-population contracts, and exact Source-Only target-evaluation-membership issue behavior. Never derive subject hashes from raw IDs or infer completeness from observed rows; training registries, ambient discovery, and target selection remain forbidden.
+    owned_paths:
+      - src/pada3dacb/evaluation/__init__.py
+      - src/pada3dacb/evaluation/schemas.py
+      - src/pada3dacb/evaluation/discovery.py
+      - src/pada3dacb/evaluation/provenance.py
+      - src/pada3dacb/evaluation/aggregation.py
+      - tests/phase15_discovery_fixtures.py
+      - tests/test_evaluation_schemas.py
+      - tests/test_evaluation_discovery.py
+      - tests/test_evaluation_provenance.py
+      - tests/test_evaluation_aggregation.py
+  - id: implement-metrics-and-confusion-matrices
+    agent: codex
+    depends_on: [implement-discovery-provenance-aggregation]
+    responsibility: After the schema prerequisite, implement count-derived metrics, then probability/ranking metrics, then fixed count/nullable normalized confusion matrices as three serial <=400-line slices. Preserve exact protocol-v2 formulas, fixed CN/MCI/AD order, deterministic first-unavailable-constituent reason propagation, non_finite_input for non-finite computed probability results, and the prohibition on target selection.
+    owned_paths:
+      - src/pada3dacb/evaluation/metrics.py
+      - src/pada3dacb/evaluation/confusion_matrices.py
+      - tests/test_evaluation_metrics.py
+      - tests/test_evaluation_confusion_matrices.py
+  - id: implement-bootstrap-and-statistics
+    agent: codex
+    depends_on: [implement-discovery-provenance-aggregation, implement-metrics-and-confusion-matrices]
+    responsibility: After the already-owned inferential schema prerequisite, implement deterministic stratified bootstrap, exact paired McNemar and paired bootstrap differences, and direct six-hypothesis Holm correction as three serial <=400-line slices.
+    owned_paths:
+      - src/pada3dacb/evaluation/bootstrap.py
+      - src/pada3dacb/evaluation/paired_statistics.py
+      - src/pada3dacb/evaluation/multiple_testing.py
+      - tests/test_evaluation_bootstrap.py
+      - tests/test_evaluation_paired_statistics.py
+      - tests/test_evaluation_multiple_testing.py
+  - id: independent-mathematical-statistical-verification
+    agent: gemini-cli
+    depends_on: [implement-bootstrap-and-statistics]
+    responsibility: Verify formulas and edge cases independently against direct calculations and scikit-learn, SciPy, NumPy, and statsmodels references; own tests only.
+    owned_paths:
+      - tests/test_evaluation_metrics_reference.py
+      - tests/test_evaluation_statistics_reference.py
+      - tests/test_evaluation_statistics_edge_cases.py
+  - id: tables-report-cli-integration
+    agent: opencode
+    depends_on: [independent-mathematical-statistical-verification]
+    responsibility: Maintain exact atomic projections, report state machines, output/reuse integrity, safe CLI, and predictive config. For remediation, compose default synthetic validated tables through metrics/confusion/bootstrap/paired/Holm projections and exact commit; align manifest plus optional artifact_index.json; report every real gate before statistics; enforce external expected populations; and resolve completed reuse identity inputs/read-only tree verification without the evaluation_index.json alias.
+    owned_paths:
+      - src/pada3dacb/evaluation/tables.py
+      - src/pada3dacb/evaluation/report.py
+      - scripts/evaluate.py
+      - configs/evaluation/predictive.yaml
+      - pyproject.toml
+      - tests/test_evaluation_tables.py
+      - tests/test_evaluation_report.py
+      - tests/test_evaluation_output_schema.py
+      - tests/test_evaluation_reuse.py
+      - tests/test_evaluation_cli.py
+  - id: complete-integration-and-regression-tests
+    agent: codex
+    depends_on: [tables-report-cli-integration]
+    responsibility: Cover all seven methods, both directions, policies, dry-run, validate-only, default synthetic evaluate/reuse, exact output/identity/population/gate boundaries, no training invocation, and Phase 14 regressions using CPU-only synthetic fixtures. Remediation tests must exercise default production rather than injected executors.
+    owned_paths:
+      - tests/phase15_integration_fixtures.py
+      - tests/test_evaluation_integration.py
+      - tests/test_evaluation_modes.py
+      - tests/test_evaluation_boundaries.py
+      - tests/test_evaluation_regressions.py
+      - tests/test_all_methods_regression_phase14.py
+      - tests/test_proposed_method_cli.py
+  - id: documentation
+    agent: claude-code
+    depends_on: [complete-integration-and-regression-tests]
+    responsibility: Run and record the required focused and full validation first, then document safe evaluator use, actual Phase 15 evidence, exact outputs/provenance, scientific limitations, and implementation scope before final audit.
+    owned_paths:
+      - docs/PREDICTIVE_EVALUATION.md
+      - docs/PHASE15_REPORT.md
+      - docs/IMPLEMENTATION_AUDIT.md
+  - id: independent-remediation-scope-spec-approval
+    agent: kimi
+    depends_on: [complete-integration-and-regression-tests]
+    responsibility: After remediation implementation evidence, independently approve or block C-01 through C-05 coverage, unchanged Phase 15 scope/spec, strict RED provenance, closed real gates, and exact zero-duplicate action ownership before T-15-15 is rerun.
+    owned_paths:
+      - specs/phase_15_predictive_evaluation/remediation_review.md
+  - id: final-audit
+    agent: kimi
+    depends_on: [independent-remediation-scope-spec-approval]
+    responsibility: Independently audit complete requirements/acceptance traceability, scope, ownership, recorded documentation validation evidence, statistical evidence, and absence of real results or Phase 16 work.
+    owned_paths:
+      - specs/phase_15_predictive_evaluation/final_audit.md
+  - id: final-validation
+    agent: opencode
+    depends_on: [final-audit]
+    responsibility: Rerun and attest editable install, import, full pytest, Ruff, diff check, and complete synthetic Phase 15 runtime-harness evidence to Engram and the user-facing result without editing repository documentation or evidence files.
+    owned_paths: []
+  - id: maintain-openspec-mirrors-and-agent-plan
+    agent: opencode
+    depends_on: []
+    responsibility: Maintain only the OpenSpec proposal, capability specification, design, task mirror, and repository agent plan; validate ownership without changing scientific or implementation artifacts.
+    owned_paths:
+      - openspec/changes/phase-15-predictive-evaluation/proposal.md
+      - openspec/changes/phase-15-predictive-evaluation/specs/predictive-evaluation/spec.md
+      - openspec/changes/phase-15-predictive-evaluation/design.md
+      - openspec/changes/phase-15-predictive-evaluation/tasks.md
+      - specs/phase_15_predictive_evaluation/agent_plan.yaml
+implementation_work_units:
+  task_state: {total: 63, complete: 63, open: 0, implementation_owned: 59, parent_owned: 4, next_dependency_ready: null}
+  pre_slice_rule: Before each unit, save failing RED evidence, then measure forecast additions plus deletions for behavior and tests. If forecast or actual would exceed 400, stop and split again before production edits; no size exception is authorized.
+  serial_ownership_note: Historical WU-01 through WU-10 remain complete and WU-11 contains the failed T-15-15 audit. WU-R01 through WU-R16 now execute serially through existing single-owner path subsets; WU-R17 is the new independent post-apply approval. Repeated paths never cross action owners. The amended declaration is 14 actions, 60 unique owned paths, zero duplicates.
+  units:
+    - id: WU-01
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-04
+      subset: schemas
+      depends_on: [independent-statistical-review]
+      chain_strategy: feature-branch-chain
+      decision_needed_before_apply: false
+      exact_paths:
+        - {path: src/pada3dacb/evaluation/__init__.py, forecast_ceiling: 20}
+        - {path: src/pada3dacb/evaluation/schemas.py, forecast_ceiling: 170}
+        - {path: tests/test_evaluation_schemas.py, forecast_ceiling: 180}
+      hard_forecast_ceiling: 370
+      reserve_under_400: 30
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      verification: tests/test_evaluation_schemas.py
+      rollback: schemas-and-focused-test
+    - id: WU-01A
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-04A
+      subset: missing-frozen-normalization-contracts
+      depends_on: [WU-01]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py]
+      target_changed_lines: "<=400"
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_schemas.py
+      rollback: contract-additions-and-focused-tests-preserving-WU-01
+    - id: WU-02A
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-05A
+      subset: provenance-privacy-core
+      depends_on: [WU-01A]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/provenance.py, tests/phase15_discovery_fixtures.py, tests/test_evaluation_provenance.py]
+      forecast_ceiling: 370
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_provenance.py
+      rollback: WU-02A-only
+    - id: WU-02B
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-05B
+      subset: configured-discovery-shared-method-adapter
+      depends_on: [WU-02A]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/discovery.py, src/pada3dacb/evaluation/provenance.py, tests/phase15_discovery_fixtures.py, tests/test_evaluation_discovery.py]
+      provenance_optional_forecast_ceiling: 15
+      forecast_ceiling: 380
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: discovery-and-provenance-focused-tests
+      rollback: WU-02B-only-preserving-WU-02A
+    - id: WU-02C
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-05C
+      subset: baseline-combined-adapter-seven-method-matrix
+      depends_on: [WU-02B]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/discovery.py, tests/phase15_discovery_fixtures.py, tests/test_evaluation_discovery.py, tests/test_evaluation_provenance.py]
+      forecast_ceiling: 345
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: discovery-and-provenance-focused-tests
+      rollback: WU-02C-only-preserving-WU-02A-and-WU-02B
+    - id: WU-02D
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-05D
+      subset: frozen-subject-prediction-final-row-contract
+      depends_on: [WU-02C]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py]
+      behavior: Frozen SubjectPrediction representing exactly one final row per subject, method, direction, and checkpoint policy with ordered probabilities, predicted label, true label, fold_count, seed_count, ordered source hashes, and status/reason as applicable; no fake seed/fold identity; pure canonical serialization.
+      strict_tdd: true
+      forecast_ceiling: 200
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_schemas.py
+      rollback: SubjectPrediction-contract-and-focused-tests-only-preserving-completed-behavior
+    - {id: WU-03, actions: [implement-discovery-provenance-aggregation], subset: aggregation, depends_on: [WU-02D], target_changed_lines: "<=400", verification: tests/test_evaluation_aggregation.py, rollback: aggregation-and-focused-test}
+    - id: WU-04A
+      actions: [implement-discovery-provenance-aggregation]
+      task: T-15-07A
+      subset: frozen-metric-and-confusion-result-schema-prerequisites
+      depends_on: [WU-03]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py]
+      behavior: Frozen MetricSet, PerClassMetric, and ConfusionResult protocol-v2 contracts with fixed CN/MCI/AD order, canonical serialization, finite/null value-status-reason invariants, integer 3x3 counts, and nullable normalized cells; no computation, I/O, or target selection.
+      forecast_range: 130-210
+      target_changed_lines: "<=400"
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_schemas.py
+      rollback: metric-confusion-contracts-and-focused-schema-tests-only
+    - id: WU-04B
+      actions: [implement-metrics-and-confusion-matrices]
+      task: T-15-07B
+      subset: count-derived-metrics
+      depends_on: [WU-04A]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/metrics.py, tests/test_evaluation_metrics.py]
+      behavior: Per-class support, precision, recall/sensitivity, specificity, and F1 plus aggregate accuracy, balanced accuracy, macro and weighted F1, macro precision and recall, MCC, and kappa; dependent unavailable reasons propagate from the first unavailable constituent scanned in fixed CN/MCI/AD order; no target selection.
+      forecast_range: 330-395
+      target_changed_lines: "<=400"
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_metrics.py
+      rollback: count-derived-metrics-and-focused-tests-only
+    - id: WU-04C
+      actions: [implement-metrics-and-confusion-matrices]
+      task: T-15-07C
+      subset: probability-and-ranking-metrics
+      depends_on: [WU-04B]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/metrics.py, tests/test_evaluation_metrics.py]
+      behavior: Exact float64 clipped-renormalized log loss, unscaled multiclass Brier, per-class OVR AUC and AP, and macro AUC/AP; macro unavailable reasons propagate from the first unavailable constituent scanned in fixed CN/MCI/AD order; non-finite computed probability results use non_finite_input; no target selection.
+      forecast_range: 260-350
+      target_changed_lines: "<=400"
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_metrics.py
+      rollback: probability-ranking-additions-and-focused-tests-only-preserving-WU-04B
+    - id: WU-04D
+      actions: [implement-metrics-and-confusion-matrices]
+      task: T-15-07D
+      subset: fixed-confusion-matrices
+      depends_on: [WU-04C]
+      sequential_execution: true
+      exact_paths: [src/pada3dacb/evaluation/confusion_matrices.py, tests/test_evaluation_confusion_matrices.py]
+      behavior: Fixed 3x3 count matrices and true-row-normalized matrices in CN/MCI/AD order, with integer zeros retained and each zero-support normalized row represented by three null unavailable cells using zero_true_support; derive only from the exact final canonical subject table; no target selection.
+      forecast_range: 180-260
+      target_changed_lines: "<=400"
+      stop_and_split_if_forecast_or_actual_exceeds: 400
+      size_exception_authorized: false
+      verification: tests/test_evaluation_confusion_matrices.py
+      rollback: confusion-matrix-module-and-focused-test-only
+    - {id: WU-05A, actions: [implement-discovery-provenance-aggregation], task: T-15-08A, subset: inferential-result-schemas, depends_on: [WU-04D], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py], forecast_range: 180-280, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_schemas.py, rollback: inferential-contracts-and-focused-tests-only}
+    - {id: WU-05B, actions: [implement-bootstrap-and-statistics], task: T-15-08B, subset: stratified-bootstrap, depends_on: [WU-05A], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/bootstrap.py, tests/test_evaluation_bootstrap.py], forecast_range: 260-380, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_bootstrap.py, rollback: bootstrap-module-and-focused-test-only}
+    - {id: WU-05C, actions: [implement-bootstrap-and-statistics], task: T-15-08C, subset: paired-inference, depends_on: [WU-05B], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/paired_statistics.py, tests/test_evaluation_paired_statistics.py], forecast_range: 320-400, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_paired_statistics.py, rollback: paired-statistics-module-and-focused-test-only}
+    - {id: WU-05D, actions: [implement-bootstrap-and-statistics], task: T-15-08D, subset: holm-correction, depends_on: [WU-05C], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/multiple_testing.py, tests/test_evaluation_multiple_testing.py], forecast_range: 180-300, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_multiple_testing.py, rollback: multiple-testing-module-and-focused-test-only}
+    - {id: WU-06A, actions: [independent-mathematical-statistical-verification], task: T-15-09A, subset: metric-confusion-references, depends_on: [WU-05D], sequential_execution: true, exact_paths: [tests/test_evaluation_metrics_reference.py], forecast_range: 280-390, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_metrics_reference.py, rollback: metric-reference-test-only}
+    - {id: WU-06B, actions: [independent-mathematical-statistical-verification], task: T-15-09B, subset: statistical-library-references, depends_on: [WU-06A], sequential_execution: true, exact_paths: [tests/test_evaluation_statistics_reference.py], forecast_range: 300-400, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_statistics_reference.py, rollback: statistical-reference-test-only}
+    - {id: WU-06C, actions: [independent-mathematical-statistical-verification], task: T-15-09C, subset: statistical-acceptance-edges, depends_on: [WU-06B], sequential_execution: true, exact_paths: [tests/test_evaluation_statistics_edge_cases.py], forecast_range: 180-300, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_statistics_edge_cases.py, rollback: statistical-edge-test-only}
+    - {id: WU-07, actions: [tables-report-cli-integration], subset: tables, depends_on: [WU-06C], target_changed_lines: "<=400", verification: tests/test_evaluation_tables.py, rollback: tables-and-focused-test}
+    - {id: WU-08A, actions: [implement-discovery-provenance-aggregation], task: T-15-11A, subset: report-schema-prerequisites, depends_on: [WU-07], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py], forecast_range: 180-300, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_schemas.py, rollback: report-schema-contracts-only}
+    - {id: WU-08B, actions: [tables-report-cli-integration], task: T-15-11B, subset: report-state-and-computational-extraction, depends_on: [WU-08A], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/report.py, tests/test_evaluation_report.py], forecast_range: 300-400, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_report.py, rollback: report-state-extraction-slice-only}
+    - {id: WU-08C, actions: [tables-report-cli-integration], task: T-15-11C, subset: exact-output-and-commit, depends_on: [WU-08B], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/report.py, tests/test_evaluation_output_schema.py], forecast_range: 300-400, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_output_schema.py, rollback: output-commit-slice-only}
+    - {id: WU-08D, actions: [tables-report-cli-integration], task: T-15-11D, subset: completed-reuse-verification, depends_on: [WU-08C], sequential_execution: true, exact_paths: [src/pada3dacb/evaluation/report.py, tests/test_evaluation_reuse.py], forecast_range: 220-350, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: tests/test_evaluation_reuse.py, rollback: reuse-slice-only}
+    - {id: WU-08E1, actions: [tables-report-cli-integration], task: T-15-12A, subset: predictive-config-and-direct-dependencies, depends_on: [WU-08D], sequential_execution: true, exact_paths: [configs/evaluation/predictive.yaml, pyproject.toml, tests/test_evaluation_cli.py], forecast_range: 100-180, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: evaluation-cli-config-tests, rollback: predictive-config-and-phase15-dependencies-only}
+    - {id: WU-08E2, actions: [tables-report-cli-integration], task: T-15-12B, subset: safe-cli-parser-and-state-mapping, depends_on: [WU-08E1], sequential_execution: true, exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 300-400, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: evaluation-cli-parser-focused-tests, rollback: fail-closed-parser-and-parser-tests-only}
+    - {id: WU-08E3, actions: [tables-report-cli-integration], task: T-15-12C, subset: default-read-only-dispatch-and-closed-routing, depends_on: [WU-08E2], sequential_execution: true, exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 220-360, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: evaluation-cli-default-dispatch-and-report-tests, rollback: default-dispatch-and-focused-tests-only}
+    - {id: WU-09A, actions: [complete-integration-and-regression-tests], task: T-15-13A, subset: seven-method-two-direction-integration, depends_on: [WU-08E3], sequential_execution: true, exact_paths: [tests/phase15_integration_fixtures.py, tests/test_evaluation_integration.py], forecast_range: 330-395, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: phase15-integration-a, rollback: integration-fixture-and-test-only}
+    - {id: WU-09B, actions: [complete-integration-and-regression-tests], task: T-15-13B, subset: statistical-integration-regressions, depends_on: [WU-09A], sequential_execution: true, exact_paths: [tests/test_evaluation_regressions.py], forecast_range: 150-220, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: phase15-integration-b, rollback: regression-test-only}
+    - {id: WU-09C, actions: [complete-integration-and-regression-tests], task: T-15-13C, subset: output-atomicity-privacy-boundaries, depends_on: [WU-09B], sequential_execution: true, exact_paths: [tests/test_evaluation_boundaries.py], forecast_range: 140-210, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: phase15-integration-c, rollback: boundary-test-only}
+    - {id: WU-09D, actions: [complete-integration-and-regression-tests], task: T-15-13D, subset: cli-modes-synthetic-reuse-gate, depends_on: [WU-09C], sequential_execution: true, exact_paths: [tests/test_evaluation_modes.py], forecast_range: 140-210, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: phase15-integration-d, rollback: modes-test-only}
+    - {id: WU-09E, actions: [complete-integration-and-regression-tests], task: T-15-13E, subset: stale-phase14-guard-reconciliation, depends_on: [WU-09D], sequential_execution: true, exact_paths: [tests/test_all_methods_regression_phase14.py, tests/test_proposed_method_cli.py], forecast_range: 2-20, target_changed_lines: "<=400", stop_and_split_if_forecast_or_actual_exceeds: 400, size_exception_authorized: false, verification: phase14-guards-focused, rollback: two-stale-guards-only}
+    - {id: WU-10, actions: [documentation], depends_on: [WU-09E], target_changed_lines: "<=400", verification: focused-and-full-validation-recorded-in-phase15-report, rollback: documentation-only}
+    - {id: WU-11, actions: [final-audit], depends_on: [WU-10], status: completed, target_changed_lines: "<=400", verification: final-audit-recorded-in-final_audit, rollback: final-audit-file-only}
+remediation_work_units:
+  execution: serial
+  strict_tdd: true
+  evidence_rule: RED command and exact failure must be saved to the unit Engram topic before any production edit; GREEN, TRIANGULATE, REFACTOR, runtime harness, authored changed-line count, and rollback evidence follow in the same topic.
+  hard_authored_changed_line_limit_per_unit: 400
+  split_before_production_if_forecast_exceeds_limit: true
+  units:
+    - {id: WU-R01, task: T-15-R01, findings: [C-02], actions: [implement-discovery-provenance-aggregation], depends_on: [WU-11], exact_paths: [src/pada3dacb/evaluation/schemas.py, tests/test_evaluation_schemas.py], forecast_range: 180-300, verification: "python -m pytest -q tests/test_evaluation_schemas.py", rollback: R01-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R01}
+    - {id: WU-R02, task: T-15-R02, findings: [C-02, C-04, C-01], actions: [tables-report-cli-integration], depends_on: [WU-R01], exact_paths: [configs/evaluation/predictive.yaml, tests/test_evaluation_cli.py], forecast_range: 140-260, verification: "python -m pytest -q tests/test_evaluation_cli.py -k config", rollback: R02-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R02}
+    - {id: WU-R03, task: T-15-R03, findings: [C-02], actions: [implement-discovery-provenance-aggregation], depends_on: [WU-R02], exact_paths: [src/pada3dacb/evaluation/provenance.py, tests/test_evaluation_provenance.py], forecast_range: 280-400, verification: "python -m pytest -q tests/test_evaluation_provenance.py", rollback: R03-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R03}
+    - {id: WU-R04, task: T-15-R04, findings: [C-02], actions: [implement-discovery-provenance-aggregation], depends_on: [WU-R03], exact_paths: [src/pada3dacb/evaluation/discovery.py, tests/phase15_discovery_fixtures.py, tests/test_evaluation_discovery.py], forecast_range: 300-400, verification: "python -m pytest -q tests/test_evaluation_discovery.py tests/test_evaluation_provenance.py", rollback: R04-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R04}
+    - {id: WU-R05, task: T-15-R05, findings: [C-02], actions: [tables-report-cli-integration], depends_on: [WU-R04], exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 180-300, verification: "python -m pytest -q tests/test_evaluation_cli.py -k 'default_dispatch and (population or validate_only)'", rollback: R05-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R05}
+    - {id: WU-R06, task: T-15-R06, findings: [C-03], actions: [tables-report-cli-integration], depends_on: [WU-R05], exact_paths: [src/pada3dacb/evaluation/report.py, tests/test_evaluation_output_schema.py, tests/test_evaluation_reuse.py], forecast_range: 260-380, verification: "python -m pytest -q tests/test_evaluation_output_schema.py tests/test_evaluation_reuse.py", rollback: R06-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R06}
+    - {id: WU-R07, task: T-15-R07, findings: [C-04], actions: [tables-report-cli-integration], depends_on: [WU-R06], exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 100-220, verification: "python -m pytest -q tests/test_evaluation_cli.py -k real_evaluation", rollback: R07-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R07}
+    - {id: WU-R08, task: T-15-R08, findings: [C-01, C-03], actions: [tables-report-cli-integration], depends_on: [WU-R07], exact_paths: [src/pada3dacb/evaluation/tables.py, tests/test_evaluation_tables.py], forecast_range: 280-400, verification: "python -m pytest -q tests/test_evaluation_tables.py", rollback: R08-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R08}
+    - {id: WU-R09, task: T-15-R09, findings: [C-01], actions: [tables-report-cli-integration], depends_on: [WU-R08], exact_paths: [src/pada3dacb/evaluation/tables.py, tests/test_evaluation_tables.py], forecast_range: 300-400, verification: "python -m pytest -q tests/test_evaluation_tables.py", rollback: R09-only-preserving-R08, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R09}
+    - {id: WU-R10, task: T-15-R10, findings: [C-01], actions: [tables-report-cli-integration], depends_on: [WU-R09], exact_paths: [src/pada3dacb/evaluation/tables.py, tests/test_evaluation_tables.py], forecast_range: 260-400, verification: "python -m pytest -q tests/test_evaluation_tables.py", rollback: R10-only-preserving-R08-R09, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R10}
+    - {id: WU-R11, task: T-15-R11, findings: [C-01], actions: [tables-report-cli-integration], depends_on: [WU-R10], exact_paths: [src/pada3dacb/evaluation/report.py, src/pada3dacb/evaluation/metrics.py, tests/test_evaluation_report.py, tests/test_evaluation_metrics_reference.py], forecast_range: 320-400, verification: "python -m pytest -q tests/test_evaluation_report.py tests/test_evaluation_metrics_reference.py", rollback: R11-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R11}
+    - {id: WU-R12, task: T-15-R12, findings: [C-01, C-03], actions: [tables-report-cli-integration], depends_on: [WU-R11], exact_paths: [src/pada3dacb/evaluation/report.py, tests/test_evaluation_output_schema.py], forecast_range: 320-400, verification: "python -m pytest -q tests/test_evaluation_output_schema.py tests/test_evaluation_report.py", rollback: R12-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R12}
+    - {id: WU-R13, task: T-15-R13, findings: [C-01, C-02, C-03, C-04], phase: RED, actions: [complete-integration-and-regression-tests], depends_on: [WU-R12], exact_paths: [tests/phase15_integration_fixtures.py, tests/test_evaluation_modes.py, tests/test_evaluation_boundaries.py, tests/test_evaluation_regressions.py], forecast_range: 300-400, verification: "python -m pytest -q tests/test_evaluation_modes.py tests/test_evaluation_boundaries.py tests/test_evaluation_regressions.py --basetemp=artifacts/pytest-tmp-phase15-remediation-red", expected_finish: controlled-failure-for-known-default-dispatch-gaps, rollback: R13-tests-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R13}
+    - {id: WU-R14, task: T-15-R14, findings: [C-01], phase: GREEN-TRIANGULATE-REFACTOR, actions: [tables-report-cli-integration], depends_on: [WU-R13], exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 280-400, verification: "python -m pytest -q tests/test_evaluation_cli.py tests/test_evaluation_modes.py -k 'synthetic and not reuse'", rollback: fail-closed-default-synthetic-route, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R14}
+    - {id: WU-R15, task: T-15-R15, findings: [C-01, C-03], phase: GREEN-TRIANGULATE-REFACTOR, actions: [tables-report-cli-integration], depends_on: [WU-R14], exact_paths: [scripts/evaluate.py, src/pada3dacb/evaluation/report.py, tests/test_evaluation_cli.py, tests/test_evaluation_reuse.py], forecast_range: 280-400, verification: "python -m pytest -q tests/test_evaluation_reuse.py tests/test_evaluation_cli.py tests/test_evaluation_modes.py -k reuse", final_triangulation: rerun-WU-R13-command-green, rollback: fail-closed-default-reuse-route-preserving-WU-R14, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R15}
+    - {id: WU-R16, task: T-15-R16, findings: [C-01, C-02, C-03, C-04, C-05], actions: [tables-report-cli-integration], depends_on: [WU-R15], exact_paths: [], discovery_targets: [WU-R01-through-WU-R15-changed-paths, immutable-input-output-snapshots, strict-red-provenance], forecast_range: 0, verification: focused-remediation-plus-full-pytest-ruff-diff-check, rollback: no-repository-bytes, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R16}
+    - {id: WU-R18, task: T-15-R18, findings: [C-01, C-02], actions: [tables-report-cli-integration], depends_on: [WU-R16], exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 160-300, verification: focused-cli-population-and-issue-tests, rollback: R18-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R18}
+    - {id: WU-R19, task: T-15-R19, findings: [C-01, C-02], actions: [tables-report-cli-integration], depends_on: [WU-R18], exact_paths: [scripts/evaluate.py, tests/test_evaluation_modes.py, tests/test_evaluation_output_schema.py], forecast_range: 260-400, verification: exact-nonempty-report-artifacts, rollback: R19-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R19}
+    - {id: WU-R20, task: T-15-R20, findings: [C-03], actions: [tables-report-cli-integration], depends_on: [WU-R19], exact_paths: [src/pada3dacb/evaluation/report.py, scripts/evaluate.py, tests/test_evaluation_reuse.py], forecast_range: 220-360, verification: exact-manifest-reuse-tamper-tests, rollback: R20-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R20}
+    - {id: WU-R21, task: T-15-R21, findings: [C-01, C-04], actions: [tables-report-cli-integration], depends_on: [WU-R20], exact_paths: [scripts/evaluate.py, tests/test_evaluation_cli.py], forecast_range: 120-240, verification: public-gate-and-root-tests, rollback: R21-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R21}
+    - {id: WU-R22, task: T-15-R22, findings: [C-05], actions: [documentation-and-validation], depends_on: [WU-R21], exact_paths: [openspec/changes/phase-15-predictive-evaluation/tasks.md, specs/phase_15_predictive_evaluation/tasks.md, specs/phase_15_predictive_evaluation/agent_plan.yaml, docs/PHASE15_REPORT.md], forecast_range: 80-180, verification: exact-planning-and-ownership-evidence, rollback: R22-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R22}
+    - {id: WU-R23, task: T-15-R23, findings: [C-01, C-02, C-03, C-04, C-05], actions: [documentation-and-validation], depends_on: [WU-R22], exact_paths: [], forecast_range: 0, verification: focused-full-install-import-ruff-diff, rollback: no-repository-bytes, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R23}
+    - {id: WU-R24, task: T-15-R24, findings: [C-01, C-02], actions: [tables-report-cli-integration], depends_on: [WU-R23], exact_paths: [scripts/evaluate.py, tests/test_evaluation_modes.py], forecast_range: 180-320, verification: mixed-candidate-artifacts, rollback: R24-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R24}
+    - {id: WU-R25, task: T-15-R25, findings: [C-01, C-02, C-05], actions: [documentation-and-validation], depends_on: [WU-R24], exact_paths: [], forecast_range: 0, verification: focused-full-install-import-ruff-diff, rollback: no-repository-bytes, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R25}
+    - {id: WU-R17, task: T-15-R17, findings: [C-05], actions: [independent-remediation-scope-spec-approval], depends_on: [WU-R25], exact_paths: [specs/phase_15_predictive_evaluation/remediation_review.md], forecast_range: 80-160, verification: ownership-command-plus-read-only-scope-spec-evidence, rollback: remediation-review-only, engram_topic: sdd/phase-15-predictive-evaluation/remediation/WU-R17}
+ownership_validation:
+  checked_key: owned_paths
+  command: >-
+    python -c "import collections,yaml; p='specs/phase_15_predictive_evaluation/agent_plan.yaml'; d=yaml.safe_load(open(p,encoding='utf-8')); a=d['actions']; pairs=[(x['id'],q) for x in a for q in x['owned_paths']]; c=collections.Counter(q for _,q in pairs); dup=sorted(q for q,n in c.items() if n>1); print(f'actions={len(a)} paths={len(pairs)} duplicates={len(dup)}'); print('duplicate_paths='+repr(dup)); assert len(a)==14 and len(pairs)==60 and not dup"
+  expected_output:
+    - actions=14 paths=60 duplicates=0
+    - duplicate_paths=[]
+  action_count: 14
+  path_count: 60
+  duplicate_count: 0
+  duplicate_owned_paths: []
+  static_duplicate_review: pass
+  status: passed-at-WU-R22-after-failed-WU-R17

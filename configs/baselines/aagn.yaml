@@ -1,0 +1,12 @@
+baseline:
+  id: aagn
+  display_name: AAGN / ROI-aware gating
+  class_name: ROIAwareGatingBaseline
+  constructor:
+    n_classes: 3
+    base_ch: 32
+    embed_dim: 128
+    dropout: 0.1
+  requires_roi_masks: true
+  optional_dependencies: []
+  notebook_provenance: notebooks/archive/baselines_original.ipynb:cell-17:603-625

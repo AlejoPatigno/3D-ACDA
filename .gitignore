@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.tmp/
 *.egg-info/
 .venv/
 venv/
@@ -22,3 +23,8 @@ results/*
 !results/README.md
 /paper_outputs/
 *.log
+# Local Pi runtime state
+.atl/
+
+# Generated Graphify knowledge graph
+/graphify-out/

@@ -1,0 +1,34 @@
+{
+  "lens": "review-risk",
+  "findings": [
+    {
+      "location": "src/pada3dacb/training/checkpointing.py:105",
+      "severity": "CRITICAL",
+      "claim": "Checkpoint loading permits arbitrary pickle execution because load_training_checkpoint calls torch.load(..., weights_only=False) on paths reachable from caller-supplied resume/export flows.",
+      "proof_refs": [
+        "git show :src/pada3dacb/training/checkpointing.py shows def load_training_checkpoint(path...) calling torch.load(Path(path), map_location=\"cpu\", weights_only=False).",
+        "git show :src/pada3dacb/training/trainer.py shows _resume(self, checkpoint_path, ...) passes checkpoint_path directly to load_training_checkpoint(checkpoint_path).",
+        "git show :src/pada3dacb/experiments/source_only.py, git show :src/pada3dacb/experiments/coral.py, git show :src/pada3dacb/experiments/mmd.py, and git show :src/pada3dacb/experiments/cdan.py show experiment run methods accept resume_from paths, making this reachable from runtime inputs."
+      ],
+      "evidence_class": "deterministic",
+      "causal_disposition": "introduced"
+    },
+    {
+      "location": "src/pada3dacb/data/splits.py:120",
+      "severity": "CRITICAL",
+      "claim": "Split manifest generation writes subject identifiers and local artifact paths into CSV outputs, creating a deterministic data-exposure risk for medical/research subject data.",
+      "proof_refs": [
+        "git show :src/pada3dacb/data/splits.py shows _record_row returns subject_id, derivative_path, concept_path, and jacobian_path.",
+        "git show :src/pada3dacb/data/splits.py shows create_direction_splits writes those rows to source_folds.csv and target_split.csv via _atomic_text(output / \"source_folds.csv\", source_folds.to_csv(index=False)) and _atomic_text(output / \"target_split.csv\", target_split.to_csv(index=False)).",
+        "git show :src/pada3dacb/data/records.py shows SubjectRecord separately contains subject_hash, so persisting subject_id is not required for hashed split identity."
+      ],
+      "evidence_class": "deterministic",
+      "causal_disposition": "introduced"
+    }
+  ],
+  "evidence": [
+    "Ran gentle-ai review status --cwd C:/Users/LOQ/Desktop/PADA-3DACB --lineage review-42a3a9305352c48b --contract gentle-ai.review-integration/v1 --next-transition --projection staged; observed lineage review-42a3a9305352c48b, revision sha256:988c42a193de8f53517d8b74f97832eee73828af57bfe29fe1bea5d315076464, target sha256:42a3a9305352c48b8c442a8e0fd615c6ca4c1e43091784f3c83e53f1907db66b, projection staged, and exactly 50 src/pada3dacb paths.",
+    "Inspected all 50 staged files using grouped commands of the form git diff --cached -- <path> and git show :<path> from C:/Users/LOQ/Desktop/PADA-3DACB; staged paths inspected covered adaptation (8), config (1), data (6), exceptions (1), experiments (9), losses (7), models (10), and training (8).",
+    "Observed full staged content for the cited files with git show :src/pada3dacb/training/checkpointing.py, git show :src/pada3dacb/training/trainer.py, git show :src/pada3dacb/experiments/source_only.py, git show :src/pada3dacb/experiments/coral.py, git show :src/pada3dacb/experiments/mmd.py, git show :src/pada3dacb/experiments/cdan.py, git show :src/pada3dacb/data/splits.py, and git show :src/pada3dacb/data/records.py."
+  ]
+}

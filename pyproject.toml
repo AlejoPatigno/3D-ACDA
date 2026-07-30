@@ -19,17 +19,19 @@ dependencies = [
   "torch",
   "nibabel",
   "matplotlib",
+  "scikit-learn",
+  "scipy",
 ]
 
 [project.optional-dependencies]
 full = [
   "SimpleITK",
   "monai",
-  "scikit-learn",
 ]
 dev = [
   "pytest",
   "ruff",
+  "statsmodels",
 ]
 
 [tool.setuptools.packages.find]
@@ -57,3 +59,6 @@ extend-exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = ["--basetemp=artifacts/pytest-tmp-phase13"]

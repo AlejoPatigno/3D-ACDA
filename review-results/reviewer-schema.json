@@ -1,0 +1,142 @@
+{
+  "$id": "https://gentle-ai.dev/schema/review/reviewer/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "examples": [
+    {
+      "evidence": [
+        "reviewed the complete candidate scope"
+      ],
+      "findings": []
+    }
+  ],
+  "properties": {
+    "evidence": {
+      "items": {
+        "not": {
+          "pattern": "^\\s*(?:[nN]/[aA]|[nN][aA]|[nN][oO][nN][eE]|[tT][oO][dD][oO]|[tT][bB][dD]|[pP][aA][sS][sS]|[pP][aA][sS][sS][eE][dD]|[sS][uU][cC][cC][eE][sS][sS]|[pP][lL][aA][cC][eE][hH][oO][lL][dD][eE][rR])\\s*$"
+        },
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "severity": {
+                  "enum": [
+                    "BLOCKER",
+                    "CRITICAL"
+                  ]
+                }
+              },
+              "required": [
+                "severity"
+              ]
+            },
+            "then": {
+              "required": [
+                "evidence_class",
+                "causal_disposition"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "causal_disposition": {
+            "enum": [
+              "introduced",
+              "behavior-activated",
+              "worsened",
+              "pre-existing",
+              "base-only",
+              "unknown"
+            ],
+            "type": "string"
+          },
+          "claim": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence_class": {
+            "enum": [
+              "deterministic",
+              "inferential",
+              "insufficient"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lens": {
+            "enum": [
+              "risk",
+              "resilience",
+              "readability",
+              "reliability"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "proof_refs": {
+            "items": {
+              "not": {
+                "pattern": "^\\s*(?:[nN]/[aA]|[nN][aA]|[nN][oO][nN][eE]|[tT][oO][dD][oO]|[tT][bB][dD]|[pP][aA][sS][sS]|[pP][aA][sS][sS][eE][dD]|[sS][uU][cC][cC][eE][sS][sS]|[pP][lL][aA][cC][eE][hH][oO][lL][dD][eE][rR])\\s*$"
+              },
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "BLOCKER",
+              "CRITICAL",
+              "WARNING",
+              "SUGGESTION"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "severity",
+          "claim",
+          "proof_refs"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "lens": {
+      "enum": [
+        "risk",
+        "resilience",
+        "readability",
+        "reliability",
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "findings",
+    "evidence"
+  ],
+  "title": "Gentle AI reviewer result",
+  "type": "object"
+}

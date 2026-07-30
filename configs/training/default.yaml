@@ -1,0 +1,50 @@
+training:
+  warmup_epochs: 20
+  full_epochs: 30
+  early_stopping: false
+  batch_size: 16
+  optimizer:
+    name: AdamW
+    learning_rate: 0.0003
+    weight_decay: 0.0001
+    betas: [0.9, 0.999]
+  scheduler:
+    name: none
+    parameters: {}
+  mixed_precision: false
+  gradient:
+    clipping_enabled: true
+    clipping_mode: norm
+    clipping_value: 5.0
+    fail_on_nonfinite_loss: true
+  checkpoint:
+    save_last: true
+    save_best_source_f1: true
+    every_epochs: 5
+    atomic_write: true
+  evaluation:
+    source_every_epochs: 1
+    target_monitoring_every_epochs: 1
+    target_monitoring_enabled: true
+    target_monitoring_label: MONITORING ONLY — NOT A TRAINING LOSS
+  resume:
+    enabled: true
+    checkpoint_path: null
+    strict_configuration: true
+losses:
+  classification_weight: 1.0
+  concept_classification_weight: 1.0
+  concept_supervision_weight: 0.5
+  anatomical_consistency_weight: 0.2
+  prediction_consistency_weight: 0.1
+  label_smoothing: 0.1
+  warm_classification_multiplier: 0.1
+  warm_concept_classification_multiplier: 1.0
+  warm_concept_supervision_multiplier: 1.0
+  warm_anatomical_consistency_multiplier: 1.0
+  warm_prediction_consistency_multiplier: 0.0
+roi_mask_preparation:
+  mode: nearest
+  normalization: sum_to_one_after_resize
+  epsilon: 0.00000001
+  cache_enabled: true

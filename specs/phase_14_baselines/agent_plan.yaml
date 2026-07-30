@@ -1,0 +1,319 @@
+version: 2
+change: phase-14-baselines
+title: Phase 14 — Canonical Baseline Migration
+artifact_store: hybrid
+production_gate:
+  approved_first_slice:
+  - ROIAwareGatingBaseline
+  - FasterSNNBaseline
+  blocked_without_separate_approval:
+  - CNNDesignForADBaseline
+  - DenseNetCNNBaseline
+  - ViTBaseline
+  - LongFormerBaseline
+  - JointTransformerBaseline
+  - DAViT3DBaseline
+  - BiFPN3DViTBaseline
+  prohibited:
+  - AlzheimerSupervisedMRIModel
+  - target_adaptation
+  - real_ADNI_or_OASIS_training_during_validation
+  - phase_15_artifacts
+delivery:
+  delivery_strategy: feature-branch-chain
+  review_budget_changed_lines: 400
+  tracker_pr: draft_no_merge
+  child_pr_targeting: immediate_parent_branch
+  size_exception: false
+  serial_single_writer_enforcement: true
+  concurrent_production_writers_allowed: false
+  rule: Only the responsible agent for the currently ready action may modify its exclusive
+    files; actions execute in dependency order and hand off before the next writer
+    starts.
+allowed_agents:
+- opencode
+- claude-code
+- kimi
+- codex
+- gemini-cli
+registry_contract:
+  list_baselines: list_baselines() -> tuple[str, ...]
+  get_baseline_spec: 'get_baseline_spec(name: str) -> BaselineSpec'
+  build_baseline: 'build_baseline(name: str, config: Mapping[str, Any]) -> nn.Module'
+  deterministic_order: true
+  explicit_aliases_only: true
+  fuzzy_matching: prohibited
+  fallback_construction: prohibited
+  required_logits: 3
+  reproducibility_hash_inputs:
+  - selected_canonical_baseline
+  - resolved_constructor_values
+rules:
+  exactly_one_responsible_agent_per_action: true
+  exclusive_file_ownership_required: true
+  zero_file_ownership_collisions: true
+  preserve_uncommitted_work: true
+  no_commit: true
+  no_push: true
+  no_real_training: true
+  tests_remain_with_one_work_unit_owner: true
+  shared_files_have_one_owner: true
+  blocked_baselines_have_no_production_file_ownership: true
+  blocked_file_omission_reason: CNN/DenseNet/ViT/LongFormer/Joint-Transformer/DA-ViT/BiFPN3DViT
+    inventory entries are active_not_executed and lack explicit implementation approval.
+review_execution_record:
+  canonical_responsible_agent: kimi
+  actual_fallback_runtime: pi
+  artifact: specs/phase_14_baselines/spec_review.md
+  verdict: approved
+  note: The canonical plan remains assigned to kimi; Pi was recorded only as the completed
+    runtime fallback.
+actions:
+- id: phase13-closure-and-baseline-audit
+  responsible_agent: opencode
+  dependencies: []
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/decisions.md
+  may_modify_production_files: false
+  deliverables:
+  - Phase 13 closure and Phase 14 baseline audit evidence
+- id: canonical-baseline-extraction
+  responsible_agent: claude-code
+  dependencies:
+  - phase13-closure-and-baseline-audit
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/baseline_inventory.yaml
+  - specs/phase_14_baselines/notebook_extraction.md
+  - specs/phase_14_baselines/requirements.md
+  - specs/phase_14_baselines/design.md
+  - specs/phase_14_baselines/tasks.md
+  - specs/phase_14_baselines/acceptance.md
+  - specs/phase_14_baselines/agent_plan.yaml
+  may_modify_production_files: false
+  deliverables:
+  - Canonical notebook extraction and reconciled implementation gate
+  - Phase 14 specification set and action ownership plan
+- id: independent-specification-review
+  responsible_agent: kimi
+  dependencies:
+  - canonical-baseline-extraction
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/spec_review.md
+  may_modify_production_files: false
+  deliverables:
+  - Approved independent specification review
+- id: implement-shared-baseline-framework
+  responsible_agent: codex
+  dependencies:
+  - independent-specification-review
+  status: completed
+  exclusive_file_ownership:
+  - src/pada3dacb/models/baselines/__init__.py
+  - src/pada3dacb/models/baselines/common.py
+  - src/pada3dacb/models/baselines/registry.py
+  - tests/test_baseline_registry.py
+  - tests/test_baseline_common.py
+  may_modify_production_files: true
+  scope:
+  - Shared helpers needed by AAGN and FasterSNN only
+  - Strict registry APIs, deterministic order, explicit aliases only, three-logit
+    validation, parameter metadata, reproducibility hashes over selected baseline
+    and constructor values, and explicit blocked-baseline failures
+  deliverables:
+  - Shared baseline framework and focused unit tests
+- id: implement-baseline-group-a
+  responsible_agent: codex
+  dependencies:
+  - implement-shared-baseline-framework
+  status: completed
+  approved_baselines:
+  - AAGN
+  exclusive_file_ownership:
+  - src/pada3dacb/models/baselines/roi_aware_gating.py
+  - tests/test_baseline_roi_aware_gating.py
+  may_modify_production_files: true
+  deliverables:
+  - ROIAwareGatingBaseline and focused tests
+- id: implement-baseline-group-b
+  responsible_agent: codex
+  dependencies:
+  - implement-baseline-group-a
+  status: completed
+  approved_baselines:
+  - FasterSNN
+  exclusive_file_ownership:
+  - src/pada3dacb/models/baselines/faster_snn.py
+  - tests/test_baseline_faster_snn.py
+  may_modify_production_files: true
+  deliverables:
+  - FasterSNNBaseline and focused tests
+- id: independent-baseline-verification
+  responsible_agent: gemini-cli
+  dependencies:
+  - implement-baseline-group-b
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/baseline_verification.md
+  may_modify_production_files: false
+  deliverables:
+  - Independent model-contract, scope-gate, and regression verification
+- id: trainer-integration
+  responsible_agent: opencode
+  dependencies:
+  - independent-baseline-verification
+  status: completed
+  exclusive_file_ownership:
+  - src/pada3dacb/data/baseline_dataset.py
+  - src/pada3dacb/training/baseline_trainer.py
+  - tests/test_baseline_dataset.py
+  - tests/test_baseline_trainer.py
+  may_modify_production_files: true
+  deliverables:
+  - Classification-only dataset and fixed-epoch trainer with focused tests
+- id: experiment-config-cli-integration
+  responsible_agent: opencode
+  dependencies:
+  - trainer-integration
+  status: completed
+  exclusive_file_ownership:
+  - src/pada3dacb/experiments/baselines.py
+  - src/pada3dacb/experiments/__init__.py
+  - scripts/train.py
+  - configs/experiments/baselines.yaml
+  - configs/baselines/aagn.yaml
+  - configs/baselines/faster_snn.yaml
+  - tests/phase14_helpers.py
+  - tests/test_baseline_cv.py
+  - tests/test_baseline_cli.py
+  - tests/test_proposed_method_cli.py
+  may_modify_production_files: true
+  deliverables:
+  - Source-only CV orchestration, reproducible config, CLI integration, and focused
+    tests
+- id: complete-baseline-integration-tests
+  responsible_agent: codex
+  dependencies:
+  - experiment-config-cli-integration
+  status: completed
+  exclusive_file_ownership:
+  - tests/test_baseline_smoke.py
+  - tests/test_baseline_source_only.py
+  - tests/test_all_methods_regression_phase14.py
+  may_modify_production_files: false
+  deliverables:
+  - Synthetic end-to-end smoke and source-only integration evidence
+- id: documentation
+  responsible_agent: claude-code
+  dependencies:
+  - complete-baseline-integration-tests
+  status: completed
+  exclusive_file_ownership:
+  - docs/BASELINES.md
+  - docs/PHASE14_REPORT.md
+  - docs/IMPLEMENTATION_AUDIT.md
+  may_modify_production_files: false
+  deliverables:
+  - Supported-baseline contract, scientific caveats, and validation evidence report
+- id: final-audit
+  responsible_agent: kimi
+  dependencies:
+  - documentation
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/final_audit.md
+  may_modify_production_files: false
+  deliverables:
+  - Final scope, ownership, blocked-baseline, and scientific-invariant audit
+- id: final-validation
+  responsible_agent: opencode
+  dependencies:
+  - final-audit
+  status: completed
+  exclusive_file_ownership:
+  - specs/phase_14_baselines/final_validation.md
+  - specs/phase_14_baselines/archive_report.md
+  may_modify_production_files: false
+  deliverables:
+  - Acceptance-command evidence and archive-readiness decision
+workload_plan:
+  strategy: feature-branch-chain
+  review_budget_changed_lines_per_child_pr: 400
+  execution: serial
+  tracker:
+    purpose: Draft/no-merge integration tracker for the complete Phase 14 feature.
+  child_prs:
+  - order: 1
+    work_unit: shared-baseline-framework
+    actions:
+    - implement-shared-baseline-framework
+    dependency: independent-specification-review
+    verification: focused shared-framework and registry unit tests
+    rollback: remove only shared baseline framework files and their tests
+  - order: 2
+    work_unit: aagn
+    actions:
+    - implement-baseline-group-a
+    dependency: shared-baseline-framework
+    verification: focused AAGN unit tests
+    rollback: remove only roi_aware_gating.py and its dedicated test
+  - order: 3
+    work_unit: fastersnn
+    actions:
+    - implement-baseline-group-b
+    - independent-baseline-verification
+    dependency: aagn
+    verification: focused FasterSNN tests plus independent baseline verification
+    rollback: remove only faster_snn.py and its dedicated test; retain read-only verification
+      evidence
+  - order: 4
+    work_unit: classification-dataset-and-trainer
+    actions:
+    - trainer-integration
+    dependency: independent-baseline-verification
+    verification: focused dataset and trainer unit tests
+    rollback: remove only baseline dataset/trainer files and their tests
+  - order: 5
+    work_unit: experiment-config-cli
+    actions:
+    - experiment-config-cli-integration
+    dependency: classification-dataset-and-trainer
+    verification: focused synthetic CV and CLI tests
+    rollback: revert only baseline experiment/config/CLI integration and its tests
+  - order: 6
+    work_unit: integration-docs-and-validation
+    actions:
+    - complete-baseline-integration-tests
+    - documentation
+    - final-audit
+    - final-validation
+    dependency: experiment-config-cli
+    verification: synthetic integration tests and acceptance commands; no real cohort
+      training
+    rollback: remove only Phase 14 integration tests, docs, and final evidence artifacts
+validation:
+  required_actions_in_order:
+  - phase13-closure-and-baseline-audit
+  - canonical-baseline-extraction
+  - independent-specification-review
+  - implement-shared-baseline-framework
+  - implement-baseline-group-a
+  - implement-baseline-group-b
+  - independent-baseline-verification
+  - trainer-integration
+  - experiment-config-cli-integration
+  - complete-baseline-integration-tests
+  - documentation
+  - final-audit
+  - final-validation
+  ownership_collision_check:
+    expected_duplicate_paths: []
+    policy: Every exclusive_file_ownership path appears under exactly one action.
+  implementation_start_gate:
+    next_action: implement-shared-baseline-framework
+    prerequisites:
+    - independent-specification-review is approved
+    - feature-branch-chain strategy is recorded
+    - current child PR remains within 400 authored changed lines or stops for reslicing

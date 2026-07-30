@@ -1,0 +1,324 @@
+phase: 14
+action_id: phase13-closure-and-baseline-audit
+source_notebook: notebooks/archive/baselines_original.ipynb
+inspection_depth: reconciled_authoritative_baseline_inventory
+verified_directly_against_notebook: true
+graphify_graph_present: true
+production_code_created: false
+authoritative_for_implementation_gate: true
+classification_schema:
+  allowed_values:
+    - active_executed
+    - active_not_executed
+    - obsolete
+    - helper_only
+    - proposed_model_copy
+    - posthoc_analysis_only
+  unresolved_policy: "Use unresolved with reason only when notebook evidence is insufficient; unresolved items are blocked from migration."
+first_slice_gate:
+  approved_baselines: [AAGN, FasterSNN]
+  blocked_without_later_approval:
+    - CNN_design_for_AD
+    - DenseNet-CNN
+    - ViT
+    - LongFormer
+    - Joint-Transformer
+    - DA-ViT
+    - BiFPN3DViT
+  do_not_migrate:
+    - AlzheimerSupervisedMRIModel
+    - obsolete definitions
+    - helper-only symbols except when needed by approved baselines
+    - posthoc notebook reporting
+
+notebook_cells:
+  - cell_index: 7
+    cell_type: code
+    role: proposed_model_copy_source
+    notes:
+      - Contains AlzheimerSupervisedMRIModel, a copied/subclassed supervised wrapper around AlzheimerDomainAdaptationModel.
+      - This symbol is not part of the final baseline factory or baseline CV workflow and is blocked from migration.
+  - cell_index: 17
+    cell_type: code
+    line_count: 1797
+    role: baseline_training_suite
+    notes:
+      - Contains baseline configs, model definitions, classification-only loss/trainer, dataset helpers, CV orchestration, external-cohort evaluation, and result summarization.
+      - Contains two generations of some symbols; later definitions in the same cell supersede earlier Python names when executed top-to-bottom.
+  - cell_index: 18
+    cell_type: code
+    line_count: 63
+    role: example_usage
+    notes:
+      - Kaggle/path-specific example invocation.
+      - The notebook example uses cohort="target"; Phase 14 production first slice explicitly rejects target-cohort training and uses source_train/source_validation plus target_evaluation monitoring only.
+      - Uses baseline_names example with AAGN and FasterSNN active and other baselines commented.
+
+inventory:
+  - name: AAGN
+    symbol: ROIAwareGatingBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [603, 625]
+    classification: active_executed
+    migration_gate: implement_first_slice
+    aliases: [aagn, roi-aware-gating, roi_gating]
+    required_fields_status: complete
+    output_contract: logits_features_and_alpha
+    requires_roi_masks: true
+    reason: Included in final REQUESTED_BASELINES and explicitly executed in the example baseline_names override.
+  - name: FasterSNN
+    symbol: FasterSNNBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [575, 600]
+    classification: active_executed
+    migration_gate: implement_first_slice
+    aliases: [fastersnn, faster-snn, faster_snn]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES and explicitly executed in the example baseline_names override.
+  - name: Joint-Transformer
+    symbol: JointTransformerBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [510, 554]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [joint-transformer, joint_transformer, jointtransformer]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: CNN_design_for_AD
+    symbol: CNNDesignForADBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [338, 354]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [cnn_design_for_ad, cnndesignforad, cnn_design_for_adbaseline]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: DenseNet-CNN
+    symbol: DenseNetCNNBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [404, 430]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [densenet-cnn, densenet_cnn, densenetcnn]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: ViT
+    symbol: ViTBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [445, 466]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [vit, visiontransformer, vision-transformer]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: DA-ViT
+    symbol: DAViT3DBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [1460, 1495]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [da-vit, davit, deformable-vit, deformable_vit, deformablemhsa-vit]
+    required_fields_status: complete
+    output_contract: logits_features_and_patch_tokens
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: BiFPN3DViT
+    symbol: BiFPN3DViTBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [1330, 1388]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [bifpn3dvit, bifpn-3d-vit, bifpn_3d_vit, bifpn3dvitbaseline]
+    required_fields_status: complete
+    output_contract: logits_features_patch_tokens_and_attn_pool
+    requires_roi_masks: false
+    reason: Included in final REQUESTED_BASELINES but commented out in the example explicit override.
+  - name: LongFormer
+    symbol: LongFormerBaseline
+    kind: model_class
+    cell_index: 17
+    lines: [469, 487]
+    classification: active_not_executed
+    migration_gate: blocked_pending_explicit_later_approval
+    aliases: [longformer, long_former]
+    required_fields_status: complete
+    output_contract: logits_and_features
+    requires_roi_masks: false
+    reason: Present in the final factory, absent from final REQUESTED_BASELINES, and commented out in earlier defaults.
+  - name: Supervised MRI model copy
+    symbol: AlzheimerSupervisedMRIModel
+    kind: model_class_copy
+    cell_index: 7
+    lines: [473, 480]
+    classification: proposed_model_copy
+    migration_gate: do_not_migrate
+    aliases: []
+    required_fields_status: complete
+    output_contract: not_applicable
+    requires_roi_masks: not_applicable
+    reason: Subclasses/copies the domain-adaptation model and is not part of the final baseline factory or baseline CV workflow.
+  - name: BaselineTrainConfig
+    symbol: BaselineTrainConfig
+    kind: dataclass
+    cell_index: 17
+    lines: [74, 87]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_orchestration
+    required_fields_status: complete
+    reason: Shared training configuration; production must reject functional early stopping.
+  - name: BaselineModelConfig
+    symbol: BaselineModelConfig
+    kind: dataclass
+    cell_index: 17
+    lines: [91, 101]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_orchestration
+    required_fields_status: complete
+    reason: Shared model configuration for approved baseline construction.
+  - name: ClassificationOnlyLoss
+    symbol: ClassificationOnlyLoss
+    kind: module_class
+    cell_index: 17
+    lines: [681, 687]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_training
+    required_fields_status: complete
+    reason: Cross-entropy classification loss used by approved supervised baselines.
+  - name: ClassificationOnlyTrainer
+    symbol: ClassificationOnlyTrainer
+    kind: trainer_class
+    cell_index: 17
+    lines: [1205, 1270]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_training
+    required_fields_status: complete
+    reason: Final trainer override; production must use fixed epochs and source_validation macro-F1 only.
+  - name: ClassificationOnlyMRIDataset
+    symbol: ClassificationOnlyMRIDataset
+    kind: dataset_class
+    cell_index: 17
+    lines: [1098, 1160]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_training
+    required_fields_status: complete
+    reason: Classification-only tensor dataset needed by approved baseline orchestration.
+  - name: Final build_baseline_model
+    symbol: build_baseline_model
+    kind: factory_function
+    cell_index: 17
+    lines: [1501, 1568]
+    classification: helper_only
+    migration_gate: migrate_only_for_approved_registry
+    required_fields_status: complete
+    reason: Final name-to-model factory; production registry must expose only approved first-slice baselines by default.
+  - name: Earlier build_baseline_model
+    symbol: build_baseline_model
+    kind: factory_function_shadow
+    cell_index: 17
+    lines: [628, 675]
+    classification: obsolete
+    migration_gate: do_not_migrate
+    required_fields_status: complete
+    reason: Superseded by final factory override.
+  - name: Earlier ClassificationOnlyTrainer.fit behavior
+    symbol: _ClassificationOnlyTrainerBase.fit
+    kind: trainer_method_shadow
+    cell_index: 17
+    lines: [690, 802]
+    classification: obsolete
+    migration_gate: do_not_migrate_as_canonical_fit_loop
+    required_fields_status: complete
+    reason: Superseded by final subclass fit implementation; inherited non-fit helpers are helper_only when required.
+  - name: Final train_baseline_cv_fold
+    symbol: train_baseline_cv_fold
+    kind: function
+    cell_index: 17
+    lines: [1574, 1671]
+    classification: helper_only
+    migration_gate: migrate_only_with_source_only_production_override
+    required_fields_status: complete
+    reason: Final external-cohort fold runner; production first slice must constrain it to source_train/source_validation and target_evaluation monitoring only.
+  - name: Earlier CV functions and REQUESTED_BASELINES
+    symbol: train_baseline_cv_fold/run_baseline_cv_for_cohort/run_all_requested_baselines/REQUESTED_BASELINES
+    kind: function_and_constant_shadows
+    cell_index: 17
+    lines: [872, 1051]
+    classification: obsolete
+    migration_gate: do_not_migrate
+    required_fields_status: complete
+    reason: Superseded by external-cohort patch definitions.
+  - name: Final run_baseline_cv_for_cohort
+    symbol: run_baseline_cv_for_cohort
+    kind: function
+    cell_index: 17
+    lines: [1686, 1727]
+    classification: helper_only
+    migration_gate: migrate_only_with_source_only_production_override
+    required_fields_status: complete
+    reason: Final n-fold runner; production first slice must reject target-cohort training.
+  - name: Final run_all_requested_baselines
+    symbol: run_all_requested_baselines
+    kind: function
+    cell_index: 17
+    lines: [1730, 1768]
+    classification: helper_only
+    migration_gate: migrate_only_with_first_slice_registry
+    required_fields_status: complete
+    reason: Final multi-baseline runner; production defaults must be AAGN and FasterSNN only unless later approved.
+  - name: summarize_baseline_cv_results
+    symbol: summarize_baseline_cv_results
+    kind: function
+    cell_index: 17
+    lines: [1771, 1794]
+    classification: posthoc_analysis_only
+    migration_gate: migrate_summary_output_only_if_required_by_reporting
+    required_fields_status: complete
+    reason: Notebook reporting helper; production runtime must not depend on notebook display behavior.
+  - name: Summary CSV display in example cell
+    symbol: df_folds/df_summary/display/to_csv
+    kind: notebook_reporting
+    cell_index: 18
+    lines: unresolved
+    classification: posthoc_analysis_only
+    migration_gate: do_not_migrate_into_production_runtime
+    required_fields_status: unresolved
+    unresolved_reason: Exact source line span is notebook-format dependent; direct cell inspection confirms posthoc reporting only.
+    reason: Notebook convenience output, not reusable training behavior.
+  - name: Common model blocks
+    symbol: ConvNormAct3D/ResidualBlock3D/Small3DBackbone/MLP/TransformerBlock/TransformerEncoder/LocalTransformerEncoder/PatchEmbed3D/BiFPNLayer3D/DeformableMHSA3D/DeformableTransformerBlock3D
+    kind: helper_classes
+    cell_index: 17
+    lines: unresolved
+    classification: helper_only
+    migration_gate: migrate_only_when_required_by_approved_baselines
+    required_fields_status: unresolved
+    unresolved_reason: Individual helper line spans are documented in notebook_extraction.md where needed; implementation gate depends on classification, not public baseline exposure.
+    reason: Shared helper implementations, not user-facing baseline classes.
+
+source_only_protocol:
+  train_split: source_train
+  checkpoint_split: source_validation
+  checkpoint_metric: val_f1_macro
+  target_split: target_evaluation
+  target_role: monitoring_export_only
+  target_adaptation: prohibited
+  target_as_train_cohort: prohibited_for_first_slice
+  allowed_direction_example: "OASIS -> ADNI means OASIS source_train/source_validation and ADNI target_evaluation only."

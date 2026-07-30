@@ -1,0 +1,102 @@
+from pathlib import Path
+
+import torch
+import yaml
+from torch.utils.data import DataLoader
+
+from pada3dacb.adaptation import CORALAdaptationMethod
+from pada3dacb.losses import CorePADA3DACBLoss
+from pada3dacb.training import FixedEpochTrainingConfig, UDATrainer
+from tests.phase8_helpers import TinyPADA3DACB
+from tests.phase9_helpers import make_source_only_environment
+
+
+def make_coral_environment(tmp_path: Path, *, weight: float | None = 1.0) -> Path:
+    source_path = make_source_only_environment(tmp_path)
+    payload = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    payload["experiment"].update(
+        {
+            "name": "synthetic_coral",
+            "display_name": "PADA-3DACB + CORAL",
+            "method": "coral",
+        }
+    )
+    payload["adaptation"] = {
+        "name": "coral",
+        "feature": "z",
+        "weight": weight,
+        "active_during_warmup": False,
+        "covariance": {
+            "estimator": "unbiased",
+            "normalization": "four_d_squared",
+            "compute_dtype": "float32",
+        },
+    }
+    path = tmp_path / "coral.yaml"
+    path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    return path
+
+
+def make_target_loader(*, seed: int = 13, include_label: bool = False) -> DataLoader:
+    rows = []
+    for index in range(4):
+        row = {
+            "x": torch.full((1, 2, 2, 2), float(index + 2) / 7),
+            "subject_id": f"target-{index}",
+            "subject_hash": f"hash-{index}",
+            "cohort": "OASIS",
+        }
+        if include_label:
+            row["y"] = torch.tensor(index % 3)
+        rows.append(row)
+    generator = torch.Generator().manual_seed(seed)
+    return DataLoader(rows, batch_size=2, shuffle=True, generator=generator, drop_last=True)
+
+
+def make_coral_trainer(
+    run_dir: Path,
+    *,
+    warmup_epochs: int = 1,
+    full_epochs: int = 1,
+    seed: int = 11,
+    weight: float = 1.0,
+) -> UDATrainer:
+    torch.manual_seed(seed)
+    model = TinyPADA3DACB()
+    config = FixedEpochTrainingConfig(
+        warmup_epochs=warmup_epochs,
+        full_epochs=full_epochs,
+        learning_rate=1e-2,
+        weight_decay=1e-4,
+        checkpoint_every=1,
+        target_monitoring_enabled=False,
+        mixed_precision=True,
+        seed=seed,
+    )
+    adaptation_configuration = {
+        "name": "coral",
+        "feature": "z",
+        "weight": weight,
+        "active_during_warmup": False,
+        "covariance": {
+            "estimator": "unbiased",
+            "normalization": "four_d_squared",
+            "compute_dtype": "float32",
+        },
+    }
+    return UDATrainer(
+        model,
+        CorePADA3DACBLoss(2),
+        torch.ones(2, 1, 1, 1),
+        run_dir,
+        config=config,
+        split_assignment_hash="split",
+        atlas_hash="atlas",
+        roi_order_hash="roi-order",
+        adaptation_method=CORALAdaptationMethod(),
+        adaptation_weight=weight,
+        adaptation_configuration=adaptation_configuration,
+        source_split_assignment_hash="source",
+        target_adaptation_assignment_hash="target-adaptation",
+        target_evaluation_assignment_hash="target-evaluation",
+    )

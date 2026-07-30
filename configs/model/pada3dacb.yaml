@@ -1,5 +1,47 @@
 model:
   name: PADA-3DACB
   contextual_encoder: false
+  input_channels: 1
   num_classes: 3
   num_rois: 102
+  class_order: [CN, MCI, AD]
+  encoder:
+    base_channels: 32
+    output_channels: 256
+    stem_kernel_size: 7
+    stem_stride: 2
+    residual_kernel_size: 3
+    normalization: GroupNorm
+    activation: ReLU
+    spatial_downsampling: 8
+  tokenizer:
+    feature_dim: 256
+    token_dim: 128
+    mask_grid_contract: pre_normalized_feature_grid
+    mask_interpolation_mode: none
+    epsilon: 0.0
+    learned_roi_embeddings: true
+  token_processing:
+    normalization: LayerNorm
+    mlp_hidden_dim: 128
+    activation: GELU
+    residual: true
+    dropout: 0.2
+  aggregator:
+    hidden_dim: 128
+    activation: tanh
+    normalization_axis: roi
+  classification_head:
+    type: linear
+    hidden_dim: 0
+    dropout: 0.0
+  concept_bottleneck:
+    per_roi_predictor: true
+    hidden_dim: 64
+    activation: GELU
+    dropout: 0.2
+    output_activation: sigmoid
+  output:
+    return_feature_map: true
+    return_tokens: true
+    return_attention: true

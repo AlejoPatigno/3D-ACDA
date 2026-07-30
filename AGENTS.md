@@ -1,318 +1,212 @@
-\# AGENTS.md
+﻿# AGENTS.md
 
 
 
-\## Repository
+
+## Repository
 
 
-
-This repository implements the research code for \*\*PADA-3DACB\*\*, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimer’s disease diagnosis from 3D MRI.
-
+This repository implements the research code for **PADA-3DACB**, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimer's disease diagnosis from 3D MRI.
 
 
-The repository is being prepared for a reproducible scientific publication targeting \*\*Medical \& Biological Engineering \& Computing\*\*.
-
+The repository is being prepared for a reproducible scientific publication targeting **Medical & Biological Engineering & Computing**.
 
 
 The codebase is derived from four canonical notebooks:
 
-
-
-\- `notebooks/archive/preprocess\_original.ipynb`
-
-\- `notebooks/archive/precompute\_original.ipynb`
-
-\- `notebooks/archive/training\_original.ipynb`
-
-\- `notebooks/archive/baselines\_original.ipynb`
-
+- `notebooks/archive/preprocess_original.ipynb`
+- `notebooks/archive/precompute_original.ipynb`
+- `notebooks/archive/training_original.ipynb`
+- `notebooks/archive/baselines_original.ipynb`
 
 
 These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/pada3dacb/`.
 
 
+---
 
-\---
-
-
-
-\## 1. Development Method
+## 1. Development Method
 
 
-
-All work from Phase 12 onward must follow \*\*Specification-Driven Development (SDD)\*\*.
-
+All work from Phase 12 onward must follow **Specification-Driven Development (SDD)**.
 
 
 Before implementing a phase, create or validate:
 
-
-
 ```text
 
-specs/phase\_<NN>\_<slug>/
-
+specs/phase_<NN>_<slug>/
 ├── requirements.md
-
 ├── design.md
-
 ├── tasks.md
-
 ├── acceptance.md
-
-├── agent\_plan.yaml
-
+├── agent_plan.yaml
 └── decisions.md
-
 ```
-
 
 
 Implementation must not begin until:
 
-
-
-1\. requirements are complete;
-
-2\. design contracts are explicit;
-
-3\. acceptance criteria are executable;
-
-4\. task dependencies are defined;
-
-5\. file ownership has no collisions;
-
-6\. an independent review action has approved the specification.
-
+1. requirements are complete;
+2. design contracts are explicit;
+3. acceptance criteria are executable;
+4. task dependencies are defined;
+5. file ownership has no collisions;
+6. an independent review action has approved the specification.
 
 
 Do not invent unresolved scientific values. Record them in `decisions.md` and stop the affected action.
 
 
+---
 
-\---
-
-
-
-\## 2. Multi-Agent Workflow
-
+## 2. Multi-Agent Workflow
 
 
 This repository is coordinated with:
 
-
-
-\- \*\*Gentle-AI\*\* for multi-agent task orchestration;
-
-\- \*\*OpenCode\*\* as the main orchestrator;
-
-\- \*\*Engram\*\* as persistent project memory.
-
+- **Gentle-AI** for multi-agent task orchestration;
+- **OpenCode** as the main orchestrator;
+- **Engram** as persistent project memory.
 
 
 Available agents:
 
-
-
-\- `claude-code`
-
-\- `codex`
-
-\- `gemini-cli`
-
-\- `opencode`
-
-\- `kimi`
-
+- `claude-code`
+- `codex`
+- `gemini-cli`
+- `opencode`
+- `kimi`
 
 
 Codex may implement both production code and tests.
 
 
-
-\### Default responsibilities
-
-
+### Default responsibilities
 
 | Agent | Primary responsibility |
-
 |---|---|
-
 | Claude Code | SDD requirements, scientific contracts, architecture review |
-
 | Codex | Production implementation, unit tests, integration tests, debugging |
-
 | Gemini CLI | Independent mathematical verification, gradients, edge cases |
-
 | OpenCode | Orchestration, repository inspection, CLI/config integration, final commands |
-
 | Kimi | Scope audit, regression audit, documentation consistency |
 
 
-
-These are defaults. `agent\_plan.yaml` is authoritative for each phase.
-
+These are defaults. `agent_plan.yaml` is authoritative for each phase.
 
 
-\### One owner per action
-
+### One owner per action
 
 
 Every atomic action must have exactly one responsible agent.
 
 
-
 No two active actions may own the same file.
-
 
 
 An agent must not modify files outside its declared `owns` list unless the orchestrator updates the action plan first.
 
 
-
 Actions must run in dependency order.
 
 
+---
 
-\---
-
-
-
-\## 3. Engram Memory Contract
-
+## 3. Engram Memory Contract
 
 
 At the start of each phase, load from Engram:
 
-
-
-\- approved phase summaries;
-
-\- permanent scientific decisions;
-
-\- current repository structure;
-
-\- immutable methods and contracts;
-
-\- known discrepancies;
-
-\- current test baseline;
-
-\- current authorized phase;
-
-\- prohibited later-phase behavior.
-
+- approved phase summaries;
+- permanent scientific decisions;
+- current repository structure;
+- immutable methods and contracts;
+- known discrepancies;
+- current test baseline;
+- current authorized phase;
+- prohibited later-phase behavior.
 
 
 After every action, write a compact Engram record:
 
-
-
 ```yaml
 
 phase: <number>
-
-action\_id: <id>
-
+action_id: <id>
 agent: <agent>
-
 status: completed | blocked | failed
 
 
-
-files\_created: \[]
-
-files\_modified: \[]
+files_created: [...]
+files_modified: [...]
 
 
-
-contracts\_implemented: \[]
-
-decisions: \[]
-
+contracts_implemented: [...]
+decisions: [...]
 
 
 tests:
-
-&#x20; command: ""
-
-&#x20; exit\_code: 0
-
-&#x20; result: ""
+  command: ""
+  exit_code: 0
+  result: ""
 
 
-
-regressions\_checked: \[]
-
-discrepancies: \[]
-
-limitations: \[]
-
-next\_action: null
+regressions_checked: [...]
+discrepancies: [...]
+limitations: [...]
+next_action: <id or null>
 
 ```
-
 
 
 Do not store private chain-of-thought, full conversations, or verbose reasoning in Engram.
 
 
+Store only:
 
-Store only decisions, contracts, file changes, tests, discrepancies, limitations, and next steps.
+- decisions;
+- contracts;
+- file changes;
+- test evidence;
+- discrepancies;
+- limitations;
+- remaining work.
 
 
+---
 
-\---
-
-
-
-\## 4. Permanent Scientific Invariants
-
+## 4. Permanent Scientific Invariants
 
 
 These rules are immutable unless explicitly changed by the user.
 
 
-
-\### Cohorts
-
+### Cohorts
 
 
 Supported cohorts:
 
-
-
-\- `ADNI`
-
-\- `OASIS`
-
+- `ADNI`
+- `OASIS`
 
 
 Supported transfer directions:
 
-
-
-\- `ADNI -> OASIS`
-
-\- `OASIS -> ADNI`
-
+- `ADNI -> OASIS`
+- `OASIS -> ADNI`
 
 
 Do not add new cohorts.
 
 
-
 Do not search for, download, or integrate external cohort data.
 
 
-
-\### Diagnostic labels
-
+### Diagnostic labels
 
 
 Use the fixed class order:
-
-
 
 ```text
 
@@ -325,18 +219,13 @@ AD  = 2
 ```
 
 
-
 Do not derive class order alphabetically.
 
 
-
-\### Production model
-
+### Production model
 
 
 The only proposed production architecture is:
-
-
 
 ```text
 
@@ -345,76 +234,47 @@ PADA-3DACB
 ```
 
 
-
 It is the former Lite / no-contextual-encoder architecture.
-
 
 
 The following are forbidden in production:
 
+- `PADA-3DACB-Full`
+- `PADA-3DACB-Lite` as a public model name
+- `ContextualROIEncoder`
+- `ctx_enc`
+- Transformer-based ROI contextual mixing
+- identity patching of a Full model
+- Full/Lite runtime switches
 
 
-\- `PADA-3DACB-Full`
-
-\- `PADA-3DACB-Lite` as a public model name
-
-\- `ContextualROIEncoder`
-
-\- `ctx\_enc`
-
-\- Transformer-based ROI contextual mixing
-
-\- identity patching of a Full model
-
-\- Full/Lite runtime switches
+### Training
 
 
-
-\### Training
-
-
-
-\- Fixed epochs only.
-
-\- Early stopping is prohibited.
-
-\- Source-validation macro-F1 is the only best-checkpoint criterion.
-
-\- Training must continue after saving a best checkpoint.
-
-\- Target monitoring must not affect:
-
-&#x20; - loss;
-
-&#x20; - gradients;
-
-&#x20; - optimizer;
-
-&#x20; - scheduler;
-
-&#x20; - checkpoint selection;
-
-&#x20; - epoch count;
-
-&#x20; - hyperparameter selection.
+- Fixed epochs only.
+- Early stopping is prohibited.
+- Source-validation macro-F1 is the only best-checkpoint criterion.
+- Training must continue after saving a best checkpoint.
+- Target monitoring must not affect:
+  - loss;
+  - gradients;
+  - optimizer;
+  - scheduler;
+  - checkpoint selection;
+  - epoch count;
+  - hyperparameter selection.
 
 
-
-\### Target partitions
-
+### Target partitions
 
 
-`target\_adaptation` and `target\_evaluation` must remain disjoint.
-
+`target_adaptation` and `target_evaluation` must remain disjoint.
 
 
 Target diagnosis labels must not enter adaptation training.
 
 
-
 Target evaluation is:
-
-
 
 ```text
 
@@ -423,824 +283,515 @@ MONITORING ONLY — NOT A TRAINING LOSS
 ```
 
 
-
-\### Concept artifacts
-
+### Concept artifacts
 
 
-\- Do not refit concept normalizers per fold.
-
-\- Do not regenerate concept targets inside experiment phases.
-
-\- Do not regenerate Jacobian artifacts inside experiment phases.
-
-\- Preserve Phase 5 ROI ordering.
-
-\- Preserve atlas and artifact hashes.
+- Do not refit concept normalizers per fold.
+- Do not regenerate concept targets inside experiment phases.
+- Do not regenerate Jacobian artifacts inside experiment phases.
+- Preserve Phase 5 ROI ordering.
+- Preserve atlas and artifact hashes.
 
 
-
-\### Immutable approved methods
-
+### Immutable approved methods
 
 
 The following methods are already approved and regression-protected:
 
-
-
-\- `PADA-3DACB Source-Only`
-
-\- `PADA-3DACB + CORAL`
-
-\- `PADA-3DACB + MMD`
-
+- `PADA-3DACB Source-Only`
+- `PADA-3DACB + CORAL`
+- `PADA-3DACB + MMD`
 
 
 Later work must not silently alter their:
 
+- equations;
+- losses;
+- split behavior;
+- target-label isolation;
+- checkpoint policy;
+- output schema;
+- experiment hashes.
 
 
-\- equations;
+---
 
-\- losses;
-
-\- split behavior;
-
-\- target-label isolation;
-
-\- checkpoint policy;
-
-\- output schema;
-
-\- experiment hashes.
-
-
-
-\---
-
-
-
-\## 5. Canonical Notebook Ownership
-
+## 5. Canonical Notebook Ownership
 
 
 Use the notebooks only as scientific references.
 
 
-
-\### Preprocessing
-
+### Preprocessing
 
 
 Canonical source:
 
-
-
 ```text
 
-notebooks/archive/preprocess\_original.ipynb
+notebooks/archive/preprocess_original.ipynb
 
 ```
 
 
-
 Responsibilities:
 
-
-
-\- ADNI/OASIS discovery;
-
-\- subject identification;
-
-\- scan selection;
-
-\- MRI loading;
-
-\- channel conversion;
-
-\- robust normalization;
-
-\- trilinear resize;
-
-\- center crop/padding;
-
-\- model-ready `.pt` output.
-
+- ADNI/OASIS discovery;
+- subject identification;
+- scan selection;
+- MRI loading;
+- channel conversion;
+- robust normalization;
+- trilinear resize;
+- center crop/padding;
+- model-ready `.pt` output.
 
 
 Do not introduce new preprocessing operations unless explicitly approved.
 
 
-
 Forbidden additions include:
 
+- new N4 correction;
+- new skull stripping;
+- new registration;
+- new atlas normalization;
+- histogram matching;
+- harmonization;
+- augmentation;
+- denoising;
+- tissue segmentation.
 
 
-\- new N4 correction;
-
-\- new skull stripping;
-
-\- new registration;
-
-\- new atlas normalization;
-
-\- histogram matching;
-
-\- harmonization;
-
-\- augmentation;
-
-\- denoising;
-
-\- tissue segmentation.
-
-
-
-\### Artifact precomputation
-
+### Artifact precomputation
 
 
 Canonical source:
 
-
-
 ```text
 
-notebooks/archive/precompute\_original.ipynb
+notebooks/archive/precompute_original.ipynb
 
 ```
 
 
-
 Responsibilities:
 
-
-
-\- prepared atlas loading;
-
-\- ROI masks and ordering;
-
-\- concept targets;
-
-\- concept normalizer;
-
-\- Jacobian summaries;
-
-\- artifact cache.
-
+- prepared atlas loading;
+- ROI masks and ordering;
+- concept targets;
+- concept normalizer;
+- Jacobian summaries;
+- artifact cache.
 
 
 Do not resample the atlas in the default pipeline.
 
 
-
-\### Model and training
-
+### Model and training
 
 
 Canonical source:
 
-
-
 ```text
 
-notebooks/archive/training\_original.ipynb
+notebooks/archive/training_original.ipynb
 
 ```
 
 
-
 Responsibilities:
 
+- latest PADA-3DACB components;
+- core losses;
+- warm-up/full-stage behavior;
+- adaptation behavior originally present in the notebook.
 
 
-\- latest PADA-3DACB components;
-
-\- core losses;
-
-\- warm-up/full-stage behavior;
-
-\- adaptation behavior originally present in the notebook.
-
-
-
-\### Baselines
-
+### Baselines
 
 
 Canonical source:
 
-
-
 ```text
 
-notebooks/archive/baselines\_original.ipynb
+notebooks/archive/baselines_original.ipynb
 
 ```
 
 
-
 Responsibilities:
 
-
-
-\- existing supervised baseline models;
-
-\- baseline-specific datasets;
-
-\- baseline training assumptions.
-
+- existing supervised baseline models;
+- baseline-specific datasets;
+- baseline training assumptions.
 
 
 Do not replace notebook baselines with unrelated external models unless explicitly approved.
 
 
+---
 
-\---
-
-
-
-\## 6. Repository Structure
-
+## 6. Repository Structure
 
 
 Expected main layout:
 
-
-
 ```text
 
 src/pada3dacb/
-
 ├── adaptation/
-
 ├── artifacts/
-
 ├── data/
-
 ├── evaluation/
-
 ├── experiments/
-
 ├── losses/
-
 ├── models/
-
 └── training/
 
 
-
 configs/
-
 docs/
-
 notebooks/archive/
-
 scripts/
-
 specs/
-
 tests/
-
 ```
-
 
 
 Do not place generated results inside `src/`, `configs/`, or `tests/`.
 
 
-
 Use:
-
-
 
 ```text
 
 runs/
-
 results/
-
 artifacts/
 
 ```
 
 
-
 for generated outputs, subject to the existing project conventions.
 
 
+---
 
-\---
+## 7. Coding Standards
 
 
+### Python
 
-\## 7. Coding Standards
 
+- Python 3.10+ compatible unless `pyproject.toml` says otherwise.
+- Use type hints for public functions and dataclasses.
+- Prefer small, single-purpose modules.
+- Avoid global mutable state.
+- Avoid hidden filesystem discovery.
+- Do not initialize CUDA at import time.
+- Do not perform network access.
+- Do not hard-code user-specific, Kaggle-specific, or machine-specific paths.
+- Use `pathlib.Path`.
+- Use custom project exceptions where available.
+- Prefer dataclasses for structured configuration and outputs.
+- Validate tensor dimensions, dtype, finiteness, device, and ROI count explicitly.
+- Do not silently broadcast incompatible tensors.
+- Do not silently select arbitrary dictionary tensors from `.pt` files.
+- Load tensors on CPU unless the caller explicitly moves them.
 
 
-\### Python
+### PyTorch
 
 
+- Keep differentiable computations in PyTorch.
+- Do not use NumPy inside differentiable losses.
+- Avoid unnecessary tensor clones and `repeat()`.
+- Use one shared PADA-3DACB model for source and target adaptation passes.
+- Never detach features or probabilities unless the approved specification explicitly requires it.
+- Check non-finite losses before backward.
+- Preserve deterministic seeds and loader-generator states.
+- Use atomic checkpoint writes.
 
-\- Python 3.10+ compatible unless `pyproject.toml` says otherwise.
 
-\- Use type hints for public functions and dataclasses.
+### Configuration
 
-\- Prefer small, single-purpose modules.
 
-\- Avoid global mutable state.
+- `pyproject.toml` is the canonical dependency source.
+- Scientific hyperparameters must be explicit.
+- New method hyperparameters must not receive invented publication defaults.
+- Synthetic fixture values must be labeled as test-only.
+- Configuration hashes must change when scientific behavior changes.
+- Real runs must fail when required scientific values remain unresolved.
 
-\- Avoid hidden filesystem discovery.
 
-\- Do not initialize CUDA at import time.
+### Paths
 
-\- Do not perform network access.
 
-\- Do not hard-code user-specific, Kaggle-specific, or machine-specific paths.
+- Resolve relative paths against the relevant configuration file or declared root.
+- Do not recursively search outside configured roots.
+- Do not silently remap missing files.
+- Prefix remapping must be explicit and audited.
 
-\- Use `pathlib.Path`.
 
-\- Use custom project exceptions where available.
+---
 
-\- Prefer dataclasses for structured configuration and outputs.
+## 8. Scientific Integrity Rules
 
-\- Validate tensor dimensions, dtype, finiteness, device, and ROI count explicitly.
 
-\- Do not silently broadcast incompatible tensors.
+- Do not overstate results.
+- Do not claim a method came from a notebook when it was newly added.
+- Do not claim publication performance before real experiments run.
+- Do not use target-monitoring metrics to tune adaptation hyperparameters.
+- Do not hide failed configurations or folds.
+- Do not average away failed folds.
+- Do not regenerate splits inside experiment runners.
+- Do not change source or target subjects between methods.
+- Do not use target labels in adaptation batches.
+- Do not use target labels to select checkpoints.
+- Do not describe target evaluation as unsupervised; only target adaptation is label-free.
 
-\- Do not silently select arbitrary dictionary tensors from `.pt` files.
 
-\- Load tensors on CPU unless the caller explicitly moves them.
+---
 
-
-
-\### PyTorch
-
-
-
-\- Keep differentiable computations in PyTorch.
-
-\- Do not use NumPy inside differentiable losses.
-
-\- Avoid unnecessary tensor clones and `repeat()`.
-
-\- Use one shared PADA-3DACB model for source and target adaptation passes.
-
-\- Never detach features or probabilities unless the approved specification explicitly requires it.
-
-\- Check non-finite losses before backward.
-
-\- Preserve deterministic seeds and loader-generator states.
-
-\- Use atomic checkpoint writes.
-
-
-
-\### Configuration
-
-
-
-\- `pyproject.toml` is the canonical dependency source.
-
-\- Scientific hyperparameters must be explicit.
-
-\- New method hyperparameters must not receive invented publication defaults.
-
-\- Synthetic fixture values must be labeled as test-only.
-
-\- Configuration hashes must change when scientific behavior changes.
-
-\- Real runs must fail when required scientific values remain unresolved.
-
-
-
-\### Paths
-
-
-
-\- Resolve relative paths against the relevant configuration file or declared root.
-
-\- Do not recursively search outside configured roots.
-
-\- Do not silently remap missing files.
-
-\- Prefix remapping must be explicit and audited.
-
-
-
-\---
-
-
-
-\## 8. Scientific Integrity Rules
-
-
-
-\- Do not overstate results.
-
-\- Do not claim a method came from a notebook when it was newly added.
-
-\- Do not claim publication performance before real experiments run.
-
-\- Do not use target-monitoring metrics to tune adaptation hyperparameters.
-
-\- Do not hide failed configurations or folds.
-
-\- Do not average away failed folds.
-
-\- Do not regenerate splits inside experiment runners.
-
-\- Do not change source or target subjects between methods.
-
-\- Do not use target labels in adaptation batches.
-
-\- Do not use target labels to select checkpoints.
-
-\- Do not describe target evaluation as unsupervised; only target adaptation is label-free.
-
-
-
-\---
-
-
-
-\## 9. Phase Boundaries
-
+## 9. Phase Boundaries
 
 
 Only the currently authorized phase may be implemented.
 
 
-
 Before adding a production file, verify that it belongs to the active phase.
-
 
 
 Do not create placeholders for future scientific methods unless explicitly requested.
 
 
-
 Unknown or future methods must raise:
 
-
-
-\- `PhaseNotImplementedError`, or
-
-\- `UnsupportedExperimentError`
-
+- `PhaseNotImplementedError`, or
+- `UnsupportedExperimentError`
 
 
 rather than silently returning zero loss or reusing another method.
 
 
-
 Every phase report must explicitly confirm that the next phase was not started.
 
 
+---
 
-\---
-
-
-
-\## 10. Tests
-
+## 10. Tests
 
 
 Each action must add or update focused tests.
 
 
-
 Required test categories when applicable:
 
+- direct mathematical reference tests;
+- tensor-contract tests;
+- gradient-flow tests;
+- invalid-input tests;
+- deterministic behavior tests;
+- checkpoint/resume tests;
+- CLI smoke tests;
+- target-label isolation tests;
+- previous-method regression tests;
+- phase-boundary tests.
 
 
-\- direct mathematical reference tests;
+### Test rules
 
-\- tensor-contract tests;
-
-\- gradient-flow tests;
-
-\- invalid-input tests;
-
-\- deterministic behavior tests;
-
-\- checkpoint/resume tests;
-
-\- CLI smoke tests;
-
-\- target-label isolation tests;
-
-\- previous-method regression tests;
-
-\- phase-boundary tests.
+- CPU-only by default.
+- CUDA-specific tests must be optional.
+- Synthetic fixtures must be small and deterministic.
+- Do not require real ADNI/OASIS data in CI.
+- Do not weaken tolerances only to make tests pass.
+- Document tolerance choices.
+- Exact algebraic operations should use exact equality where feasible.
+- Float32 model comparisons should use explicit `rtol` and `atol`.
+- Interrupted/resumed runs should match uninterrupted runs exactly when the runtime contract supports it.
 
 
-
-\### Test rules
-
-
-
-\- CPU-only by default.
-
-\- CUDA-specific tests must be optional.
-
-\- Synthetic fixtures must be small and deterministic.
-
-\- Do not require real ADNI/OASIS data in CI.
-
-\- Do not weaken tolerances only to make tests pass.
-
-\- Document tolerance choices.
-
-\- Exact algebraic operations should use exact equality where feasible.
-
-\- Float32 model comparisons should use explicit `rtol` and `atol`.
-
-\- Interrupted/resumed runs should match uninterrupted runs exactly when the runtime contract supports it.
-
-
-
-\### Regression protection
-
+### Regression protection
 
 
 Every new adaptation method must re-run regression tests for:
 
-
-
-\- Source-Only;
-
-\- CORAL;
-
-\- MMD;
-
-\- all previously approved methods.
-
+- Source-Only;
+- CORAL;
+- MMD;
+- all previously approved methods.
 
 
 A new method must not change previous experiment hashes without an explicit documented reason.
 
 
+---
 
-\---
-
-
-
-\## 11. Required Validation Commands
-
+## 11. Required Validation Commands
 
 
 At the end of every phase run:
 
-
-
 ```bash
 
 python -m pip install -e .
-
-python -c "import pada3dacb; print(pada3dacb.\_\_version\_\_)"
-
+python -c "import pada3dacb; print(pada3dacb.__version__)"
 python -m pytest -q
-
 python -m ruff check .
-
 git diff --check
 
 ```
 
 
-
 When normal dependency resolution fails because of network restrictions:
 
-
-
-1\. report the failed command;
-
-2\. report the exact error;
-
-3\. optionally run `python -m pip install --no-deps -e .` in the already resolved environment;
-
-4\. do not describe `--no-deps` as equivalent to a clean installation.
-
+1. report the failed command;
+2. report the exact error;
+3. optionally run `python -m pip install --no-deps -e .` in the already resolved environment;
+4. do not describe `--no-deps` as equivalent to a clean installation.
 
 
 Run focused tests before the full suite.
 
 
-
 Do not report success without exact exit codes and results.
 
 
+---
 
-\---
-
-
-
-\## 12. Git and Change Discipline
+## 12. Git and Change Discipline
 
 
-
-\- Inspect `git status` before starting.
-
-\- Do not overwrite unrelated user changes.
-
-\- Keep generated artifacts out of commits unless explicitly required.
-
-\- Do not commit:
-
-&#x20; - `\_\_pycache\_\_/`;
-
-&#x20; - `.pytest\_cache/`;
-
-&#x20; - `\*.egg-info/`;
-
-&#x20; - local runtime metadata;
-
-&#x20; - synthetic smoke outputs;
-
-&#x20; - `.codex/`;
-
-&#x20; - private data;
-
-&#x20; - MRI volumes;
-
-&#x20; - checkpoints from local validation.
-
-\- Run `git diff --check`.
-
-\- Keep commits phase-scoped and reviewable.
-
-\- Do not rewrite history without explicit approval.
+- Inspect `git status` before starting.
+- Do not overwrite unrelated user changes.
+- Keep generated artifacts out of commits unless explicitly required.
+- Do not commit:
+  - `__pycache__/`;
+  - `.pytest_cache/`;
+  - `*.egg-info/`;
+  - local runtime metadata;
+  - synthetic smoke outputs;
+  - `.codex/`;
+  - private data;
+  - MRI volumes;
+  - checkpoints from local validation.
+- Run `git diff --check`.
+- Keep commits phase-scoped and reviewable.
+- Do not rewrite history without explicit approval.
 
 
+---
 
-\---
-
-
-
-\## 13. Action Completion Checklist
-
+## 13. Action Completion Checklist
 
 
 Before marking an action complete:
 
+- [ ] Read the active SDD specification.
+- [ ] Confirm action dependencies are complete.
+- [ ] Confirm exclusive file ownership.
+- [ ] Implement only the declared scope.
+- [ ] Add or update focused tests.
+- [ ] Run focused tests.
+- [ ] Run focused Ruff checks.
+- [ ] Confirm no later-phase behavior was added.
+- [ ] Record discrepancies and limitations.
+- [ ] Write the compact Engram completion record.
+- [ ] Release file ownership.
 
 
-\- \[ ] Read the active SDD specification.
+---
 
-\- \[ ] Confirm action dependencies are complete.
-
-\- \[ ] Confirm exclusive file ownership.
-
-\- \[ ] Implement only the declared scope.
-
-\- \[ ] Add or update focused tests.
-
-\- \[ ] Run focused tests.
-
-\- \[ ] Run focused Ruff checks.
-
-\- \[ ] Confirm no later-phase behavior was added.
-
-\- \[ ] Record discrepancies and limitations.
-
-\- \[ ] Write the compact Engram completion record.
-
-\- \[ ] Release file ownership.
-
-
-
-\---
-
-
-
-\## 14. Phase Completion Checklist
-
+## 14. Phase Completion Checklist
 
 
 Before marking a phase complete:
 
+- [ ] SDD specification exists.
+- [ ] Independent specification review passed.
+- [ ] Every action has exactly one owner.
+- [ ] No file-ownership collision occurred.
+- [ ] All action-level tests passed.
+- [ ] Complete regression suite passed.
+- [ ] Ruff passed.
+- [ ] `git diff --check` passed.
+- [ ] Documentation matches implemented behavior.
+- [ ] Scientific equations match code.
+- [ ] Configuration matches code and documentation.
+- [ ] Previous approved methods remain unchanged.
+- [ ] Target-label isolation is verified.
+- [ ] Final Engram summary was written.
+- [ ] The next phase was not started.
 
 
-\- \[ ] SDD specification exists.
+---
 
-\- \[ ] Independent specification review passed.
-
-\- \[ ] Every action has exactly one owner.
-
-\- \[ ] No file-ownership collision occurred.
-
-\- \[ ] All action-level tests passed.
-
-\- \[ ] Complete regression suite passed.
-
-\- \[ ] Ruff passed.
-
-\- \[ ] `git diff --check` passed.
-
-\- \[ ] Documentation matches implemented behavior.
-
-\- \[ ] Scientific equations match code.
-
-\- \[ ] Configuration matches code and documentation.
-
-\- \[ ] Previous approved methods remain unchanged.
-
-\- \[ ] Target-label isolation is verified.
-
-\- \[ ] Final Engram summary was written.
-
-\- \[ ] The next phase was not started.
-
-
-
-\---
-
-
-
-\## 15. Final Reporting Format
-
+## 15. Final Reporting Format
 
 
 Every phase report must include:
 
+1. phase status;
+2. SDD documents created;
+3. action graph;
+4. agent assigned to each action;
+5. files created or modified per action;
+6. scientific equations and tensor contracts;
+7. configuration decisions;
+8. target-label isolation evidence;
+9. checkpoint and resume behavior;
+10. focused test commands and results;
+11. full test result;
+12. Ruff result;
+13. `git diff --check` result;
+14. regression results for previous methods;
+15. discrepancies;
+16. installation limitations;
+17. computational limitations;
+18. Engram records created;
+19. proposed next-phase scope without implementing it;
+20. explicit confirmation that the next phase was not started.
 
 
-1\. phase status;
+---
 
-2\. SDD documents created;
-
-3\. action graph;
-
-4\. agent assigned to each action;
-
-5\. files created or modified per action;
-
-6\. scientific equations and tensor contracts;
-
-7\. configuration decisions;
-
-8\. target-label isolation evidence;
-
-9\. checkpoint and resume behavior;
-
-10\. focused test commands and results;
-
-11\. full test result;
-
-12\. Ruff result;
-
-13\. `git diff --check` result;
-
-14\. regression results for previous methods;
-
-15\. discrepancies;
-
-16\. installation limitations;
-
-17\. computational limitations;
-
-18\. Engram records created;
-
-19\. proposed next-phase scope without implementing it;
-
-20\. explicit confirmation that the next phase was not started.
-
-
-
-\---
-
-
-
-\## 16. Current Authorized Phase
-
+## 16. Current Authorized Phase
 
 
 At the time this file was created, the current authorized phase is:
 
 
-
 ```text
 
-Phase 12 — PADA-3DACB + CDAN
+Phase 16 — Quantitative Concept, Anatomical Consistency,
+           Head Agreement and ROI Stability Evaluation
 
 ```
-
 
 
 The phase specification must be stored under:
 
 
-
 ```text
 
-specs/phase\_12\_cdan/
+specs/phase_16_concept_validation/
 
 ```
 
 
+Phase 16 is authorized by explicit human approval after Phase 15 final audit and validation passed. The unresolved native Phase 14 review/receipt incident (#1793) is administrative and remains a hard blocker for archive, commit, push, PR, or publication, but does not authorize changes to Phase 14 scientific behavior. Phase 17 production work remains forbidden until Phase 16 is reviewed and explicitly approved.
 
-Phase 13 production work is forbidden until Phase 12 is reviewed and explicitly approved.
+## graphify
 
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
