@@ -41,3 +41,24 @@ def test_write_all_tables_preserves_first_row_column_order(tmp_path) -> None:
         reader = csv.DictReader(handle)
         assert reader.fieldnames == ["method", "value"]
         assert list(reader) == [{"method": "source_only", "value": "0.25"}]
+
+
+def test_write_required_tables_creates_complete_protocol_set(tmp_path) -> None:
+    from pada3dacb.evaluation.concepts.tables import write_required_tables
+
+    write_required_tables(tmp_path, {"method_status": [{"method": "aagn"}]})
+
+    expected = {
+        "concept_fidelity_global.csv",
+        "concept_fidelity_per_subject.csv",
+        "concept_fidelity_per_roi.csv",
+        "anatomy_consistency_global.csv",
+        "anatomy_consistency_per_subject.csv",
+        "anatomy_consistency_per_roi.csv",
+        "head_agreement.csv",
+        "roi_stability.csv",
+        "class_conditional_profiles.csv",
+        "paired_method_comparisons.csv",
+        "method_status.csv",
+    }
+    assert {path.name for path in (tmp_path / "tables").iterdir()} == expected

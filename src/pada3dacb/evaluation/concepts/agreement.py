@@ -72,6 +72,10 @@ def compute_head_predictive_metrics(
     _validate_probabilities(latent_probs, concept_probs)
     if true_labels.shape != (latent_probs.shape[0],):
         raise ValueError("true_labels must have one entry per subject")
+    if not np.issubdtype(true_labels.dtype, np.integer) or np.any(
+        ~np.isin(true_labels, np.array([0, 1, 2]))
+    ):
+        raise ValueError("true_labels must use the fixed class order indices 0, 1, and 2")
     latent_predictions = _probs_to_predictions(latent_probs, true_labels)
     concept_predictions = _probs_to_predictions(concept_probs, true_labels)
 
@@ -192,6 +196,16 @@ def compute_per_class_disagreement(
     Returns:
         List of PerClassDisagreement for classes CN, MCI, AD
     """
+    if any(
+        vector.ndim != 1
+        for vector in (latent_pred, concept_pred, true_labels)
+    ) or not (latent_pred.shape == concept_pred.shape == true_labels.shape):
+        raise ValueError("prediction and label vectors must have the same length")
+    if not np.issubdtype(true_labels.dtype, np.integer) or np.any(
+        ~np.isin(true_labels, np.array([0, 1, 2]))
+    ):
+        raise ValueError("true_labels must use the fixed class order indices 0, 1, and 2")
+
     class_names = ["CN", "MCI", "AD"]
     results = []
 

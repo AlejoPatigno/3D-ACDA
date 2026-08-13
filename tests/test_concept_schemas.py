@@ -180,6 +180,14 @@ class TestConceptSubjectRecord:
             _make_record(attention_alpha=(0.1, 0.1, 0.1, 0.1, 0.1))
 
     @pytest.mark.parametrize(
+        "field_name",
+        ["predicted_concepts", "concept_targets", "anatomical_targets"],
+    )
+    def test_rejects_out_of_range_normalized_concepts(self, field_name):
+        with pytest.raises(ValueError, match=rf"{field_name} must be in \[0, 1\]"):
+            _make_record(**{field_name: (0.1, 0.2, 0.3, 0.4, 1.1)})
+
+    @pytest.mark.parametrize(
         ("overrides", "message"),
         [
             ({"K": 0}, "K must be positive"),

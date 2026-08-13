@@ -1,16 +1,10 @@
 ﻿# AGENTS.md
 
-
-
-
 ## Repository
-
 
 This repository implements the research code for **PADA-3DACB**, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimer's disease diagnosis from 3D MRI.
 
-
 The repository is being prepared for a reproducible scientific publication targeting **Medical & Biological Engineering & Computing**.
-
 
 The codebase is derived from four canonical notebooks:
 
@@ -19,17 +13,13 @@ The codebase is derived from four canonical notebooks:
 - `notebooks/archive/training_original.ipynb`
 - `notebooks/archive/baselines_original.ipynb`
 
-
 These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/pada3dacb/`.
-
 
 ---
 
 ## 1. Development Method
 
-
 All work from Phase 12 onward must follow **Specification-Driven Development (SDD)**.
-
 
 Before implementing a phase, create or validate:
 
@@ -44,7 +34,6 @@ specs/phase_<NN>_<slug>/
 └── decisions.md
 ```
 
-
 Implementation must not begin until:
 
 1. requirements are complete;
@@ -54,21 +43,17 @@ Implementation must not begin until:
 5. file ownership has no collisions;
 6. an independent review action has approved the specification.
 
-
 Do not invent unresolved scientific values. Record them in `decisions.md` and stop the affected action.
-
 
 ---
 
 ## 2. Multi-Agent Workflow
-
 
 This repository is coordinated with:
 
 - **Gentle-AI** for multi-agent task orchestration;
 - **OpenCode** as the main orchestrator;
 - **Engram** as persistent project memory.
-
 
 Available agents:
 
@@ -78,9 +63,7 @@ Available agents:
 - `opencode`
 - `kimi`
 
-
 Codex may implement both production code and tests.
-
 
 ### Default responsibilities
 
@@ -92,29 +75,21 @@ Codex may implement both production code and tests.
 | OpenCode | Orchestration, repository inspection, CLI/config integration, final commands |
 | Kimi | Scope audit, regression audit, documentation consistency |
 
-
 These are defaults. `agent_plan.yaml` is authoritative for each phase.
-
 
 ### One owner per action
 
-
 Every atomic action must have exactly one responsible agent.
-
 
 No two active actions may own the same file.
 
-
 An agent must not modify files outside its declared `owns` list unless the orchestrator updates the action plan first.
 
-
 Actions must run in dependency order.
-
 
 ---
 
 ## 3. Engram Memory Contract
-
 
 At the start of each phase, load from Engram:
 
@@ -127,7 +102,6 @@ At the start of each phase, load from Engram:
 - current authorized phase;
 - prohibited later-phase behavior.
 
-
 After every action, write a compact Engram record:
 
 ```yaml
@@ -137,20 +111,16 @@ action_id: <id>
 agent: <agent>
 status: completed | blocked | failed
 
-
 files_created: [...]
 files_modified: [...]
 
-
 contracts_implemented: [...]
 decisions: [...]
-
 
 tests:
   command: ""
   exit_code: 0
   result: ""
-
 
 regressions_checked: [...]
 discrepancies: [...]
@@ -159,9 +129,7 @@ next_action: <id or null>
 
 ```
 
-
 Do not store private chain-of-thought, full conversations, or verbose reasoning in Engram.
-
 
 Store only:
 
@@ -173,38 +141,29 @@ Store only:
 - limitations;
 - remaining work.
 
-
 ---
 
 ## 4. Permanent Scientific Invariants
 
-
 These rules are immutable unless explicitly changed by the user.
 
-
 ### Cohorts
-
 
 Supported cohorts:
 
 - `ADNI`
 - `OASIS`
 
-
 Supported transfer directions:
 
 - `ADNI -> OASIS`
 - `OASIS -> ADNI`
 
-
 Do not add new cohorts.
-
 
 Do not search for, download, or integrate external cohort data.
 
-
 ### Diagnostic labels
-
 
 Use the fixed class order:
 
@@ -218,12 +177,9 @@ AD  = 2
 
 ```
 
-
 Do not derive class order alphabetically.
 
-
 ### Production model
-
 
 The only proposed production architecture is:
 
@@ -233,9 +189,7 @@ PADA-3DACB
 
 ```
 
-
 It is the former Lite / no-contextual-encoder architecture.
-
 
 The following are forbidden in production:
 
@@ -247,9 +201,7 @@ The following are forbidden in production:
 - identity patching of a Full model
 - Full/Lite runtime switches
 
-
 ### Training
-
 
 - Fixed epochs only.
 - Early stopping is prohibited.
@@ -264,15 +216,11 @@ The following are forbidden in production:
   - epoch count;
   - hyperparameter selection.
 
-
 ### Target partitions
-
 
 `target_adaptation` and `target_evaluation` must remain disjoint.
 
-
 Target diagnosis labels must not enter adaptation training.
-
 
 Target evaluation is:
 
@@ -282,9 +230,7 @@ MONITORING ONLY — NOT A TRAINING LOSS
 
 ```
 
-
 ### Concept artifacts
-
 
 - Do not refit concept normalizers per fold.
 - Do not regenerate concept targets inside experiment phases.
@@ -292,16 +238,13 @@ MONITORING ONLY — NOT A TRAINING LOSS
 - Preserve Phase 5 ROI ordering.
 - Preserve atlas and artifact hashes.
 
-
 ### Immutable approved methods
-
 
 The following methods are already approved and regression-protected:
 
 - `PADA-3DACB Source-Only`
 - `PADA-3DACB + CORAL`
 - `PADA-3DACB + MMD`
-
 
 Later work must not silently alter their:
 
@@ -313,17 +256,13 @@ Later work must not silently alter their:
 - output schema;
 - experiment hashes.
 
-
 ---
 
 ## 5. Canonical Notebook Ownership
 
-
 Use the notebooks only as scientific references.
 
-
 ### Preprocessing
-
 
 Canonical source:
 
@@ -332,7 +271,6 @@ Canonical source:
 notebooks/archive/preprocess_original.ipynb
 
 ```
-
 
 Responsibilities:
 
@@ -346,9 +284,7 @@ Responsibilities:
 - center crop/padding;
 - model-ready `.pt` output.
 
-
 Do not introduce new preprocessing operations unless explicitly approved.
-
 
 Forbidden additions include:
 
@@ -362,9 +298,7 @@ Forbidden additions include:
 - denoising;
 - tissue segmentation.
 
-
 ### Artifact precomputation
-
 
 Canonical source:
 
@@ -373,7 +307,6 @@ Canonical source:
 notebooks/archive/precompute_original.ipynb
 
 ```
-
 
 Responsibilities:
 
@@ -384,12 +317,9 @@ Responsibilities:
 - Jacobian summaries;
 - artifact cache.
 
-
 Do not resample the atlas in the default pipeline.
 
-
 ### Model and training
-
 
 Canonical source:
 
@@ -399,7 +329,6 @@ notebooks/archive/training_original.ipynb
 
 ```
 
-
 Responsibilities:
 
 - latest PADA-3DACB components;
@@ -407,9 +336,7 @@ Responsibilities:
 - warm-up/full-stage behavior;
 - adaptation behavior originally present in the notebook.
 
-
 ### Baselines
-
 
 Canonical source:
 
@@ -419,21 +346,17 @@ notebooks/archive/baselines_original.ipynb
 
 ```
 
-
 Responsibilities:
 
 - existing supervised baseline models;
 - baseline-specific datasets;
 - baseline training assumptions.
 
-
 Do not replace notebook baselines with unrelated external models unless explicitly approved.
-
 
 ---
 
 ## 6. Repository Structure
-
 
 Expected main layout:
 
@@ -449,7 +372,6 @@ src/pada3dacb/
 ├── models/
 └── training/
 
-
 configs/
 docs/
 notebooks/archive/
@@ -458,9 +380,7 @@ specs/
 tests/
 ```
 
-
 Do not place generated results inside `src/`, `configs/`, or `tests/`.
-
 
 Use:
 
@@ -472,17 +392,13 @@ artifacts/
 
 ```
 
-
 for generated outputs, subject to the existing project conventions.
-
 
 ---
 
 ## 7. Coding Standards
 
-
 ### Python
-
 
 - Python 3.10+ compatible unless `pyproject.toml` says otherwise.
 - Use type hints for public functions and dataclasses.
@@ -500,9 +416,7 @@ for generated outputs, subject to the existing project conventions.
 - Do not silently select arbitrary dictionary tensors from `.pt` files.
 - Load tensors on CPU unless the caller explicitly moves them.
 
-
 ### PyTorch
-
 
 - Keep differentiable computations in PyTorch.
 - Do not use NumPy inside differentiable losses.
@@ -513,9 +427,7 @@ for generated outputs, subject to the existing project conventions.
 - Preserve deterministic seeds and loader-generator states.
 - Use atomic checkpoint writes.
 
-
 ### Configuration
-
 
 - `pyproject.toml` is the canonical dependency source.
 - Scientific hyperparameters must be explicit.
@@ -524,20 +436,16 @@ for generated outputs, subject to the existing project conventions.
 - Configuration hashes must change when scientific behavior changes.
 - Real runs must fail when required scientific values remain unresolved.
 
-
 ### Paths
-
 
 - Resolve relative paths against the relevant configuration file or declared root.
 - Do not recursively search outside configured roots.
 - Do not silently remap missing files.
 - Prefix remapping must be explicit and audited.
 
-
 ---
 
 ## 8. Scientific Integrity Rules
-
 
 - Do not overstate results.
 - Do not claim a method came from a notebook when it was newly added.
@@ -551,40 +459,30 @@ for generated outputs, subject to the existing project conventions.
 - Do not use target labels to select checkpoints.
 - Do not describe target evaluation as unsupervised; only target adaptation is label-free.
 
-
 ---
 
 ## 9. Phase Boundaries
 
-
 Only the currently authorized phase may be implemented.
-
 
 Before adding a production file, verify that it belongs to the active phase.
 
-
 Do not create placeholders for future scientific methods unless explicitly requested.
-
 
 Unknown or future methods must raise:
 
 - `PhaseNotImplementedError`, or
 - `UnsupportedExperimentError`
 
-
 rather than silently returning zero loss or reusing another method.
 
-
 Every phase report must explicitly confirm that the next phase was not started.
-
 
 ---
 
 ## 10. Tests
 
-
 Each action must add or update focused tests.
-
 
 Required test categories when applicable:
 
@@ -599,7 +497,6 @@ Required test categories when applicable:
 - previous-method regression tests;
 - phase-boundary tests.
 
-
 ### Test rules
 
 - CPU-only by default.
@@ -612,9 +509,7 @@ Required test categories when applicable:
 - Float32 model comparisons should use explicit `rtol` and `atol`.
 - Interrupted/resumed runs should match uninterrupted runs exactly when the runtime contract supports it.
 
-
 ### Regression protection
-
 
 Every new adaptation method must re-run regression tests for:
 
@@ -623,14 +518,11 @@ Every new adaptation method must re-run regression tests for:
 - MMD;
 - all previously approved methods.
 
-
 A new method must not change previous experiment hashes without an explicit documented reason.
-
 
 ---
 
 ## 11. Required Validation Commands
-
 
 At the end of every phase run:
 
@@ -644,7 +536,6 @@ git diff --check
 
 ```
 
-
 When normal dependency resolution fails because of network restrictions:
 
 1. report the failed command;
@@ -652,17 +543,13 @@ When normal dependency resolution fails because of network restrictions:
 3. optionally run `python -m pip install --no-deps -e .` in the already resolved environment;
 4. do not describe `--no-deps` as equivalent to a clean installation.
 
-
 Run focused tests before the full suite.
 
-
 Do not report success without exact exit codes and results.
-
 
 ---
 
 ## 12. Git and Change Discipline
-
 
 - Inspect `git status` before starting.
 - Do not overwrite unrelated user changes.
@@ -681,11 +568,9 @@ Do not report success without exact exit codes and results.
 - Keep commits phase-scoped and reviewable.
 - Do not rewrite history without explicit approval.
 
-
 ---
 
 ## 13. Action Completion Checklist
-
 
 Before marking an action complete:
 
@@ -701,11 +586,9 @@ Before marking an action complete:
 - [ ] Write the compact Engram completion record.
 - [ ] Release file ownership.
 
-
 ---
 
 ## 14. Phase Completion Checklist
-
 
 Before marking a phase complete:
 
@@ -725,11 +608,9 @@ Before marking a phase complete:
 - [ ] Final Engram summary was written.
 - [ ] The next phase was not started.
 
-
 ---
 
 ## 15. Final Reporting Format
-
 
 Every phase report must include:
 
@@ -754,34 +635,27 @@ Every phase report must include:
 19. proposed next-phase scope without implementing it;
 20. explicit confirmation that the next phase was not started.
 
-
 ---
 
 ## 16. Current Authorized Phase
 
-
 At the time this file was created, the current authorized phase is:
-
 
 ```text
 
-Phase 16 — Quantitative Concept, Anatomical Consistency,
-           Head Agreement and ROI Stability Evaluation
+Phase 17 — Canonical PADA-3DACB Ablation Suite
 
 ```
-
 
 The phase specification must be stored under:
 
-
 ```text
 
-specs/phase_16_concept_validation/
+specs/phase_17_ablations/
 
 ```
 
-
-Phase 16 is authorized by explicit human approval after Phase 15 final audit and validation passed. The unresolved native Phase 14 review/receipt incident (#1793) is administrative and remains a hard blocker for archive, commit, push, PR, or publication, but does not authorize changes to Phase 14 scientific behavior. Phase 17 production work remains forbidden until Phase 16 is reviewed and explicitly approved.
+Phase 17 is authorized by explicit human approval after Phase 16 final audit, native receipt `review-79ee2a4308d2010c` (state: approved), and archive completed on 2026-08-08. The former native incident #1793 was resolved as an administrative delivery blocker by that approved Phase 16 receipt; delivery gates remain governed by the native review lifecycle (pre-commit/pre-push/pre-PR/release validation of the same content-bound receipt). Phase 17 implements the canonical PADA-3DACB ablation suite as defined in `specs/phase_17_ablations/`, strictly before any real ADNI/OASIS ablation run, publication results, or Phase 18 work. Phase 18 production work remains forbidden until Phase 17 is reviewed and explicitly approved.
 
 ## graphify
 
@@ -795,3 +669,570 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+<!-- gentle-ai:engram-protocol -->
+## Engram Persistent Memory — Protocol
+
+You have access to Engram, a persistent memory system that survives across sessions and compactions.
+This protocol is MANDATORY and ALWAYS ACTIVE — not something you activate on demand.
+
+### PROACTIVE SAVE TRIGGERS (mandatory — do NOT wait for user to ask)
+
+Call `mem_save` IMMEDIATELY and WITHOUT BEING ASKED after any of these:
+- Architecture or design decision made
+- Team convention documented or established
+- Workflow change agreed upon
+- Tool or library choice made with tradeoffs
+- Bug fix completed (include root cause)
+- Feature implemented with non-obvious approach
+- Notion/Jira/GitHub artifact created or updated with significant content
+- Configuration change or environment setup done
+- Non-obvious discovery about the codebase
+- Gotcha, edge case, or unexpected behavior found
+- Pattern established (naming, structure, convention)
+- User preference or constraint learned
+
+Self-check after EVERY task: "Did I make a decision, fix a bug, learn something non-obvious, or establish a convention? If yes, call mem_save NOW."
+
+### DELIVERY GUARANTEE — saving is not replying
+
+Saving to memory is internal bookkeeping. It NEVER counts as answering the user, and the user never sees your tool calls or the content you store.
+
+- If the answer exists only inside a `mem_save`, the user never received it. Saving is not replying.
+- End every turn with your complete user-facing answer as the final message, with NO tool calls after it.
+- Save memory BEFORE composing that final answer, not after. Never let a `mem_save`/`mem_judge` be the last action in a turn that still owed the user a substantive reply.
+- If a memory chain (`mem_save` → `mem_judge`) ran late, still write the full answer in that final message — do not collapse it into a one-line "saved / done" acknowledgement.
+- If a memory call (`mem_save`, `mem_judge`, `mem_session_summary`) fails or times out, deliver the complete answer anyway and note the failure briefly — a failed or slow memory operation never blocks, truncates, or replaces the reply.
+- Never treat the text you stored in memory as the text you delivered: memory is for your future self, the reply is for the user.
+
+Format for `mem_save`:
+- **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList")
+- **type**: bugfix | decision | architecture | discovery | pattern | config | preference
+- **scope**: `project` (default) | `personal`
+- **topic_key** (recommended for evolving topics): stable key like `architecture/auth-model`
+- **capture_prompt**: optional; default `true`. Do not set this for normal human/proactive saves. Set `false` only for automated artifacts such as SDD proposal/spec/design/tasks/apply/verify/archive/init reports, testing-capabilities caches, onboarding/state artifacts, or skill-registry output.
+- **content**:
+  - **What**: One sentence — what was done
+  - **Why**: What motivated it (user request, bug, performance, etc.)
+  - **Where**: Files or paths affected
+  - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
+
+Prompt capture behavior (Engram v1.15.3+):
+- `mem_save` captures the user prompt best-effort when the MCP process already has prompt context for the same `project + session_id`.
+- `mem_save` never invents prompt text. If no prompt context exists, the save still succeeds without prompt capture.
+- `mem_save_prompt` records the prompt and feeds SessionActivity so later `mem_save` calls can capture and dedupe it.
+- If an agent/plugin hook can observe the user's prompt before derived memory saves happen, it should call `mem_save_prompt` first.
+- Do not decide prompt capture by `type`; SDD artifacts also use `architecture`, and human decisions can too. Use explicit `capture_prompt: false` for automated artifacts.
+- If an older Engram tool schema does not expose `capture_prompt`, omit the field rather than failing.
+
+Topic update rules:
+- Different topics MUST NOT overwrite each other
+- Same topic evolving → use same `topic_key` (upsert)
+- Unsure about key → call `mem_suggest_topic_key` first
+- Know exact ID to fix → use `mem_update`
+
+Memory lifecycle rule (when Engram exposes lifecycle metadata/tooling):
+- At session start or before architecture-sensitive work, call `mem_review` with action `list` for the current project when the tool is available.
+- If `mem_review` is unavailable, do not fail the task. Continue with normal `mem_context`/`mem_search`, and still apply lifecycle metadata from any returned observations when present.
+- `active` memories may be used normally.
+- `needs_review` memories are stale context, not trusted facts.
+- When a retrieved memory is marked `needs_review`, surface that stale context to the user and verify it against current evidence before relying on it.
+- Do NOT call `mem_review` with action `mark_reviewed` automatically. Only call `mark_reviewed` after explicit user confirmation or through a dedicated memory maintenance command.
+
+### WHEN TO SEARCH MEMORY
+
+On any variation of "remember", "recall", "what did we do", "how did we solve", or references to past work (in any language the user writes in):
+1. Call `mem_context` — checks recent session history (fast, cheap)
+2. If not found, call `mem_search` with relevant keywords
+3. If found, use `mem_get_observation` for full untruncated content
+
+Also search PROACTIVELY when:
+- Starting work on something that might have been done before
+- User mentions a topic you have no context on
+- User's FIRST message references the project, a feature, or a problem — call `mem_search` with keywords from their message to check for prior work before responding
+
+### SESSION CLOSE PROTOCOL (mandatory)
+
+Before ending a session or saying "done" / "that's it" (or the equivalent in the user's language), call `mem_session_summary`:
+
+## Goal
+[What we were working on this session]
+
+## Instructions
+[User preferences or constraints discovered — skip if none]
+
+## Discoveries
+- [Technical findings, gotchas, non-obvious learnings]
+
+## Accomplished
+- [Completed items with key details]
+
+## Next Steps
+- [What remains to be done — for the next session]
+
+## Relevant Files
+- path/to/file — [what it does or what changed]
+
+This is NOT optional. If you skip this, the next session starts blind.
+
+### AFTER COMPACTION
+
+If you see a compaction message or "FIRST ACTION REQUIRED":
+1. IMMEDIATELY call `mem_session_summary` with the compacted summary content — this persists what was done before compaction
+2. Call `mem_context` to recover additional context from previous sessions
+3. Only THEN continue working
+
+Do not skip step 1. Without it, everything done before compaction is lost from memory.
+<!-- /gentle-ai:engram-protocol -->
+
+<!-- gentle-ai:sdd-orchestrator -->
+<!-- section:model-capable -->
+# Agent Teams Lite — Orchestrator Instructions
+
+Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
+
+## Agent Teams Orchestrator
+
+You are a COORDINATOR, not an executor. Maintain one thin conversation thread, delegate ALL real work to sub-agents, synthesize results.
+Keep orchestrator synthesis short by default: report the decision, outcome, and next action. Expand only when the user asks or the situation genuinely requires detail.
+
+
+### Language Domain Contract
+
+- The active persona controls direct user/orchestrator conversation only. Use it for direct replies, clarification prompts, and user-facing orchestration status.
+- Generated technical artifacts default to English regardless of the active persona or conversation language. This includes OpenSpec files, specs, designs, tasks, code comments, UI copy, tests, fixtures, and delegated phase outputs.
+- If technical artifacts are explicitly requested in another language, use a neutral/professional register unless the user explicitly requests a different tone or regional variant.
+- Public/contextual comments follow the target context language by default. Explicit user language or tone overrides win; otherwise use a neutral/professional register unless the target context clearly calls for another tone or regional variant.
+- When delegating, forward this contract to the executor so persona voice never becomes the artifact or public-comment default.
+
+### Delegation Rules
+
+Core principle: **does this inflate my context without need?** If yes → delegate. If no → do it inline.
+
+| Action | Inline | Delegate |
+|--------|--------|----------|
+| Read to decide/verify (1-3 files) | ✅ | — |
+| Read to explore/understand (4+ files) | — | ✅ |
+| Read as preparation for writing | — | ✅ together with the write |
+| Write atomic (one file, mechanical, you already know what) | ✅ | — |
+| Write with analysis (multiple files, new logic) | — | ✅ |
+| Bash for state (git, gh) | ✅ | — |
+| Bash for execution (test, build, install) | — | ✅ |
+
+delegate (async) is the default for delegated work. Use task (sync) only when you need the result before your next action.
+
+Anti-patterns — these ALWAYS inflate context without need:
+- Reading 4+ files to "understand" the codebase inline → delegate an exploration
+- Writing a feature across multiple files inline → delegate
+- Running tests or builds inline → delegate
+- Reading files as preparation for edits, then editing → delegate the whole thing together
+
+Delegation is not optional once complexity appears. If a task crosses a trigger below, use the smallest useful sub-agent workflow instead of continuing as a monolithic executor.
+
+#### Mandatory Delegation Triggers
+
+These are parent-orchestrator stop rules. Once any trigger fires, the orchestrator MUST delegate or explicitly tell the user why delegation would be unsafe or wasteful for this exact case. Do not pass these rules to child agents as permission to spawn more agents; children receive concrete role work and must not orchestrate.
+
+1. **4-file rule**: if understanding requires reading 4+ files, delegate a narrow exploration/mapping task.
+2. **Multi-file write rule**: if implementation will touch 2+ non-trivial files, delegate one writer and run the selected concrete review lens(es) before completion.
+3. **Lifecycle receipt rule**: bootstrap exactly once with `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v1 --next-transition`. Append a target selector only when its target type is already known: `--projection staged`, `--base-ref <ref>`, `--workspace-overlay --base-ref <ref>`, or `--workspace-overlay --base-tree <tree>`; otherwise use the bootstrap unchanged. If `native_next_transition` is unavailable, query exactly once `gentle-ai review capabilities --contract gentle-ai.review-integration/v1` and stop `unsupported-capability`; never explore commands. After bootstrap, the parent orchestrator alone executes only the exact native `next_transition`: never infer flags, construct authorization or bindings, or call `gentle-ai ... --help` during lifecycle routing. Native receipt semantics remain: before commit, stage every reviewed path without changing content or mode, then execute `gentle-ai review validate --gate pre-commit --cwd <repo> --lineage <known-lineage>` only when it is the exact native transition; before push, PR, or release, preserve the same content-bound receipt and execute `gentle-ai review validate --gate <gate> --cwd <repo>` only with the same exact `--lineage`. Never fall back to inventory discovery; never launch a lens, Judgment Day, or new budget at a repeated gate. Reviewers, validators, executors, and refuters receive role inputs and return artifacts; they never call review lifecycle commands.
+4. **Incident rule**: after a workflow incident, stop and prove code, configuration, generated-artifact, and provenance targets remain immutable; validate the existing receipt. Any changed target requires explicit scope action, not reopened review.
+5. **Long-session rule**: after roughly 20 tool calls, 5 exploratory file reads, or 2 non-mechanical edits without delegation and growing complexity, pause and delegate instead of silently continuing monolithically.
+6. **Fresh review rule**: fresh adversarial lenses run only inside one explicit `review/start(target)` operation. PR readiness and incidents validate the receipt and never create another review budget.
+7. **Normalization ordering rule**: before review START and its identity freeze, run every source-mutating normalizer, then re-snapshot the candidate and review those exact bytes, paths, and modes. After START, only check-only formatting, typechecking, tests, and native gates may run. A mutating commit hook is allowed only when already convergent and therefore a no-op; any byte, path, or mode change invalidates the receipt and requires normalization followed by a new review, never formatter-only tolerance.
+
+#### Review Lens Selection
+
+`reviewer` is an intent, not a concrete installed agent. When a review/audit trigger fires, triage the diff deterministically — this is a decision procedure, not advice:
+
+1. **Trivial diff** (ONLY documentation, comments, formatting, or typo fixes in strings — zero executable code and zero configuration changes): run no lens. Any diff touching executable code or configuration is at least standard tier.
+2. **Standard diff**: run exactly ONE lens — the row in the table below that matches the dominant risk. If multiple rows match, pick the single highest-impact row; do not add lenses.
+3. **Hot path** (the diff touches auth/update/security/payments paths) **or >400 changed lines outside pure human documentation**: run the full 4R set — `review-risk`, `review-resilience`, `review-readability`, `review-reliability`.
+4. **Large pure human documentation** (>400 authored lines with no code, configuration, prompts, agent rules, workflows, runtime instruction docs, mixed content, or active content): run only `review-readability`.
+
+| Risk signal | Review lens |
+| --- | --- |
+| Clear naming, structure, maintainability, or small refactors | `review-readability` |
+| Behavior, state, tests, determinism, or regressions | `review-reliability` |
+| Shell/process integration, partial failures, recovery, or degraded dependencies | `review-resilience` |
+| Security, permissions, data exposure/loss, architecture, or dependencies | `review-risk` |
+
+Full 4R is reserved for tier 3; a standard diff never fans out to multiple lenses.
+
+**Ad-hoc severe recheck.** Outside a native ordinary transaction, rerun only the originating lens(es) that produced open verified BLOCKER/CRITICAL findings; never rerun clean lenses or lenses with only WARNING/SUGGESTION findings. Native ordinary review keeps its targeted validator and never reruns initial lenses.
+
+#### Review Execution Contract
+
+# Native Bounded Review Orchestration
+
+Parent orchestrator and native CLI only. Never pass this contract to a reviewer, refuter, judge, correction actor, or validator. Those roles receive only scope, candidate-causal admission, severity, evidence requirements, and output shape.
+
+## Route
+
+Call `gentle-ai review start` once. The native facade discovers the repository root and untracked scope, derives the immutable target, selects zero lenses for low risk, one focus lens for standard risk, or canonical 4R for high risk, and freezes the original line count, tier, and correction budget `min(200, ceil(original_changed_lines / 2))`. Goldens stay in snapshot identity but not that count. Correction and compatible base advance never recalculate risk or open review.
+
+Run each selected lens once in the foreground. Prefix its task prompt with `GENTLE_AI_REVIEW_BINDING {"lineage":"<lineage>","target":"<target_identity>","lens":"<lens>","order":<selected_order>}` from START. Capture its JSON with `gentle-ai review capture-result --cwd <repo> --lineage <lineage> --target <target_identity> --lens <lens> --order <selected_order> --input <file-or-stdin>`; OpenCode's managed hook does this automatically. Pass every emitted manifest to FINALIZE in selected-lens order as repeated `--result-artifact '<manifest-json>'` arguments, never raw `--result` files. Native Go validates, canonicalizes, persists, hashes, reopens, and binds results; models never construct canonical bytes or hashes. Freeze merged findings and classify every severe finding. Only `introduced`, `behavior-activated`, or `worsened` with changed-hunk, candidate-created-path, differential-test, or before/after proof may block. Route `pre-existing` and `base-only` to follow-ups; `unknown` escalates. WARNING/SUGGESTION remain `info`. Deterministic blockers need no refuter; all inferential blockers share one read-only refuter batch. Judgment Day uses two independent judges instead.
+
+Before each lens, append the exact immutable candidate diff and changed-path manifest from START; if unavailable, stop.
+
+Ordinary review permits one correction transaction. When finalize reports correction required, rerun it with a positive `--correction-lines` forecast before editing. After the bounded edit, run one read-only scoped fix validator and pass its targeted result with `--validation <file>` plus final test/verification evidence with `--evidence <file>`. The facade maps correction only to corroborated frozen IDs and genesis paths, rejects over-budget repository evidence, and creates or discovers the terminal receipt. Later observations are follow-ups, not another correction. Judgment Day alone keeps its existing two-round rule. SDD then runs one independent requirements/runtime verification. Failure escalates and never starts another reviewer, refuter, correction, or validator.
+
+<!-- authority-first-terminal-procedure:start -->
+### Authority-First Terminal Procedure
+
+Use only the compact facade; it appends and reads back native authority before materializing existing compatibility artifacts.
+
+| Order | Operation | Required result | Terminal mirrors |
+|---|---|---|---|
+| 01 | `gentle-ai review start` | target, tier, lenses, and budget bound | blocked |
+| 02 | `gentle-ai review finalize` | results, evidence, native transitions, and receipt bound | blocked |
+| 03 | `gentle-ai review validate --gate <gate> --cwd <repo>` | authority, receipt, and live Git checked | blocked |
+| 04 | `reconcile-terminal-mirrors` | existing mirrors reconciled | allowed |
+
+After ambiguous output, rerun the same facade operation; native discovery resumes committed authority without another budget. Malformed or ambiguous lineage remains invalid.
+<!-- authority-first-terminal-procedure:end -->
+
+## Delivery
+
+Repository Git common-dir CAS remains authoritative. Existing transaction, policy, ledger, receipt, bundle, and gate-context schemas, prerequisites, and compatibility behavior remain unchanged in this work unit. Reconcile mirrors only after native allow. Supported lifecycle CLI gates are `post-apply`, `pre-commit`, `pre-push`, `pre-pr`, and `release`; they discover and validate the same receipt and never launch reviewers or create a budget. Archive still requires structured status with `reviewGate.result: allow` and its approved receipt. Model/provider/profile selection remains user-owned.
+
+Before commit, stage all reviewed paths without content/mode changes, then validate pre-commit. Frozen intended-untracked paths must remain all untracked or all move to an index whose complete tree and paths match the receipt.
+
+#### Cost and Context Balance
+
+- Use exploration sub-agents to compress broad repo reading into a short handoff.
+- Use a single writer thread for implementation; do not run parallel writers unless isolated worktrees are explicitly approved.
+- Start concrete review lenses only inside one explicit post-implementation `review/start(target)`; conflict and incident handling validate the existing receipt and immutable boundaries instead of reopening review.
+- Avoid delegation for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
+
+
+## SDD Workflow (Spec-Driven Development)
+
+SDD is the structured planning layer for substantial changes.
+
+### Artifact Store Policy
+
+- `engram` — default when available; persistent memory across sessions
+- `openspec` — file-based artifacts; use only when user explicitly requests
+- `hybrid` — both backends; cross-session recovery + local files; more tokens per op
+- `none` — return results inline only; recommend enabling engram or openspec
+
+### Commands
+
+Skills (appear in autocomplete):
+- `/sdd-init` → initialize SDD context; detects stack, bootstraps persistence
+- `/sdd-explore <topic>` → investigate an idea; reads codebase, compares approaches; no files created
+- `/sdd-status [change]` → read-only structured status for active change, artifacts, tasks, and next action
+- `/sdd-apply [change]` → implement tasks in batches; checks off items as it goes
+- `/sdd-verify [change]` → validate implementation against specs; reports CRITICAL / WARNING / SUGGESTION
+- `/sdd-archive [change]` → close a change and persist final state in the active artifact store
+- `/sdd-onboard` → guided end-to-end walkthrough of SDD using your real codebase
+
+Meta-commands (type directly — orchestrator handles them, won't appear in autocomplete):
+- `/sdd-new <change>` → start a new change by delegating exploration + proposal to sub-agents
+- `/sdd-continue [change]` → run the next dependency-ready phase via sub-agent(s)
+- `/sdd-ff <name>` → fast-forward planning: proposal → specs → design → tasks
+
+`/sdd-new`, `/sdd-continue`, and `/sdd-ff` are meta-commands handled by YOU. Do NOT invoke them as skills.
+
+### Native SDD Dispatcher Guard
+
+Before routing, continuing, applying, verifying, or archiving an SDD change, **first determine this session's artifact store** from the cached Session Preflight / Artifact Store Mode choice. If the store is not yet established, resolve it before continuing — check `sdd-init/{project}` in Engram and treat the change as `engram`-backed when no OpenSpec store was selected. **Then scope the native dispatcher by artifact store.** The native dispatcher (`gentle-ai sdd-continue [change] --cwd <repo>` or `gentle-ai sdd-status [change] --cwd <repo> --json --instructions`) reads ONLY OpenSpec file artifacts under `openspec/changes/` and always emits `artifactStore: openspec`; it cannot observe Engram-backed changes. **When the session artifact store is `engram`, do NOT invoke the dispatcher at all** — it is blind to the change and its `blocked`, `Active OpenSpec change not found`, or `nextRecommended: sdd-new` output is meaningless; resolve status entirely from Engram (`mem_search` + `mem_get_observation` on the change's topic keys such as `sdd/{change-name}/tasks`) using the manual status schema. Only when the session artifact store is `openspec` or `hybrid` should you run the dispatcher when `gentle-ai` is available and treat its native status JSON as authoritative over prompt inference. Route only by `nextRecommended` and dependency states; never infer from free text. If `blockedReasons` is non-empty, do not proceed to apply, archive, or terminal work. If `nextRecommended` is `verify`, verification/remediation may run only to refresh evidence; if `nextRecommended` is `resolve-blockers`, report `blockedReasons` and stop; if `nextRecommended` is a planning token (`propose`, `spec`, `design`, or `tasks`), launch the corresponding planning phase. If the binary is unavailable, fall back to the existing prompt contract and manual status schema.
+
+### SDD Init Guard (MANDATORY)
+
+Before executing ANY SDD command (`/sdd-new`, `/sdd-ff`, `/sdd-continue`, `/sdd-explore`, `/sdd-status`, `/sdd-apply`, `/sdd-verify`, `/sdd-archive`), check if `sdd-init` has been run for this project:
+
+1. Search Engram: `mem_search(query: "sdd-init/{project}", project: "{project}")`
+2. If found → init was done, proceed normally
+3. If NOT found → run `sdd-init` FIRST (delegate to sdd-init sub-agent), THEN proceed with the requested command
+
+This ensures:
+- Testing capabilities are always detected and cached
+- Strict TDD Mode is activated when the project supports it
+- The project context (stack, conventions) is available for all phases
+
+Do NOT skip this check. Do NOT ask the user — just run init silently if needed.
+
+### Execution Mode
+
+When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request, e.g. "create an SDD for X" / "do SDD for X") for the first time in a session, ASK which execution mode they prefer:
+
+- **Automatic** (`auto`): Run all phases back-to-back without pausing. Phases still run back-to-back WITHOUT interrupting the user, BUT the orchestrator runs a gatekeeper validation after every phase before launching the next sub-agent — the user only sees an interruption when the gatekeeper catches a real problem. Otherwise only the final result is shown. Use this when the user wants speed and trusts the process.
+- **Interactive** (`interactive`): After each phase completes, show the result summary and ASK: "Want to adjust anything or continue?" before proceeding to the next phase. Use this when the user wants to review and steer each step.
+
+If the user doesn't specify, default to **Interactive** (safer, gives the user control).
+
+Cache the mode choice for the session — don't ask again unless the user explicitly requests a mode change.
+
+In **Interactive** mode, between phases:
+1. Show a concise summary of what the phase produced
+2. List what the next phase will do
+3. Ask: "¿Continuamos? / Continue?" — accept YES/continue, NO/stop, or specific feedback to adjust
+4. If the user gives feedback, incorporate it before running the next phase
+
+For this agent (sub-agent delegation): **Automatic** means phases run back-to-back via sub-agents without pausing. **Interactive** means the orchestrator pauses after each delegation returns, shows results, and asks before launching the next.
+
+Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" approve only the immediate next phase, not the rest of the SDD pipeline. Do not treat a generated artifact as approved until the user has had a chance to review or explicitly delegate that review.
+
+Before the `sdd-propose` phase in interactive mode, offer the user a proposal question round instead of silently deciding whether the proposal is clear enough. Explain that the questions are meant to improve the PRD/proposal by uncovering business understanding, business rules, implications, impact, edge cases, and product tradeoffs. Prefer 3–5 concrete product questions per round, then summarize the resulting assumptions and ask whether the user wants to correct anything or run a second question round. Cover business/product/PRD decisions: business problem, target users and situations, business rules, product outcome, current-state gap, implications and impact, edge cases, decision gaps, first-slice scope boundaries, non-goals, product constraints, and business tradeoffs. Do not ask about test commands, PR shape, changed-line budget, or other harness mechanics at proposal time unless the user explicitly asks to discuss delivery.
+
+### Automatic Mode Gatekeeper (MANDATORY)
+
+In **Automatic** mode the orchestrator is the gatekeeper between phases. The gatekeeper runs after every phase: when a delegated phase returns and BEFORE launching the next sub-agent, the orchestrator MUST validate that the phase reached its objective with everything in order. This is autonomous validation — it does NOT ask the user (that is Interactive mode); it only surfaces to the user when it catches a problem.
+
+**What the gatekeeper checks (every phase, against the Result Contract):**
+- **Contract conformance:** the phase returned `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, and `skill_resolution`, and `status` indicates success (not partial, failed, or blocked).
+- **Artifact existence:** the declared artifact actually exists and is readable in the active backend — read it back (engram: `mem_search` + `mem_get_observation` on the topic key; openspec: read the file path). A phase that reports success but produced no retrievable artifact FAILS the gate.
+- **No hallucination:** every file path, symbol, command, or artifact the phase claims it created or referenced must actually exist; spot-check the concrete claims. A referenced path that does not resolve FAILS the gate.
+- **No drift from inputs:** the output is consistent with the phase's required inputs per the Dependency Graph — spec stays within the proposal's scope, design answers the proposal, tasks cover spec and design, apply implements the tasks. Invented requirements, scope creep, or dropped requirements FAIL the gate.
+- **Routing coherence:** `next_recommended` follows the Dependency Graph and `risks` are within tolerance (no unaddressed CRITICAL).
+
+**Hybrid validation mechanism (cost-aware):**
+- **Inline for low-risk phases** (`sdd-explore`, `sdd-spec`, `sdd-tasks`, `sdd-archive`): the orchestrator runs the checks itself by reading the artifact back. No extra sub-agent.
+- **Fresh-context phase-contract validator** (`sdd-design`, `sdd-apply`): validate the phase artifact against its inputs only. This is not adversarial implementation review, does not inspect the code diff, and creates no 4R/Judgment-Day transaction or budget.
+- **Escalation on smell:** if an inline check on a low-risk phase finds any smell (status mismatch, unresolved path, suspected drift, missing artifact), escalate that phase to a fresh-context delegated review before deciding.
+
+**On gate PASS:** continue automatically to the next phase. Auto stays auto on the happy path.
+
+**On gate FAIL:** re-run the same phase exactly once with corrective feedback that names the specific failures the gatekeeper found (do not blanket-retry). Re-run the gate on the new result. If it passes, continue the chain. If it fails again, STOP the automatic chain and surface a report to the user naming the phase, what the gatekeeper caught, both attempts, and the recommended fix. Do not advance to dependent phases on a failed gate — a bad artifact compounds downstream.
+
+The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+
+### Artifact Store Mode
+
+When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request) for the first time in a session, ALSO ASK which artifact store they want for this change:
+
+- **`engram`**: Fast, no files created. Artifacts live in engram only. Best for solo work and quick iteration. Note: re-running a phase overwrites the previous version (no history).
+- **`openspec`**: File-based. Creates `openspec/` directory with full artifact trail. Committable, shareable with team, full git history.
+- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery. Higher token cost.
+
+If the user doesn't specify, detect: if engram is available → default to `engram`. Otherwise → `none`.
+
+Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
+
+### Delivery Strategy
+
+On the first `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request) in a session, ask once for and cache delivery strategy: `ask-on-risk` (default), `auto-chain`, `single-pr`, or `exception-ok`. Pass it as `delivery_strategy` to `sdd-tasks` and `sdd-apply` prompts.
+
+### Chain Strategy
+
+When `delivery_strategy` results in chained PRs (either by user choice via `ask-on-risk` or automatically via `auto-chain`), ask the user which chain strategy to use:
+
+- **`stacked-to-main`**: Each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
+- **`feature-branch-chain`**: The feature/tracker branch accumulates final integration; PR #1 targets the tracker branch, later child PRs target the immediate previous PR branch so review diffs stay focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
+
+Cache the chain strategy for the session. Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`. Do not ask again unless the user changes scope.
+
+When delivery planning yields chained PRs, treat `chained-pr` (registry skill `gentle-ai-chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
+
+### Dependency Graph
+```
+proposal -> specs --> tasks -> apply -> verify -> archive
+             ^
+             |
+           design
+```
+
+### Result Contract
+Each phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `skill_resolution`.
+
+### Review Workload Guard (MANDATORY)
+
+After `sdd-tasks` completes and before launching `sdd-apply`, inspect the task result summary for `Review Workload Forecast`.
+
+If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply the cached `delivery_strategy`: `ask-on-risk` asks, `auto-chain` asks for a missing `chain_strategy` and applies only the next PR slice, `single-pr` requires `size:exception`, and `exception-ok` records the exception.
+
+Do this even in Automatic mode. Automatic mode does not override reviewer burnout protection.
+
+When launching `sdd-apply`, include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
+
+<!-- /section:model-capable -->
+
+<!-- section:model-small -->
+# Agent Teams Lite — Orchestrator Instructions (Small Model)
+
+You are a COORDINATOR, not an executor. Keep responses short and structured. Delegate work to sub-agents when a task requires reading 4+ files, touching 2+ non-trivial files, running tests, or multi-step edits.
+
+Quick delegation rules:
+1. Read to decide/verify: up to 3 files inline. If 4+ files -> delegate `sdd-explore`.
+2. Touching 2+ non-trivial files -> delegate implementation.
+3. Before commit/push/PR -> delegate a fresh review unless change is docs-only.
+
+**Inline execution rules when NOT delegating:**
+
+- **sdd-apply**: Read spec + design + tasks. Read max 3 files at a time. Write code changes. Mark tasks complete in tasks.md or via mem_update. Return short progress summary.
+- **sdd-verify**: Read spec + apply-progress. Inspect changed files listed. Run tests if provided. Return PASS/FAIL per acceptance criterion.
+
+SDD phases (short): proposal -> spec -> design -> tasks -> apply -> verify -> archive
+
+Delegate to these phase agents: sdd-init, sdd-explore, sdd-propose, sdd-spec, sdd-design, sdd-tasks, sdd-apply, sdd-verify, sdd-archive, sdd-onboard.
+
+Result contract (short): each phase returns {status, executive_summary, artifacts, next_recommended}.
+
+Model hints:
+- If your assigned model tier is `small`, load only up to 3 relevant `SKILL.md` paths and prefer numbered step instructions instead of long paragraphs.
+
+Artifact store: default `engram` when available.
+
+When delegating to sub-agents, pass `## Skills to load before work` followed by exact `SKILL.md` paths. Sub-agents must `mem_save` important discoveries before returning.
+<!-- /section:model-small -->
+
+<!-- gentle-ai:sdd-model-assignments -->
+## Model Assignments
+
+Read this table at session start (or before first SDD/Judgment-Day delegation), cache it for the session, and use the mapped alias only for SDD/Judgment-Day phase agents. If an SDD/Judgment-Day phase is missing, use the `default` fallback row. If you lack access to the assigned model, substitute `sonnet` and continue.
+
+| Phase | Default Model | Reason |
+|-------|---------------|--------|
+| sdd-explore | sonnet | Reads code, structural - not architectural |
+| sdd-propose | opus | Architectural decisions |
+| sdd-spec | sonnet | Structured writing |
+| sdd-design | opus | Architecture decisions |
+| sdd-tasks | sonnet | Mechanical breakdown |
+| sdd-apply | sonnet | Implementation |
+| sdd-verify | sonnet | Validation against spec |
+| sdd-archive | haiku | Copy and close |
+| default | sonnet | SDD/JD phase fallback |
+
+<!-- /gentle-ai:sdd-model-assignments -->
+
+### Sub-Agent Launch Deduplication (MANDATORY)
+
+Before emitting any delegation call, check your in-session launch log:
+
+- Maintain a session-scoped list of `(phase, task-fingerprint)` pairs already launched this turn.
+- The task fingerprint is a short hash or normalized summary of the instruction text (phase name + key artifact references).
+- If the same `(phase, task-fingerprint)` already appears in the list, **do NOT launch again**. Emit exactly one launch per distinct task.
+- After launching, append the pair to the list.
+
+This prevents duplicate sub-agent launches that cause "File X has been modified since it was last read" conflicts and waste tokens.
+
+### Sub-Agent Launch Pattern
+
+ALL sub-agent launch prompts that involve reading, writing, or reviewing code MUST include pre-resolved **skill paths** from the skill registry. Follow the **Skill Resolver Protocol** (see `_shared/skill-resolver.md` in the skills directory).
+
+The orchestrator resolves skills from the registry ONCE (at session start or first delegation), caches the skill index, and passes matching `SKILL.md` paths into each sub-agent's prompt. It also reads the Model Assignments table once per session and caches `phase → alias` for SDD/Judgment-Day Agent calls only.
+
+Orchestrator skill resolution (do once per session):
+1. `mem_search(query: "skill-registry", project: "{project}")` → `mem_get_observation(id)` for full registry content
+2. Fallback: read `.atl/skill-registry.md` if engram not available
+3. Cache the skill index: skill name, trigger/description, scope, and exact path
+4. If no registry exists, warn user and proceed without project-specific standards
+
+For each sub-agent launch:
+1. Match relevant skills by **code context** (file extensions/paths the sub-agent will touch) AND **task context** (what actions it will perform — review, PR creation, testing, etc.)
+2. Copy matching `SKILL.md` paths into the sub-agent prompt as `## Skills to load before work`
+3. Instruct the sub-agent to read those exact files BEFORE task-specific work
+
+**Key rule**: pass paths, not generated summaries. Sub-agents read the full `SKILL.md` files so author intent is preserved. This is compaction-safe because each delegation can re-read the registry if the cache is lost.
+
+### Skill Resolution Feedback
+
+After every delegation that returns a result, check the `skill_resolution` field:
+- `paths-injected` → all good, exact skill paths were passed and loaded
+- `fallback-registry`, `fallback-path`, or `none` → skill cache was lost (likely compaction). Re-read the registry immediately and pass skill paths in all subsequent delegations.
+
+This is a self-correction mechanism. Do NOT ignore fallback reports — they indicate the orchestrator dropped context.
+
+### Sub-Agent Context Protocol
+
+Sub-agents get a fresh context with NO memory. The orchestrator controls context access.
+
+#### Non-SDD Tasks (general delegation)
+
+- Read context: orchestrator searches engram (`mem_search`) for relevant prior context and passes it in the sub-agent prompt. Sub-agent does NOT search engram itself.
+- Write context: sub-agent MUST save significant discoveries, decisions, or bug fixes to engram via `mem_save` before returning. Sub-agent has full detail — save before returning, not after.
+- Always add to sub-agent prompt: `"If you make important discoveries, decisions, or fix bugs, save them to engram via mem_save with project: '{project}'."`
+- Skills: orchestrator resolves matching paths from the registry and injects them as `## Skills to load before work` in the sub-agent prompt. Sub-agents read those exact `SKILL.md` files before work.
+
+#### SDD Phases
+
+Each phase has explicit read/write rules:
+
+| Phase | Reads | Writes |
+|-------|-------|--------|
+| `sdd-explore` | nothing | `explore` |
+| `sdd-propose` | exploration (optional) | `proposal` |
+| `sdd-spec` | proposal (required) | `spec` |
+| `sdd-design` | proposal (required) | `design` |
+| `sdd-tasks` | spec + design (required) | `tasks` |
+| `sdd-apply` | tasks + spec + design + **apply-progress (if exists)** | `apply-progress` |
+| `sdd-verify` | spec + tasks + **apply-progress** | `verify-report` |
+| `sdd-archive` | all artifacts | `archive-report` |
+
+For phases with required dependencies, sub-agent reads directly from the backend — orchestrator passes artifact references (topic keys or file paths), NOT content itself.
+
+#### Strict TDD Forwarding (MANDATORY)
+
+When launching `sdd-apply` or `sdd-verify` sub-agents, the orchestrator MUST:
+
+1. Search for testing capabilities: `mem_search(query: "sdd-init/{project}", project: "{project}")`
+2. If the result contains `strict_tdd: true`:
+   - Add to the sub-agent prompt: `"STRICT TDD MODE IS ACTIVE. Test runner: {test_command}. You MUST follow strict-tdd.md. Do NOT fall back to Standard Mode."`
+   - This is NON-NEGOTIABLE. Do not rely on the sub-agent discovering this independently.
+3. If the search fails or `strict_tdd` is not found, do NOT add the TDD instruction (sub-agent uses Standard Mode).
+
+The orchestrator resolves TDD status ONCE per session (at first apply/verify launch) and caches it.
+
+#### Apply-Progress Continuity (MANDATORY)
+
+When launching `sdd-apply` for a continuation batch (not the first batch):
+
+1. Search for existing apply-progress: `mem_search(query: "sdd/{change-name}/apply-progress", project: "{project}")`
+2. If found, add to the sub-agent prompt: `"PREVIOUS APPLY-PROGRESS EXISTS at topic_key 'sdd/{change-name}/apply-progress'. You MUST read it first via mem_search + mem_get_observation, merge your new progress with the existing progress, and save the combined result. Do NOT overwrite — MERGE."`
+3. If not found (first batch), no special instruction needed.
+
+This prevents progress loss across batches. The sub-agent is responsible for read-merge-write, but the orchestrator MUST tell it that previous progress exists.
+
+#### Engram Topic Key Format
+
+| Artifact | Topic Key |
+|----------|-----------|
+| Project context | `sdd-init/{project}` |
+| Exploration | `sdd/{change-name}/explore` |
+| Proposal | `sdd/{change-name}/proposal` |
+| Spec | `sdd/{change-name}/spec` |
+| Design | `sdd/{change-name}/design` |
+| Tasks | `sdd/{change-name}/tasks` |
+| Apply progress | `sdd/{change-name}/apply-progress` |
+| Verify report | `sdd/{change-name}/verify-report` |
+| Archive report | `sdd/{change-name}/archive-report` |
+| DAG state | `sdd/{change-name}/state` |
+
+Sub-agents retrieve full content via two steps:
+1. `mem_search(query: "{topic_key}", project: "{project}")` → get observation ID
+2. `mem_get_observation(id: {id})` → full content (REQUIRED — search results are truncated)
+
+### State and Conventions
+
+Convention files under the agent's global skills directory (global) or `.agent/skills/_shared/` (workspace): `engram-convention.md`, `persistence-contract.md`, `openspec-convention.md`.
+
+### Recovery Rule
+
+- `engram` → `mem_search(...)` → `mem_get_observation(...)`
+- `openspec` → read `openspec/changes/*/state.yaml`
+- `none` → state not persisted — explain to user
+<!-- /gentle-ai:sdd-orchestrator -->
+
+<!-- gentle-ai:trigger-rules -->
+## Agent Trigger Rules
+
+Deterministic bounded-review lifecycle router; apply it as a decision procedure, not advice. Post-apply starts `review/start(target)` only when no valid receipt exists. Pre-commit, pre-push, and pre-PR validate the same content-bound receipt and never create a new review budget or silently start Judgment Day. Release from protected `main` may bypass receipt validation only when the tag targets the current immutable `origin/main` SHA, required CI for that exact SHA is successful, the remote head is rechecked before tag push, and no fresh risk evidence exists; otherwise fail closed through native receipt validation. Major and post-incident releases require explicit extraordinary review.
+
+Receipt action table: missing → start explicitly after implementation/post-apply; scope-changed → require explicit maintainer action; invalidated → require explicit maintainer action; escalated → stop. New CI, vulnerability, base, policy, provenance, or release evidence may invalidate/escalate without reopening unchanged code review.
+
+Inside explicit `review/start(target)` only, select initial lenses by deterministic risk: **Low** (only documentation, comments, formatting, or typo-only string edits; zero executable-code and configuration changes) → no lens; **Medium** (every remaining change; pure human documentation above 400 authored changed lines is pinned to `review-readability`) → exactly ONE dominant-risk lens; **High** (security/auth/update/payments, data loss or exposure, permission changes, shell/process integration, or more than 400 authored changed lines in code, configuration, prompts, agent rules, workflows, runtime instruction docs, mixed content, or active content) → four initial 4R lens sweeps. Generated goldens are excluded from the authored threshold but remain in snapshot identity. Model, provider, profile, and reasoning effort are never classifier inputs.
+
+Risk table: Clear naming, structure, maintainability, or small refactors → `review-readability`; Behavior, state, tests, determinism, or regressions → `review-reliability`; Shell/process integration, partial failures, recovery, or degraded dependencies → `review-resilience`; Security, permissions, data exposure/loss, architecture, or dependencies → `review-risk`.
+
+- At **pre-commit**, always: validate the existing content-bound receipt with native `gentle-ai review validate --gate <gate>`; never start a reviewer or reset its budget. (validate the staged/intended content against the existing receipt; never create a review budget)
+- At **pre-push**, always: validate the existing content-bound receipt with native `gentle-ai review validate --gate <gate>`; never start a reviewer or reset its budget. (validate pushed commits against the same content-bound receipt)
+- At **pre-pr**, always: validate the existing content-bound receipt with native `gentle-ai review validate --gate <gate>`; never start a reviewer or reset its budget. (validate candidate tree, paths, policy, evidence, base relationship, and receipt without reopening review)
+- At **release**, always: validate the existing content-bound receipt with native `gentle-ai review validate --gate <gate>`; never start a reviewer or reset its budget. (validate immutable release tree, provenance, evidence, and publication boundary)
+- At **post-sdd-phase**, after the apply phase completes: if no valid receipt exists, explicitly run `review/start(target)`; otherwise reuse the receipt. (explicitly start ordinary bounded implementation review after apply only when no valid receipt exists)
+<!-- /gentle-ai:trigger-rules -->
+
+<!-- gentle-ai:strict-tdd-mode -->
+Strict TDD Mode: enabled
+<!-- /gentle-ai:strict-tdd-mode -->

@@ -7,10 +7,13 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import tempfile
 import time
+import uuid
 from collections.abc import Mapping, Sequence
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -57,8 +60,10 @@ def build_concept_output_plan(
         "method_status.csv",
         "evaluation_log.txt",
     ]
+    included_methods = tuple(dict.fromkeys(included_methods))
+    concept_directions = directions if included_methods else ()
 
-    for direction in directions:
+    for direction in concept_directions:
         for policy in checkpoint_policies:
             base = f"concepts/{direction.value}/{policy.logical_checkpoint}"
             paths.extend([
@@ -114,6 +119,7 @@ def build_concept_output_plan(
                 f"{base}/tables/method_status.csv",
             ])
 
+    paths = sorted(paths)
     if include_artifact_index:
         paths.append("artifact_index.json")
 
@@ -125,7 +131,7 @@ def build_concept_output_plan(
         methods=tuple(methods),
         directions=tuple(directions),
         checkpoint_policies=tuple(checkpoint_policies),
-        intended_relative_paths=tuple(sorted(paths)),
+        intended_relative_paths=tuple(paths),
     )
 
 
@@ -221,24 +227,26 @@ def _synthetic_status_rows(
     directions: Sequence[Direction],
     policies: Sequence[CheckpointPolicy],
 ) -> list[dict[str, Any]]:
+    not_applicable_methods = (MethodId.AAGN, MethodId.FASTER_SNN)
+    selected_methods = tuple(dict.fromkeys(methods))
+    status_methods = tuple(dict.fromkeys((*selected_methods, *not_applicable_methods)))
     rows = []
     for direction in directions:
         for policy in policies:
-            for method in methods:
+            for method in status_methods:
+                is_not_applicable = method in not_applicable_methods
                 rows.append({
                     "method": method.value,
                     "direction": direction.value,
                     "checkpoint_policy": policy.logical_checkpoint,
-                    "status": "included",
-                    "reason": "fixture_only",
-                })
-            for method in (MethodId.AAGN, MethodId.FASTER_SNN):
-                rows.append({
-                    "method": method.value,
-                    "direction": direction.value,
-                    "checkpoint_policy": policy.logical_checkpoint,
-                    "status": "not_applicable_no_pada3dacb_concept_head",
-                    "reason": "no_pada3dacb_concept_head",
+                    "status": (
+                        "not_applicable_no_pada3dacb_concept_head"
+                        if is_not_applicable else "included"
+                    ),
+                    "reason": (
+                        "no_pada3dacb_concept_head"
+                        if is_not_applicable else "fixture_only"
+                    ),
                 })
     return rows
 
@@ -340,13 +348,17 @@ def build_synthetic_fixture_bundle(
     bootstrap_seed: int,
 ) -> tuple[ConceptEvaluationPlan, dict[str, bytes]]:
     """Build the complete deterministic fixture-only report tree."""
+    included_methods = tuple(
+        method for method in methods
+        if method not in {MethodId.AAGN, MethodId.FASTER_SNN}
+    )
     plan = build_concept_output_plan(
         evaluation_identity,
         "synthetic_test_only",
         methods,
         directions,
         checkpoint_policies,
-        tuple(methods),
+        included_methods,
     )
     ordinary: dict[str, bytes] = {
         "evaluation_config_resolved.yaml": (
@@ -393,12 +405,337 @@ def _default_output_writer(path: Path, payload: bytes) -> None:
         os.fsync(stream.fileno())
 
 
+def _relative_entries(root: Path) -> tuple[set[str], set[str]]:
+    files: set[str] = set()
+    directories: set[str] = set()
+    if root.is_symlink():
+        raise ValueError("output root must not be a symlink")
+    for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            raise ValueError(f"output contains a symlink: {relative}")
+        if path.is_file():
+            files.add(relative)
+        elif path.is_dir():
+            directories.add(relative)
+        else:
+            raise ValueError(f"output contains an unsupported entry: {relative}")
+    return files, directories
+
+
 def _relative_files(root: Path) -> set[str]:
-    return {
-        path.relative_to(root).as_posix()
-        for path in root.rglob("*")
-        if path.is_file()
-    }
+    return _relative_entries(root)[0]
+
+
+def _safe_relative_path(relative_path: Any) -> bool:
+    if not isinstance(relative_path, str) or not relative_path or "\\" in relative_path:
+        return False
+    path = Path(relative_path)
+    return (
+        not path.is_absolute()
+        and all(part not in {"", ".", ".."} for part in relative_path.split("/"))
+    )
+
+
+def _expected_directories(files: set[str]) -> set[str]:
+    directories: set[str] = set()
+    for relative_path in files:
+        parts = relative_path.split("/")[:-1]
+        for index in range(1, len(parts) + 1):
+            directories.add("/".join(parts[:index]))
+    return directories
+
+
+def _validate_allowlisted_tree(root: Path, expected_files: set[str]) -> None:
+    if not root.is_dir() or root.is_symlink():
+        raise RuntimeError("recognized output exists and is not a directory")
+    try:
+        actual_files, actual_directories = _relative_entries(root)
+    except ValueError as error:
+        raise RuntimeError(str(error)) from error
+    if actual_files != expected_files:
+        unknown = sorted(actual_files - expected_files)
+        missing = sorted(expected_files - actual_files)
+        raise RuntimeError(
+            f"unknown output paths block overwrite; unknown={unknown}, missing={missing}"
+        )
+    expected_directories = _expected_directories(expected_files)
+    if actual_directories != expected_directories:
+        unknown = sorted(actual_directories - expected_directories)
+        raise RuntimeError(f"unknown output directories block overwrite: {unknown}")
+
+
+def _validate_completed_manifest(manifest: Any) -> dict[str, Any]:
+    if not isinstance(manifest, Mapping):
+        raise ValueError("completed evaluation manifest is not an object")
+    if manifest.get("schema_version") != "1.0" or manifest.get("protocol_version") != "1.0":
+        raise ValueError("completed evaluation manifest version is unsupported")
+    if not isinstance(manifest.get("evaluation_identity"), str) or not manifest["evaluation_identity"]:
+        raise ValueError("completed evaluation identity is missing")
+    if not isinstance(manifest.get("analysis_mode"), str) or not manifest["analysis_mode"]:
+        raise ValueError("completed analysis mode is missing")
+    if manifest.get("disposition") != "completed":
+        raise ValueError("completed evaluation is not marked completed")
+    output_hashes = manifest.get("output_sha256s")
+    if not isinstance(output_hashes, Mapping):
+        raise ValueError("completed output hashes are missing")
+    for relative_path, expected_hash in output_hashes.items():
+        if not _safe_relative_path(relative_path) or relative_path in {
+            "artifact_index.json", "evaluation_manifest.json"
+        }:
+            raise ValueError("completed output contains an unsafe artifact path")
+        if (
+            not isinstance(expected_hash, str)
+            or len(expected_hash) != 64
+            or expected_hash != expected_hash.lower()
+            or any(character not in "0123456789abcdef" for character in expected_hash)
+        ):
+            raise ValueError(f"invalid artifact hash: {relative_path}")
+    return dict(manifest)
+
+
+_OWNER_METADATA_NAME = ".pada3dacb-owner.json"
+_STALE_CONTROLLED_AGE_SECONDS = 30.0
+
+
+def _process_is_alive(pid: int) -> bool:
+    """Return a conservative liveness result for a controlled owner PID."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _owner_metadata_path(entry: Path, kind: str) -> Path:
+    return entry / _OWNER_METADATA_NAME
+
+
+def _write_owner_metadata(entry: Path, *, kind: str, pid: int, token: str) -> None:
+    metadata_path = _owner_metadata_path(entry, kind)
+    metadata = json.dumps(
+        {"schema_version": "1", "pid": pid, "token": token},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    temporary = metadata_path.with_name(f".{metadata_path.name}.{token}.tmp")
+    try:
+        with temporary.open("wb") as stream:
+            stream.write(metadata)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, metadata_path)
+    finally:
+        with suppress(FileNotFoundError):
+            temporary.unlink()
+
+
+def _read_owner_metadata(entry: Path, *, kind: str) -> dict[str, Any] | None:
+    metadata_path = _owner_metadata_path(entry, kind)
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {}
+    if (
+        not isinstance(payload, Mapping)
+        or payload.get("schema_version") != "1"
+        or isinstance(payload.get("pid"), bool)
+        or not isinstance(payload.get("pid"), int)
+        or payload["pid"] <= 0
+        or not isinstance(payload.get("token"), str)
+        or not payload["token"]
+    ):
+        return {}
+    return dict(payload)
+
+
+def _controlled_entry_kind(name: str, output_name: str) -> tuple[str, str] | None:
+    pattern = rf"\.{re.escape(output_name)}(?:\.v\d{{6}})?\.(stage|reserve|backup)\.([A-Za-z0-9_-]+)"
+    match = re.fullmatch(pattern, name)
+    if match is None:
+        return None
+    return match.group(1), match.group(2)
+
+
+def _controlled_destination(entry: Path, output_name: str) -> Path:
+    name = entry.name
+    destination_name = output_name
+    version_prefix = f".{output_name}.v"
+    if name.startswith(version_prefix):
+        version = name[len(version_prefix):].split(".", maxsplit=1)[0]
+        destination_name = f"{output_name}.v{version}"
+    return entry.parent / destination_name
+
+
+def _is_old_controlled_entry(entry: Path) -> bool:
+    try:
+        age = time.time() - entry.stat().st_mtime
+    except OSError:
+        return False
+    return age >= _STALE_CONTROLLED_AGE_SECONDS
+
+
+def _owner_is_stale(
+    entry: Path,
+    *,
+    kind: str,
+    token: str | None = None,
+) -> bool:
+    if entry.is_symlink() or not entry.is_dir():
+        return False
+    metadata = _read_owner_metadata(entry, kind=kind)
+    if metadata is None and token is not None:
+        encoded_pid = token.split("-", maxsplit=1)[0]
+        if encoded_pid.isdigit() and int(encoded_pid) > 0:
+            return not _process_is_alive(int(encoded_pid))
+    if metadata is None:
+        return _is_old_controlled_entry(entry)
+    if not metadata:
+        return False
+    if token is not None and metadata["token"] != token:
+        return False
+    if _process_is_alive(metadata["pid"]):
+        return False
+    # Read twice: a writer racing an owner read is never reclaimed.
+    return _read_owner_metadata(entry, kind=kind) == metadata
+
+
+def _remove_controlled_entry(entry: Path, parent: Path) -> bool:
+    if entry.parent != parent or entry.is_symlink() or not entry.is_dir():
+        return False
+    shutil.rmtree(entry)
+    return True
+
+
+def _recover_stale_backup(entry: Path, output_name: str) -> None:
+    destination = _controlled_destination(entry, output_name)
+    if not destination.exists() and not destination.is_symlink():
+        try:
+            verify_completed_output(entry)
+        except (OSError, ValueError):
+            pass
+        else:
+            os.replace(entry, destination)
+            return
+    _remove_controlled_entry(entry, entry.parent)
+
+
+def _recover_stale_controlled_entries(parent: Path, output_name: str) -> None:
+    for entry in tuple(parent.iterdir()):
+        controlled = _controlled_entry_kind(entry.name, output_name)
+        if controlled is None:
+            continue
+        kind, token = controlled
+        if not _owner_is_stale(entry, kind=kind, token=token):
+            continue
+        if kind == "backup":
+            _recover_stale_backup(entry, output_name)
+        else:
+            _remove_controlled_entry(entry, parent)
+
+
+@contextmanager
+def _allocation_lock(parent: Path, output_name: str, *, timeout_seconds: float = 5.0):
+    lock = parent / f".{output_name}.allocation.lock"
+    owner = {"pid": os.getpid(), "token": uuid.uuid4().hex}
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            lock.mkdir()
+        except FileExistsError as error:
+            if _owner_is_stale(lock, kind="lock"):
+                _remove_controlled_entry(lock, parent)
+                continue
+            if time.monotonic() >= deadline:
+                raise RuntimeError("output allocation lock is busy") from error
+            time.sleep(0.01)
+        else:
+            try:
+                _write_owner_metadata(
+                    lock, kind="lock", pid=owner["pid"], token=owner["token"]
+                )
+            except Exception:
+                _remove_controlled_entry(lock, parent)
+                raise
+            break
+    try:
+        _recover_stale_controlled_entries(parent, output_name)
+        yield owner
+    finally:
+        metadata = _read_owner_metadata(lock, kind="lock")
+        if metadata is not None and metadata.get("token") == owner["token"]:
+            _remove_controlled_entry(lock, parent)
+
+
+def _reservation_glob(parent: Path, destination: Path) -> str:
+    return f".{destination.name}.reserve.*"
+
+
+def _reserve_destination(parent: Path, destination: Path, token: str) -> Path:
+    reservation = parent / f".{destination.name}.reserve.{token}"
+    reservation.mkdir()
+    return reservation
+
+
+def _find_non_overwrite_destination(
+    output: Path,
+    evaluation_identity: str,
+    *,
+    owner: Mapping[str, Any] | None = None,
+) -> tuple[Path, Path | None]:
+    if output.exists() or output.is_symlink():
+        if not output.is_dir():
+            raise ValueError("existing output is not a completed directory")
+        try:
+            manifest = verify_completed_output(output)
+        except ValueError as error:
+            raise ValueError(
+                f"existing output is invalid and was not modified: {error}"
+            ) from error
+        if manifest["evaluation_identity"] == evaluation_identity:
+            return output, None
+
+    token = (
+        f"{owner['pid']}-{owner['token']}"
+        if owner is not None else f"{os.getpid()}-{uuid.uuid4().hex}"
+    )
+    if (
+        not output.exists()
+        and not output.is_symlink()
+        and not list(output.parent.glob(_reservation_glob(output.parent, output)))
+    ):
+        return output, _reserve_destination(
+            output.parent, output, token,
+        )
+
+    version = 1
+    while True:
+        destination = output.with_name(f"{output.name}.v{version:06d}")
+        if destination.exists() or destination.is_symlink():
+            if destination.is_dir() and not destination.is_symlink():
+                try:
+                    manifest = verify_completed_output(destination)
+                except ValueError:
+                    pass
+                else:
+                    if manifest["evaluation_identity"] == evaluation_identity:
+                        return destination, None
+            version += 1
+            continue
+        if list(output.parent.glob(_reservation_glob(output.parent, destination))):
+            version += 1
+            continue
+        try:
+            return destination, _reserve_destination(
+                output.parent, destination, token,
+            )
+        except FileExistsError:
+            version += 1
 
 
 def _replace_with_permission_retry(
@@ -419,6 +756,74 @@ def _replace_with_permission_retry(
             time.sleep(delay_seconds)
 
 
+def _publish_output(
+    destination: Path,
+    plan: ConceptEvaluationPlan,
+    artifacts: Mapping[str, bytes],
+    *,
+    overwrite: bool,
+    write: Any,
+    replace: Any,
+    reservation: Path | None,
+    owner: Mapping[str, Any],
+) -> Path:
+    stage: Path | None = None
+    backup: Path | None = None
+    moved_existing = False
+    committed = False
+    try:
+        stage = destination.parent / (
+            f".{destination.name}.stage.{owner['pid']}-{owner['token']}"
+        )
+        stage.mkdir()
+        backup = destination.parent / (
+            f".{destination.name}.backup.{owner['pid']}-{owner['token']}"
+        )
+        ordered_paths = [
+            path for path in plan.intended_relative_paths
+            if path != "evaluation_manifest.json"
+        ]
+        if "evaluation_manifest.json" in plan.intended_relative_paths:
+            ordered_paths.append("evaluation_manifest.json")
+        for relative_path in ordered_paths:
+            write(stage / relative_path, artifacts[relative_path])
+        if overwrite and destination.exists():
+            if backup.exists():
+                raise RuntimeError("controlled output backup already exists")
+            _replace_with_permission_retry(replace, destination, backup)
+            moved_existing = True
+        elif destination.exists() or destination.is_symlink():
+            raise RuntimeError("reserved output destination became occupied")
+
+        _replace_with_permission_retry(replace, stage, destination)
+        committed = True
+        return destination
+    except Exception as error:
+        restored = False
+        if (
+            moved_existing
+            and backup is not None
+            and backup.exists()
+            and not destination.exists()
+        ):
+            try:
+                _replace_with_permission_retry(replace, backup, destination)
+                restored = True
+            except Exception as restore_error:
+                raise RuntimeError(
+                    f"output commit and restoration failed; backup remains at {backup}"
+                ) from restore_error
+        message = "output commit failed; previous tree restored" if restored else "output commit failed"
+        raise RuntimeError(f"{message}: {error}") from error
+    finally:
+        if stage is not None and stage.exists():
+            shutil.rmtree(stage, ignore_errors=True)
+        if reservation is not None and reservation.exists():
+            _remove_controlled_entry(reservation, reservation.parent)
+        if committed and backup is not None and backup.exists():
+            shutil.rmtree(backup, ignore_errors=True)
+
+
 def commit_output(
     output_root: str | Path,
     plan: ConceptEvaluationPlan,
@@ -428,63 +833,34 @@ def commit_output(
     writer: Any = None,
     replace: Any = os.replace,
 ) -> Path:
-    """Stage a complete allowlisted tree and publish it with the manifest written last."""
+    """Publish an exact completed tree without destructive non-overwrite behavior."""
     output = Path(output_root)
     output.parent.mkdir(parents=True, exist_ok=True)
-
-    if set(artifacts.keys()) != set(plan.intended_relative_paths):
+    expected_files = set(plan.intended_relative_paths)
+    if set(artifacts.keys()) != expected_files:
         raise ValueError("artifacts must exactly match the evaluation plan")
 
     write = writer or _default_output_writer
+    if overwrite:
+        with _allocation_lock(output.parent, output.name) as owner:
+            if output.exists() or output.is_symlink():
+                _validate_allowlisted_tree(output, expected_files)
+                verify_completed_output(output)
+            return _publish_output(
+                output, plan, artifacts, overwrite=True, write=write,
+                replace=replace, reservation=None, owner=owner,
+            )
 
-    stage = Path(tempfile.mkdtemp(prefix=f".{output.name}.stage.", dir=output.parent))
-    token = stage.name.rsplit(".", maxsplit=1)[-1]
-    backup = output.parent / f".{output.name}.backup.{token}"
-
-    moved_existing = False
-    try:
-        ordered_paths = [
-            path for path in plan.intended_relative_paths
-            if path != "evaluation_manifest.json"
-        ]
-        if "evaluation_manifest.json" in plan.intended_relative_paths:
-            ordered_paths.append("evaluation_manifest.json")
-        for relative_path in ordered_paths:
-            write(stage / relative_path, artifacts[relative_path])
-
-        if output.exists():
-            if not output.is_dir():
-                raise RuntimeError("recognized output exists and is not a directory")
-            unknown = _relative_files(output) - set(plan.intended_relative_paths)
-            if unknown and not overwrite:
-                raise RuntimeError(f"unknown output paths block overwrite: {sorted(unknown)}")
-            _replace_with_permission_retry(replace, output, backup)
-            moved_existing = True
-
-        _replace_with_permission_retry(replace, stage, output)
-
-        if backup.exists():
-            shutil.rmtree(backup, ignore_errors=True)
-
-        return output
-
-    except Exception as error:
-        restored = False
-        if moved_existing and backup.exists() and not output.exists():
-            try:
-                _replace_with_permission_retry(replace, backup, output)
-                restored = True
-            except Exception as restore_error:
-                raise RuntimeError(
-                    f"output commit and restoration failed; backup remains at {backup}"
-                ) from restore_error
-        message = "output commit failed; previous tree restored" if restored else "output commit failed"
-        raise RuntimeError(message) from error
-    finally:
-        if stage.exists():
-            shutil.rmtree(stage, ignore_errors=True)
-        if backup.exists() and output.exists():
-            shutil.rmtree(backup, ignore_errors=True)
+    with _allocation_lock(output.parent, output.name) as owner:
+        destination, reservation = _find_non_overwrite_destination(
+            output, plan.evaluation_identity, owner=owner
+        )
+        if reservation is None:
+            return destination
+    return _publish_output(
+        destination, plan, artifacts, overwrite=False, write=write,
+        replace=replace, reservation=reservation, owner=owner,
+    )
 
 
 def verify_completed_output(
@@ -492,23 +868,27 @@ def verify_completed_output(
     *,
     expected_identity: str | None = None,
 ) -> dict[str, Any]:
-    """Verify an immutable completed synthetic bundle without writing to it."""
+    """Verify any immutable completed output tree without writing to it."""
     root = Path(output_root)
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("completed output root is not a directory")
     manifest_path = root / "evaluation_manifest.json"
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = _validate_completed_manifest(
+            json.loads(manifest_path.read_text(encoding="utf-8"))
+        )
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ValueError("completed evaluation manifest is unreadable") from error
-    if manifest.get("analysis_mode") != "synthetic_test_only":
-        raise ValueError("completed output is not fixture-only")
-    if expected_identity is not None and manifest.get("evaluation_identity") != expected_identity:
+    if expected_identity is not None and manifest["evaluation_identity"] != expected_identity:
         raise ValueError("evaluation identity mismatch")
 
-    output_hashes = manifest.get("output_sha256s")
-    if not isinstance(output_hashes, Mapping):
-        raise ValueError("completed output hashes are missing")
+    output_hashes = manifest["output_sha256s"]
     expected_files = set(output_hashes) | {"artifact_index.json", "evaluation_manifest.json"}
-    if _relative_files(root) != expected_files:
+    try:
+        actual_files, actual_directories = _relative_entries(root)
+    except ValueError as error:
+        raise ValueError(str(error)) from error
+    if actual_files != expected_files or actual_directories != _expected_directories(expected_files):
         raise ValueError("completed output file set mismatch")
 
     ordinary: dict[str, bytes] = {}

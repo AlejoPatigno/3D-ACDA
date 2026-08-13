@@ -1,0 +1,574 @@
+phase: 17
+slug: ablations
+status: audited_closure_only
+language: en
+production_phase_17_code_created: false
+real_adni_oasis_training_or_publication_evaluation_executed: false
+phase_18_started: false
+
+classification_schema:
+  allowed_values:
+    - canonical_executed
+    - canonical_defined_not_executed
+    - equivalent_to_existing_method
+    - invalid_after_architecture_revision
+    - obsolete
+    - unsupported
+    - helper_only
+  unresolved_policy: "Ambiguous names, incomplete interventions, selective-fold shortcuts, and unresolved coefficient choices remain blocked; no inference from a name is allowed."
+
+closure:
+  phase_16:
+    repository_state_file: openspec/changes/archive/2026-08-08-phase-16-concept-validation/state.yaml
+    archive_report: openspec/changes/archive/2026-08-08-phase-16-concept-validation/archive-report.md
+    status: archived
+    tasks_completed: 65
+    native_receipt:
+      lineage: review-79ee2a4308d2010c
+      state: approved
+      generation: 1
+      gate: post-apply
+      result: allow
+    current_engram_context: "Parent-provided current Engram context confirms the same Phase 16 archive/approval state."
+  authorization:
+    source: AGENTS.md:640-658
+    phase_17_authorized: true
+    authorization_scope: "Audit, specification, and synthetic-only implementation of the canonical ablation suite before any real run."
+    real_evaluation_authorized: false
+    phase_18_authorized: false
+    candidate_approval:
+      source: "Explicit maintainer decision in the Phase 17 orchestration session"
+      synthetic_implementation_authorized: true
+      real_execution_authorized: false
+      approved_ids:
+        - no_proto
+        - no_pl
+        - no_cons
+        - no_concept
+        - no_anat
+        - mean_pool
+      exact_interventions:
+        no_proto: "lambda_proto = 0.0"
+        no_pl: "lambda_pl = 0.0"
+        no_cons: "lambda_cons = 0.0"
+        no_concept: "lambda_cbm = 0.0"
+        no_anat: "lambda_anat = 0.0"
+        mean_pool: "Replace attention aggregation with the exact notebook-defined uniform mean operation"
+      exclusions:
+        - no_domain_adaptation
+        - no_ctx_encoder
+        - identity_ctx
+        - full
+        - lambda_proto_0.2
+        - unsupported_aliases
+        - CFS
+        - ACS
+        - PCS
+        - QIS
+  carried_forward_blockers:
+    - "Real ADNI/OASIS evaluation and training remain authorization-gated."
+    - "CFS, ACS, PCS, and QIS remain BLOCKED without authoritative equations."
+    - "The former native incident #1793 was resolved administratively; its receipt provenance and native lifecycle validation gates remain mandatory for archive, commit, push, PR, release, and publication operations."
+    - "No Phase 17 production path existed before Phase 17 authorization."
+  stale_mirror_note: "Older blocked Phase 16 verification mirrors remain historical evidence; the current archived state.yaml and archive-report.md are authoritative and were not rewritten."
+
+validation_evidence:
+  - command: python -m pip install -e .
+    result: passed
+  - command: python -c "import pada3dacb; print(pada3dacb.__version__)"
+    result: "passed; 0.1.0"
+  - command: python -m pytest -q --basetemp=artifacts/pytest-tmp-phase17-final
+    result: "passed; 1059 passed, 7 warnings, exit 0"
+  - command: focused Windows concept-report cleanup regression tests
+    result: "passed; 30 passed"
+  - command: python -m ruff check .
+    result: passed
+  - command: git diff --check
+    result: passed
+bugfix_scope:
+  files:
+    - src/pada3dacb/evaluation/concepts/report.py
+    - tests/test_concept_report.py
+  description: "Existing Phase 16 Windows lock cleanup and its regression coverage only."
+  phase_17_behavior_changed: false
+  modified_by_this_action: false
+
+canonical_sources:
+  - path: notebooks/archive/training_original.ipynb
+    role: primary scientific source
+    inspected_locations:
+      - "cell 8, lines 442-625: DomainAdaptiveTotalLoss"
+      - "cell 14, lines 303-328: build_patched_model"
+      - "cell 14, lines 330-619: primary train_domain_adaptation_fold"
+      - "cell 14, lines 621-676: primary run_domain_adaptation_experiment"
+      - "cell 14, lines 678-735: run_bidirectional_domain_adaptation and commented backward call"
+      - "cell 15, lines 11-26: non-commented bidirectional_results call"
+      - "cell 18, lines 10-86: identity/mean-pool patches and ablation loss builder"
+      - "cell 18, lines 96-161: terminal metrics and summary table helpers"
+      - "cell 18, lines 163-458: later ablation-aware fold runner"
+      - "cell 18, lines 460-531: later fold-selective experiment runner"
+      - "cell 18, lines 533-642: ablation study runner and CSV/JSON outputs"
+      - "cell 19, lines 1-66: default ablation specifications"
+      - "cell 19, lines 68-88: commented ablation setup and call"
+  - path: docs/PROPOSED_METHOD_EXPERIMENT.md
+    role: "Phase 13 canonical proposed-method coefficients, target-label firewall, and real-run blockers"
+  - path: docs/PHASE13_REPORT.md
+    role: "Primary versus later ablation helper distinction and executed-path audit"
+  - path: specs/phase_13_prototype_pseudo/notebook_extraction.md
+    role: "Cell-level loss, warm/full, and primary-call extraction"
+  - path: docs/NOTEBOOK_MIGRATION_MAP.md
+    role: "Architecture revision, excluded contextual patching, and shadowed runner audit"
+  - path: docs/PADA3DACB_MODEL.md
+    role: "Explicit no-context production architecture"
+  - path: docs/LOSSES_AND_TRAINING.md
+    role: "Fixed-epoch, checkpoint, and target-monitoring production contracts"
+  - path: specs/phase_16_concept_validation/manuscript_extraction.md
+    role: "Authoritative-source limitation and blocked manuscript-score disposition"
+
+method_contract:
+  production_method: PADA-3DACB
+  architecture:
+    retained:
+      - Encoder3D
+      - ROITokenizer
+      - token normalization
+      - token MLP and dropout
+      - AttentionAggregator
+      - ClassificationHead
+      - ConceptBottleneck
+    forbidden_or_removed:
+      - ContextualROIEncoder
+      - ctx_enc
+      - Transformer-based ROI contextual mixing
+      - Full/Lite runtime switch
+      - identity patching of a Full model
+  labels:
+    order: [CN, MCI, AD]
+    indices: {CN: 0, MCI: 1, AD: 2}
+  target_label_contract:
+    target_adaptation_batch_keys: [x, subject_id, subject_hash, cohort]
+    target_label_fields_forbidden:
+      - y
+      - label
+      - label_name
+      - true_label
+      - c_target
+      - g_bar
+      - diagnosis
+      - stored_diagnostic_probabilities
+      - concept_targets
+      - jacobian_targets
+      - other_supervision_fields
+      - other_artifact_fields
+    target_diagnosis_labels_in_adaptation: forbidden
+    target_evaluation_labels: "Monitoring only; not a training loss"
+    target_adaptation_and_evaluation_disjoint: true
+    concept_targets_and_jacobian_targets: "Immutable precomputed source artifacts; no regeneration in the ablation runner"
+
+objective_contract:
+  source: "training_original.ipynb cell 8, lines 526-625; primary values cell 14, lines 504-524"
+  primary_coefficients:
+    lambda_z: 1.0
+    lambda_c: 1.0
+    lambda_cons: 0.1
+    lambda_cbm: 0.5
+    lambda_anat: 0.2
+    lambda_proto: 1.0
+    lambda_pl: 0.1
+    tau_p: 0.95
+    proto_margin: 1.0
+    lambda_sep: 0.1
+    label_smoothing: 0.1
+    warm_lambda_z: 0.1
+    warm_lambda_c: 1.0
+    warm_lambda_cbm: 1.0
+    warm_lambda_anat: 1.0
+    warm_lambda_cons: 0.0
+  warm:
+    equation: "warm_lambda_z*lambda_z*L_cls_z + warm_lambda_c*lambda_c*L_cls_c + warm_lambda_cbm*lambda_cbm*L_concept + warm_lambda_anat*lambda_anat*L_anat + warm_lambda_cons*lambda_cons*L_cons"
+    prototype_term: absent_and_logged_as_zero
+    pseudo_label_term: absent_and_logged_as_zero
+  full:
+    equation: "lambda_z*L_cls_z + lambda_c*L_cls_c + lambda_cons*L_cons + lambda_cbm*L_concept + lambda_anat*L_anat + lambda_proto*L_proto + lambda_pl*L_pl"
+    prototype_probability_source: concept_head_target_logits
+    pseudo_label_probability_source: concept_head_target_logits
+  unresolved_configuration:
+    name: lambda_proto_0.2
+    source: "cell 18, lines 61-86: build_ablation_loss default; cell 8, lines 463-488: class default"
+    classification: unsupported
+    repository_primary_value: 1.0
+    manuscript_or_later_helper_value: 0.2
+    blocker: "D-14-001 remains unresolved; do not choose a publication-facing value in this inventory."
+
+checkpoint_output_policy:
+  binding_production_policy:
+    epochs: fixed_only
+    early_stopping: forbidden
+    best_checkpoint_metric: source_validation_macro_f1_only
+    training_after_best_save: required
+    target_metrics_affect_training_or_selection: false
+  historical_notebook_paths:
+    primary:
+      source: "cell 14, lines 577-619"
+      pattern: "<save_dir>/<source>_to_<target>/fold_<NN>/domain_adaptive_mri_cbm.pt and history_domain_adaptive.json"
+    ablation:
+      source: "cell 18, lines 410-458"
+      pattern: "<save_dir>/<ablation>/<source>_to_<target>/fold_<NN>/domain_adaptive_mri_cbm.pt and history_domain_adaptive.json"
+    summaries:
+      source: "cell 18, lines 621-642"
+      files: [ablation_folds.csv, ablation_summary.csv, ablation_runs.json]
+  policy_disposition: "Historical notebook saves are provenance evidence only; they do not override the production checkpoint and output contract."
+
+ablation_candidates:
+  - id: full
+    exact_source_name: full
+    requested_names: []
+    provenance: "training_original.ipynb cell 19, lines 3-8"
+    classification: invalid_after_architecture_revision
+    execution_status: canonical_defined_not_executed
+    intervention: "No loss override and no model patch in the later helper; the helper's base loss uses lambda_proto=0.2 and the model remains the former contextual Full path."
+    preserved_components: all_components_of_former_full_helper
+    warm_behavior: "Historical warm objective unchanged."
+    full_behavior: "Historical full objective with the later helper's lambda_proto=0.2 default."
+    blocker: "The contextual Full architecture and the 0.2 coefficient are not the current canonical PADA-3DACB control."
+  - id: no_proto
+    exact_source_name: no_proto
+    requested_names: [no_prototype]
+    provenance: "training_original.ipynb cell 19, lines 9-14"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found."
+    intervention: "loss_overrides.lambda_proto = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_cons, L_concept, L_anat, L_pl]
+    warm_behavior: "Unchanged; L_proto is not computed during warm."
+    full_behavior: "Removes lambda_proto * L_proto only."
+    target_label_contract: preserved
+    blocker: "No complete Phase 17 fold/seed/checkpoint/output contract has been executed."
+  - id: no_pl
+    exact_source_name: no_pl
+    requested_names: [no_pseudo_label]
+    provenance: "training_original.ipynb cell 19, lines 15-20"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found; the selective-fold branch is only helper logic."
+    intervention: "loss_overrides.lambda_pl = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_cons, L_concept, L_anat, L_proto]
+    warm_behavior: "Unchanged; L_pl is not computed during warm."
+    full_behavior: "Removes lambda_pl * L_pl only."
+    target_label_contract: preserved
+    blocker: "Historical availability logic runs only fold 4 for this name and is not full-suite evidence."
+  - id: no_cons
+    exact_source_name: no_cons
+    requested_names: [no_head_consistency]
+    provenance: "training_original.ipynb cell 19, lines 21-26"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found."
+    intervention: "loss_overrides.lambda_cons = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_concept, L_anat, L_proto, L_pl]
+    warm_behavior: "No effective change because warm_lambda_cons is already 0.0."
+    full_behavior: "Removes lambda_cons * L_cons, the consistency loss between latent and concept heads."
+    target_label_contract: preserved
+    alias_disposition: "no_head_consistency is not an exact notebook symbol; treat it as an alias only after explicit semantic confirmation."
+    blocker: "The requested long name must not silently become a new candidate."
+  - id: no_head_consistency_alias
+    exact_source_name: null
+    requested_names: [no_head_consistency]
+    provenance: "No exact symbol found in training_original.ipynb or inspected docs; nearest exact source is no_cons at cell 19, lines 21-26."
+    classification: unsupported
+    execution_status: not_found
+    intervention: "Not established independently; do not infer that the requested name means no_cons."
+    preserved_components: unresolved
+    warm_behavior: unresolved
+    full_behavior: unresolved
+    blocker: "Requires an explicit maintainer mapping to no_cons or a separately sourced definition."
+  - id: no_concept
+    exact_source_name: no_concept
+    requested_names: [no_concept_supervision]
+    provenance: "training_original.ipynb cell 19, lines 27-32"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found; the selective-fold branch is only helper logic."
+    intervention: "loss_overrides.lambda_cbm = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_cons, L_anat, L_proto, L_pl]
+    warm_behavior: "Removes lambda_cbm * L_concept."
+    full_behavior: "Removes lambda_cbm * L_concept."
+    target_label_contract: preserved
+    alias_disposition: "no_concept_supervision is a requested descriptive alias; the exact source name is no_concept."
+    blocker: "Do not rename the source candidate in a future runner without preserving exact provenance."
+  - id: no_anat
+    exact_source_name: no_anat
+    requested_names: [no_anatomical_consistency]
+    provenance: "training_original.ipynb cell 19, lines 33-38"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found."
+    intervention: "loss_overrides.lambda_anat = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_cons, L_concept, L_proto, L_pl]
+    warm_behavior: "Removes lambda_anat * L_anat."
+    full_behavior: "Removes lambda_anat * L_anat."
+    target_label_contract: preserved
+    alias_disposition: "no_anatomical_consistency is a requested descriptive alias; the exact source name is no_anat."
+    blocker: "The long alias is not an additional independently defined candidate."
+  - id: no_domain_adaptation
+    exact_source_name: no_domain_adaptation
+    requested_names: [no_domain_adaptation]
+    provenance:
+      definition: "training_original.ipynb cell 19, lines 53-64"
+      selective_fold_branch: "training_original.ipynb cell 18, lines 487-499"
+      runner: "training_original.ipynb cell 18, lines 460-531"
+    classification: canonical_defined_not_executed
+    execution_status: "Only included when get_default_ablation_specs(include_no_da=True) is called; the call is commented out at cell 19, lines 68-88."
+    intervention: "loss_overrides.lambda_proto = 0.0 and lambda_pl = 0.0"
+    preserved_components: [model, L_cls_z, L_cls_c, L_cons, L_concept, L_anat]
+    warm_behavior: "Unchanged supervised warm objective."
+    full_behavior: "Removes prototype and pseudo-label terms, but historical train_full_epoch still constructs/forwards target adaptation batches."
+    target_label_contract: "Must remain unlabeled if reproduced; the name alone does not authorize source-only loader substitution."
+    blocker: "Not a proven source-only control until the target-forward and output contract are explicitly specified."
+  - id: no_ctx_encoder
+    exact_source_name: no_ctx_encoder
+    requested_names: []
+    provenance:
+      spec: "training_original.ipynb cell 19, lines 39-44"
+      patch: "training_original.ipynb cell 18, lines 37-52"
+      component: "training_original.ipynb cell 18, lines 10-12"
+    classification: equivalent_to_existing_method
+    execution_status: canonical_defined_not_executed
+    intervention: "model_patch=identity_ctx; replace former Full model.ctx_enc with IdentityContextualEncoder."
+    preserved_components: [encoder, tokenizer, token_processing, attention_aggregator, classification_head, concept_bottleneck, losses]
+    warm_behavior: unchanged
+    full_behavior: unchanged_loss_algebra
+    production_disposition: "The resulting no-context behavior is the already approved PADA-3DACB architecture, but identity patching a Full model is invalid after the architecture revision."
+    blocker: "Do not implement as a runtime switch or treat it as a distinct Phase 17 method."
+  - id: identity_ctx
+    exact_source_name: identity_ctx
+    requested_names: []
+    provenance: "training_original.ipynb cell 18, lines 37-52; selected at cell 19, lines 39-44"
+    classification: helper_only
+    execution_status: canonical_defined_not_executed
+    intervention: "Component patch token for apply_model_ablation."
+    preserved_components: [former_full_model_except_contextual_encoder]
+    warm_behavior: unchanged
+    full_behavior: unchanged_loss_algebra
+    blocker: "Implementation technique only; not a standalone production method."
+  - id: mean_pool
+    exact_source_name: mean_pool
+    requested_names: [mean_pooling]
+    provenance:
+      component: "training_original.ipynb cell 18, lines 15-31"
+      patch: "training_original.ipynb cell 18, lines 37-52"
+      spec: "training_original.ipynb cell 19, lines 45-50"
+    classification: canonical_defined_not_executed
+    execution_status: "No non-commented ablation call found."
+    intervention: "Replace AttentionAggregator with MeanPoolAggregator; z=U.mean(dim=1), alpha is uniform 1/K."
+    preserved_components: [encoder, tokenizer, token_processing, concept_bottleneck, classification_head, all_loss_terms]
+    warm_behavior: unchanged_loss_algebra
+    full_behavior: unchanged_loss_algebra
+    target_label_contract: preserved
+    blocker: "Defined alternative pooling only; docs exclude it from the final proposed architecture and no Phase 17 output matrix has been run."
+  - id: mean_pooling_alias
+    exact_source_name: null
+    requested_names: [mean_pooling]
+    provenance: "No exact symbol named mean_pooling; nearest exact source symbol is mean_pool at cell 19, lines 45-50."
+    classification: unsupported
+    execution_status: not_found
+    intervention: "Use mean_pool only after explicit alias acceptance."
+    preserved_components: unresolved
+    warm_behavior: unresolved
+    full_behavior: unresolved
+    blocker: "Do not create a second spelling with independent semantics."
+
+supporting_symbols:
+  - id: IdentityContextualEncoder
+    provenance: "training_original.ipynb cell 18, lines 10-12"
+    kind: component_helper
+    classification: helper_only
+    role: "Identity replacement used only by identity_ctx patch."
+  - id: MeanPoolAggregator
+    provenance: "training_original.ipynb cell 18, lines 15-31"
+    kind: alternative_pooling_component
+    classification: helper_only
+    role: "Uniform ROI pooling and uniform alpha output."
+  - id: apply_model_ablation
+    provenance: "training_original.ipynb cell 18, lines 37-52"
+    kind: component_patch_helper
+    classification: helper_only
+    flags: [model_patch, identity_ctx, mean_pool]
+    role: "Deep-copies the former model and applies a named patch."
+  - id: build_ablation_loss
+    provenance: "training_original.ipynb cell 18, lines 55-86"
+    kind: loss_override_helper
+    classification: helper_only
+    flags: [loss_overrides, lambda_z, lambda_c, lambda_cons, lambda_cbm, lambda_anat, lambda_proto, lambda_pl, tau_p, proto_margin, lambda_sep, warm_lambda_z, warm_lambda_c, warm_lambda_cbm, warm_lambda_anat, warm_lambda_cons]
+    role: "Constructs DomainAdaptiveTotalLoss after applying arbitrary dictionary overrides."
+  - id: _get_last_epoch_info
+    provenance: "training_original.ipynb cell 18, lines 88-93"
+    kind: terminal_history_helper
+    classification: helper_only
+    role: "Selects the last full or warm history row."
+  - id: extract_fold_terminal_metrics
+    provenance: "training_original.ipynb cell 18, lines 96-147"
+    kind: result_table_helper
+    classification: helper_only
+    outputs: [L_total, L_cls_z, L_cls_c, L_cons, L_concept, L_anat, L_proto, L_pl, proto_align, proto_sep, n_confident_T, source_metrics, target_metrics]
+  - id: summarize_ablation_results
+    provenance: "training_original.ipynb cell 18, lines 149-161"
+    kind: summary_table_helper
+    classification: helper_only
+    role: "Groups fold rows by ablation and computes nanmean/nanstd; no inferential protocol."
+  - id: run_ablation_study
+    provenance: "training_original.ipynb cell 18, lines 533-642"
+    kind: ablation_runner
+    classification: helper_only
+    execution_status: defined_not_called
+    outputs: [ablation_folds.csv, ablation_summary.csv, ablation_runs.json]
+  - id: get_default_ablation_specs
+    provenance: "training_original.ipynb cell 19, lines 1-66"
+    kind: ablation_config_factory
+    classification: helper_only
+    flags: [include_no_da]
+  - id: availability_fold_filter
+    provenance: "training_original.ipynb cell 18, lines 487-499"
+    kind: selective_fold_shortcut
+    classification: obsolete
+    role: "Runs only selected late folds for four names; not a complete ablation design."
+    blocker: "Must not be used as evidence or copied into a production Phase 17 runner."
+  - id: ablation_spec
+    provenance: "training_original.ipynb cell 18, lines 185-190"
+    kind: config_shape
+    classification: helper_only
+    fields: [name, description, loss_overrides, model_patch]
+  - id: ABLATIONS_FAST
+    provenance: "training_original.ipynb cell 19, line 68"
+    kind: commented_config_assignment
+    classification: canonical_defined_not_executed
+    role: "Commented assignment of get_default_ablation_specs(True)."
+
+executed_calls:
+  - id: primary_bidirectional_results
+    provenance: "training_original.ipynb cell 15, lines 11-26"
+    expression: "bidirectional_results = run_bidirectional_domain_adaptation(...)"
+    classification: canonical_executed
+    arguments: {n_splits: 5, batch_size: 16, num_workers: 2, n_epochs_warm: 5, n_epochs_full: 50, lr: 0.0001, weight_decay: 0.0001, random_state: 42}
+    direction_output: [source_to_target]
+    ablation_spec_present: false
+  - id: commented_ablation_assignment
+    provenance: "training_original.ipynb cell 19, line 68"
+    expression: "# ABLATIONS_FAST = get_default_ablation_specs(True)"
+    classification: canonical_defined_not_executed
+  - id: commented_ablation_study_call
+    provenance: "training_original.ipynb cell 19, lines 70-88"
+    expression: "# ablation_results = run_ablation_study(...)"
+    classification: canonical_defined_not_executed
+    intended_arguments: {n_splits: 5, batch_size: 16, num_workers: 2, n_epochs_warm: 5, n_epochs_full: 50, lr: 0.0001, weight_decay: 0.0001, random_state: 42}
+    note: "The source call is commented and the notebook has stripped outputs/execution counts."
+
+duplicate_shadowed_definitions:
+  - symbol: train_domain_adaptation_fold
+    definitions:
+      - "cell 14, lines 330-619: primary runner without ablation_spec"
+      - "cell 18, lines 163-458: later ablation-aware runner with ablation_spec"
+    namespace_effect: "The later definition shadows the earlier name if cells are executed top-to-bottom."
+    classification: obsolete
+    canonical_selection: "Primary cell-14 path for the non-commented cell-15 call; later cell-18 path only as ablation audit evidence."
+  - symbol: run_domain_adaptation_experiment
+    definitions:
+      - "cell 14, lines 621-676: runs every fold and calls primary fold runner"
+      - "cell 18, lines 460-531: uses ablation_spec and selective availability filter"
+    namespace_effect: "The later definition shadows the earlier name after cell 18."
+    classification: obsolete
+    canonical_selection: "Do not infer execution from the later namespace definition; the primary call is documented as using the earlier path."
+  - symbol: DomainAdaptiveTotalLoss
+    definitions:
+      - "cell 8, lines 345-431: commented SupervisedTotalLoss draft, not active"
+      - "cell 8, lines 442-625: active DomainAdaptiveTotalLoss"
+    namespace_effect: "Only the cell-8 DomainAdaptiveTotalLoss class is active; the commented supervised draft is not a duplicate active definition."
+    classification: canonical_executed
+  - symbol: apply_model_ablation
+    definitions:
+      - "cell 18, lines 37-52: single exact definition"
+    namespace_effect: no_shadow
+    classification: helper_only
+
+loss_overrides:
+  - name: lambda_proto_zero
+    source: "cell 19, lines 9-14"
+    used_by: no_proto
+    classification: canonical_defined_not_executed
+  - name: lambda_pl_zero
+    source: "cell 19, lines 15-20"
+    used_by: no_pl
+    classification: canonical_defined_not_executed
+  - name: lambda_cons_zero
+    source: "cell 19, lines 21-26"
+    used_by: no_cons
+    classification: canonical_defined_not_executed
+  - name: lambda_cbm_zero
+    source: "cell 19, lines 27-32"
+    used_by: no_concept
+    classification: canonical_defined_not_executed
+  - name: lambda_anat_zero
+    source: "cell 19, lines 33-38"
+    used_by: no_anat
+    classification: canonical_defined_not_executed
+  - name: lambda_proto_and_pl_zero
+    source: "cell 19, lines 53-64"
+    used_by: no_domain_adaptation
+    classification: canonical_defined_not_executed
+  - name: lambda_proto_0_2_default
+    source: "cell 18, lines 61-86; also DomainAdaptiveTotalLoss default at cell 8, lines 463-488"
+    classification: unsupported
+    blocker: "Conflicts with primary executed lambda_proto=1.0 and unresolved D-14-001."
+
+component_flags:
+  - flag: model_patch
+    source: "cell 18, lines 37-52"
+    values: [null, identity_ctx, mean_pool]
+    classification: helper_only
+  - flag: loss_overrides
+    source: "cell 18, lines 55-86"
+    values: [lambda_proto, lambda_pl, lambda_cons, lambda_cbm, lambda_anat]
+    classification: helper_only
+  - flag: include_no_da
+    source: "cell 19, lines 1-66"
+    values: [false, true]
+    classification: helper_only
+  - flag: availability
+    source: "cell 18, lines 487-499"
+    values: [false, true]
+    classification: obsolete
+    blocker: "Selective fold execution is not an approved scientific intervention."
+
+result_tables_and_outputs:
+  - name: fold_terminal_metric_row
+    provenance: "cell 18, lines 96-147"
+    classification: helper_only
+    fields: [ablation, fold_idx, source_domain, target_domain, loss_components, prototype_components, confidence_count, source_train_metrics, target_train_metrics, source_validation_metrics, target_validation_metrics]
+  - name: fold_summary_table
+    provenance: "cell 18, lines 149-161 and 604-619"
+    classification: helper_only
+    operation: "nanmean and nanstd grouped by ablation"
+    inferential_statistics: false
+  - name: ablation_folds_csv
+    provenance: "cell 18, lines 621-629"
+    classification: canonical_defined_not_executed
+  - name: ablation_summary_csv
+    provenance: "cell 18, lines 621-629"
+    classification: canonical_defined_not_executed
+  - name: ablation_runs_json
+    provenance: "cell 18, lines 621-632"
+    classification: canonical_defined_not_executed
+
+negative_findings:
+  - "No exact source symbol named no_prototype; it maps only to no_proto by requested alias."
+  - "No exact source symbol named no_pseudo_label; it maps only to no_pl by requested alias."
+  - "No exact source symbol named no_domain_adaptation beyond the helper's optional spec."
+  - "No exact source symbol named no_concept_supervision; the exact source name is no_concept."
+  - "No exact source symbol named no_anatomical_consistency; the exact source name is no_anat."
+  - "No exact source symbol named no_head_consistency; the nearest exact candidate is no_cons."
+  - "No exact source symbol named mean_pooling; the exact source name is mean_pool."
+  - "No ablation output table, checkpoint, or executed ablation result is present in the archived notebook because outputs were stripped and the only ablation call is commented."
+  - "The notebook's later selective-fold availability branch is not complete evidence for any ablation."
+
+next_gate:
+  action: "Define and independently review the Phase 17 production contract before implementation or any real run."
+  required_resolutions:
+    - "Map or reject requested aliases explicitly."
+    - "Resolve lambda_proto=0.2 versus 1.0 before publication-facing comparisons."
+    - "Specify complete direction/fold/seed matrix, source-only semantics, checkpoint policy, target-label firewall, and exact output provenance."
+    - "Retain the real-data authorization gate and the native incident #1793 lifecycle boundary."

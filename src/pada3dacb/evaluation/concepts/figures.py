@@ -240,3 +240,41 @@ def plot_class_conditional_profiles(
         ax.grid(True, alpha=0.3)
 
     _save_figure(output_path)
+
+def generate_all_figures(
+    output_root: str | Path,
+    data: dict[str, Any],
+    *,
+    roi_labels: list[str] | None = None,
+    top_k: list[int] | tuple[int, ...] = (5, 10, 20),
+) -> None:
+    """Generate the five predeclared concept-evaluation figures.
+
+    The caller supplies complete ROI profiles and a stability result.  This
+    function never ranks, filters, or selects a favorable subset of ROIs;
+    ``top_k`` is validated against the already computed stability profiles.
+    """
+    if not top_k or any(isinstance(k, bool) or not isinstance(k, int) or k <= 0 for k in top_k):
+        raise ValueError("top_k must contain positive integers")
+    stability = data["stability"]
+    for k in top_k:
+        if k not in stability.jaccard_fidelity:
+            raise ValueError(f"stability is missing configured top-k value {k}")
+
+    root = Path(output_root)
+    root.mkdir(parents=True, exist_ok=True)
+    plot_concept_fidelity_roi_heatmap(
+        data["fidelity_per_roi"], root / "concept_fidelity_roi_heatmap.png", roi_labels
+    )
+    plot_anatomy_consistency_roi_heatmap(
+        data["anatomy_per_roi"], root / "anatomy_consistency_roi_heatmap.png", roi_labels
+    )
+    plot_head_agreement_matrix(
+        data["agreement"], root / "head_agreement_matrix.png"
+    )
+    plot_roi_stability_heatmap(
+        stability, root / "roi_stability_heatmap.png", roi_labels
+    )
+    plot_class_conditional_profiles(
+        data["class_profiles"], root / "class_conditional_concept_profiles.png", roi_labels
+    )

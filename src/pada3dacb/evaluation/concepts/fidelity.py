@@ -140,17 +140,16 @@ def _compute_correlations(
     Returns:
         (pearson, spearman, status, reason)
     """
-    # Check for constant arrays
-    if np.allclose(x, x[0]) or np.allclose(y, y[0]):
-        return None, None, ValueStatus.UNAVAILABLE, "constant_roi"
+    # Check for NaN/inf before classifying the ROI.
+    if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
+        return None, None, ValueStatus.UNAVAILABLE, "numerical_error"
 
-    # Check sample count
+    # Sample count takes precedence over constant-value detection.
     if len(x) < 3:
         return None, None, ValueStatus.UNAVAILABLE, "insufficient_samples"
 
-    # Check for NaN/inf
-    if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
-        return None, None, ValueStatus.UNAVAILABLE, "numerical_error"
+    if np.allclose(x, x[0]) or np.allclose(y, y[0]):
+        return None, None, ValueStatus.UNAVAILABLE, "constant_roi"
 
     try:
         pearson_r, _ = stats.pearsonr(x, y)

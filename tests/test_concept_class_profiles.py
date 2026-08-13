@@ -58,3 +58,21 @@ def test_class_profiles_keep_zero_support_unavailable() -> None:
     assert profiles[1].status is ValueStatus.UNAVAILABLE
     assert profiles[1].reason == "zero_support"
     assert profiles[2].class_label == "AD"
+
+
+def test_class_profiles_reject_mixed_roi_widths() -> None:
+    with pytest.raises(ValueError, match="same ROI width"):
+        compute_class_profiles(
+            [_record("a", (0.2, 0.6)), _record("b", (0.2, 0.6, 0.8))],
+            bootstrap_replicates=10,
+        )
+
+
+def test_class_profiles_reject_non_finite_concepts() -> None:
+    record = _record("a", (0.2, 0.6))
+    record = record.__class__(
+        **{**record.__dict__, "predicted_concepts": (float("nan"), 0.6)}
+    )
+
+    with pytest.raises(ValueError, match="finite"):
+        compute_class_profiles([record], bootstrap_replicates=10)

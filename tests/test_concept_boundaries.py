@@ -42,3 +42,16 @@ def test_inference_loads_precomputed_targets_without_regeneration() -> None:
 def test_phase17_has_not_started() -> None:
     assert not any(Path("specs").glob("phase_17*"))
     assert not any(Path("src/pada3dacb").rglob("*phase17*"))
+
+
+def test_concept_evaluator_has_no_forbidden_adaptation_or_causal_paths() -> None:
+    source = "\n".join(path.read_text(encoding="utf-8") for path in PHASE16_ROOT.glob("*.py"))
+    forbidden = (
+        "target_adaptation",
+        "jacobian",
+        "causal importance",
+        "biomarker",
+        "disease mechanism",
+        "phase_17",
+    )
+    assert [token for token in forbidden if token in source.lower()] == []

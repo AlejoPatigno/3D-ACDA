@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import json
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -41,6 +43,392 @@ class ConceptAggregationPolicy(str, Enum):
 
 class ConceptNormalizerHash(str):
     """SHA-256 hash of concept normalizer JSON."""
+
+
+REAL_EVALUATION_CAPABILITY_SCHEMA_VERSION = "phase16-real-evaluation-capability-v1"
+_REAL_CAPABILITY_ISSUER_TOKEN = object()
+_REAL_CAPABILITY_EVIDENCE = (
+    "authorized_exports",
+    "concept_normalizer",
+    "atlas_hash",
+    "protocol_approval",
+)
+
+
+@dataclass(frozen=True)
+class RealEvaluationCapability:
+    """Opaque, process-local authorization for real concept evaluation."""
+
+    schema_version: str
+    manifest_sha256: str
+    authorization_sha256: str
+    issuer: str
+    _issuer_token: object | None = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if self.schema_version != REAL_EVALUATION_CAPABILITY_SCHEMA_VERSION:
+            raise ValueError("unsupported real evaluation capability schema")
+        validate_sha256(self.manifest_sha256, "capability manifest sha256")
+        validate_sha256(self.authorization_sha256, "capability authorization sha256")
+        if not isinstance(self.issuer, str) or not self.issuer.strip():
+            raise ValueError("capability issuer must be a non-empty label")
+
+    def __getstate__(self):
+        raise TypeError("real evaluation capabilities are process-local and non-serializable")
+
+
+def issue_real_evaluation_capability(
+    authorization_evidence: Mapping[str, Any],
+    manifest_sha256: str,
+    *,
+    issuer: str,
+) -> RealEvaluationCapability:
+    """Issue a capability only for complete, canonical authorization evidence."""
+    if not isinstance(authorization_evidence, Mapping):
+        raise ValueError("authorization evidence must be a mapping")
+    if authorization_evidence.get("authorized") is not True:
+        raise ValueError("authorization evidence must explicitly authorize real evaluation")
+    for name in _REAL_CAPABILITY_EVIDENCE:
+        entry = authorization_evidence.get(name)
+        if (
+            not isinstance(entry, Mapping)
+            or entry.get("resolved") is not True
+            or not isinstance(entry.get("sha256"), str)
+        ):
+            raise ValueError(f"authorization evidence is incomplete: {name}")
+        validate_sha256(entry["sha256"], f"authorization evidence {name}.sha256")
+    validate_sha256(manifest_sha256, "manifest sha256")
+    if not isinstance(issuer, str) or not issuer.strip():
+        raise ValueError("capability issuer must be a non-empty label")
+    return RealEvaluationCapability(
+        REAL_EVALUATION_CAPABILITY_SCHEMA_VERSION,
+        manifest_sha256,
+        canonical_sha256(authorization_evidence),
+        issuer,
+        _REAL_CAPABILITY_ISSUER_TOKEN,
+    )
+
+
+def _is_issued_real_evaluation_capability(value: object) -> bool:
+    return isinstance(value, RealEvaluationCapability) and value._issuer_token is _REAL_CAPABILITY_ISSUER_TOKEN
+
+
+PROVENANCE_MANIFEST_SCHEMA_VERSION = "phase16-concept-provenance-v1"
+_SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def validate_sha256(value: Any, field_name: str = "hash") -> str:
+    """Return a canonical lowercase SHA-256 or fail closed."""
+    if not isinstance(value, str) or _SHA256_RE.fullmatch(value) is None:
+        raise ValueError(f"{field_name} must be a lowercase SHA-256")
+    return value
+
+
+def canonical_roi_order_hash(labels: Sequence[int]) -> str:
+    """Hash the ordered ROI labels without sorting or normalizing them."""
+    if isinstance(labels, (str, bytes)) or not isinstance(labels, Sequence) or not labels:
+        raise ValueError("ROI labels must be a non-empty sequence")
+    normalized = []
+    for label in labels:
+        if isinstance(label, bool) or not isinstance(label, int):
+            raise ValueError("ROI labels must be integers")
+        normalized.append(label)
+    if len(set(normalized)) != len(normalized):
+        raise ValueError("ROI labels must be unique")
+    return hashlib.sha256(json.dumps(normalized).encode("utf-8")).hexdigest()
+
+
+def validate_safe_relative_path(value: Any, field_name: str = "relative_path") -> str:
+    """Validate a root-relative POSIX path and reject traversal/platform escapes."""
+    if not isinstance(value, str) or not value or "\\" in value or ":" in value:
+        raise ValueError(f"{field_name} must be a safe POSIX-relative path")
+    path = Path(value)
+    if path.is_absolute() or value.startswith("/"):
+        raise ValueError(f"{field_name} must be a safe POSIX-relative path")
+    parts = value.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise ValueError(f"{field_name} must be a safe POSIX-relative path")
+    return value
+
+
+@dataclass(frozen=True)
+class FileIdentity:
+    """Immutable identity established from file bytes before parsing."""
+
+    path: Path
+    sha256: str
+    size_bytes: int
+
+    def __post_init__(self) -> None:
+        validate_sha256(self.sha256, "file sha256")
+        if self.size_bytes < 0:
+            raise ValueError("file size must be non-negative")
+
+
+FIXTURE_MANIFEST_SCHEMA_VERSION = "phase16-concept-fixture-manifest-v1"
+FIXTURE_MANIFEST_MARKER = "phase16-synthetic-fixture"
+_FIXTURE_MANIFEST_ISSUER_TOKEN = object()
+
+
+@dataclass(frozen=True)
+class VerifiedFixtureManifest:
+    """Immutable fixture identity issued only after complete manifest verification."""
+
+    manifest_path: Path
+    manifest_sha256: str
+    allowed_root: Path
+    files: tuple[FileIdentity, ...]
+    _issuer_token: object | None = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        validate_sha256(self.manifest_sha256, "fixture manifest sha256")
+        if not self.files:
+            raise ValueError("fixture manifest must list at least one file")
+        root = self.allowed_root.resolve()
+        manifest = self.manifest_path.resolve()
+        try:
+            manifest.relative_to(root)
+        except ValueError as error:
+            raise ValueError("fixture manifest path escapes allowed root") from error
+        if not root.is_dir() or not manifest.is_file():
+            raise ValueError("fixture manifest path and allowed root must exist")
+        for identity in self.files:
+            try:
+                identity.path.resolve().relative_to(root)
+            except ValueError as error:
+                raise ValueError("fixture file path escapes allowed root") from error
+
+    def file_identity(self, path: Path) -> FileIdentity | None:
+        resolved = Path(path).resolve()
+        return next((item for item in self.files if item.path.resolve() == resolved), None)
+
+
+
+    @property
+    def fixture_files(self) -> tuple[dict[str, str | int], ...]:
+        """Return the verified fixture file set in a portable canonical form."""
+        root = self.allowed_root.resolve()
+        entries = []
+        for identity in self.files:
+            relative_path = identity.path.resolve().relative_to(root).as_posix()
+            entries.append({
+                "relative_path": relative_path,
+                "sha256": identity.sha256,
+                "size_bytes": identity.size_bytes,
+            })
+        return tuple(sorted(entries, key=lambda item: item["relative_path"]))
+
+    @property
+    def fixture_payload_sha256(self) -> str:
+        """Hash the verified manifest bytes and relative fixture paths, bytes, and sizes."""
+        return canonical_sha256({
+            "schema_version": FIXTURE_MANIFEST_SCHEMA_VERSION,
+            "manifest_sha256": self.manifest_sha256,
+            "files": self.fixture_files,
+        })
+
+
+def _is_verified_fixture_manifest(value: object) -> bool:
+    return isinstance(value, VerifiedFixtureManifest) and value._issuer_token is _FIXTURE_MANIFEST_ISSUER_TOKEN
+
+
+
+def verify_fixture_manifest(
+    manifest_path: str | Path,
+    expected_sha256: str,
+    allowed_root: str | Path,
+) -> VerifiedFixtureManifest:
+    """Verify a synthetic fixture manifest and every listed fixture file."""
+    try:
+        expected = validate_sha256(expected_sha256, "fixture manifest sha256")
+        root = Path(allowed_root).resolve()
+        path = Path(manifest_path).resolve()
+        if not root.is_dir():
+            raise ValueError("fixture manifest allowed root must be an existing directory")
+        try:
+            path.relative_to(root)
+        except ValueError as error:
+            raise ValueError("fixture manifest path escapes allowed root") from error
+        raw_bytes = path.read_bytes()
+    except (OSError, TypeError, ValueError) as error:
+        if isinstance(error, ValueError):
+            raise
+        raise ValueError(f"fixture manifest is unreadable: {path}") from error
+    actual = hashlib.sha256(raw_bytes).hexdigest()
+    if not hmac.compare_digest(actual, expected):
+        raise ValueError("fixture manifest sha256 is forged or stale")
+    try:
+        payload = json.loads(raw_bytes.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("fixture manifest is unreadable") from error
+    if not isinstance(payload, Mapping):
+        raise ValueError("fixture manifest must be a mapping")
+    if payload.get("schema_version") != FIXTURE_MANIFEST_SCHEMA_VERSION:
+        raise ValueError("unsupported fixture manifest schema version")
+    if payload.get("fixture_marker") != FIXTURE_MANIFEST_MARKER:
+        raise ValueError("fixture marker is missing or invalid")
+    if payload.get("fixture_only") is not True:
+        raise ValueError("fixture manifest must explicitly set fixture_only=true")
+    entries = payload.get("files")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("fixture manifest files must be a non-empty list")
+    identities = []
+    seen = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"fixture manifest files[{index}] must be a mapping")
+        relative_path = validate_safe_relative_path(
+            entry.get("relative_path"), f"fixture manifest files[{index}].relative_path"
+        )
+        if relative_path in seen:
+            raise ValueError(f"duplicate fixture path: {relative_path}")
+        seen.add(relative_path)
+        file_path = (root / relative_path).resolve()
+        try:
+            file_path.relative_to(root)
+        except ValueError as error:
+            raise ValueError("fixture file path escapes allowed root") from error
+        if not file_path.is_file():
+            raise ValueError(f"fixture file is missing: {relative_path}")
+        declared = validate_sha256(
+            entry.get("sha256"), f"fixture manifest files[{index}].sha256"
+        )
+        actual_file = compute_sha256_file(file_path)
+        if not hmac.compare_digest(actual_file, declared):
+            raise ValueError(f"fixture file hash mismatch: {relative_path}")
+        identities.append(FileIdentity(file_path, actual_file, file_path.stat().st_size))
+    return VerifiedFixtureManifest(
+        path,
+        actual,
+        root,
+        tuple(identities),
+        _FIXTURE_MANIFEST_ISSUER_TOKEN,
+    )
+
+
+@dataclass(frozen=True)
+class ManifestArtifact:
+    relative_path: str
+    sha256: str
+    roi_order_sha256: str
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any], field_name: str) -> ManifestArtifact:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{field_name} must be a mapping")
+        return cls(
+            validate_safe_relative_path(value.get("relative_path"), f"{field_name}.relative_path"),
+            validate_sha256(value.get("sha256"), f"{field_name}.sha256"),
+            validate_sha256(value.get("roi_order_sha256"), f"{field_name}.roi_order_sha256"),
+        )
+
+
+@dataclass(frozen=True)
+class ManifestCandidate:
+    key: tuple[str, str, int, int, str]
+    checkpoint: ManifestArtifact
+    normalizer: ManifestArtifact
+    concept_artifacts_root: str
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any], index: int) -> ManifestCandidate:
+        if not isinstance(value, Mapping) or not isinstance(value.get("key"), Mapping):
+            raise ValueError(f"candidates[{index}].key is required")
+        key_value = value["key"]
+        names = ("method_id", "direction", "seed", "fold", "checkpoint_policy")
+        if any(name not in key_value for name in names):
+            raise ValueError(f"candidates[{index}].key is incomplete")
+        seed, fold = key_value["seed"], key_value["fold"]
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+            raise ValueError(f"candidates[{index}].key.seed must be a non-negative integer")
+        if isinstance(fold, bool) or not isinstance(fold, int) or fold < 0:
+            raise ValueError(f"candidates[{index}].key.fold must be a non-negative integer")
+        return cls(
+            (str(key_value["method_id"]), str(key_value["direction"]), seed, fold, str(key_value["checkpoint_policy"])),
+            ManifestArtifact.from_mapping(value.get("checkpoint"), f"candidates[{index}].checkpoint"),
+            ManifestArtifact.from_mapping(value.get("normalizer"), f"candidates[{index}].normalizer"),
+            validate_safe_relative_path(value.get("concept_artifacts_root"), f"candidates[{index}].concept_artifacts_root"),
+        )
+
+
+@dataclass(frozen=True)
+class ProvenanceManifest:
+    schema_version: str
+    labels: tuple[int, ...]
+    roi_order_sha256: str
+    atlas: ManifestArtifact
+    candidates: tuple[ManifestCandidate, ...]
+    root: Path
+    raw_bytes: bytes = b""
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any], root: str | Path) -> ProvenanceManifest:
+        if not isinstance(value, Mapping):
+            raise ValueError("provenance manifest must be a mapping")
+        if value.get("schema_version") != PROVENANCE_MANIFEST_SCHEMA_VERSION:
+            raise ValueError("unsupported provenance manifest schema version")
+        roi = value.get("roi_order")
+        if not isinstance(roi, Mapping):
+            raise ValueError("roi_order is required")
+        labels = tuple(roi.get("labels", ()))
+        roi_hash = validate_sha256(roi.get("sha256"), "roi_order.sha256")
+        if canonical_roi_order_hash(labels) != roi_hash:
+            raise ValueError("roi_order.sha256 does not match ordered labels")
+        atlas = ManifestArtifact.from_mapping(value.get("atlas"), "atlas")
+        entries = value.get("candidates")
+        if not isinstance(entries, list):
+            raise ValueError("candidates must be a list")
+        candidates = tuple(ManifestCandidate.from_mapping(item, index) for index, item in enumerate(entries))
+        keys = [candidate.key for candidate in candidates]
+        if len(set(keys)) != len(keys):
+            raise ValueError("duplicate candidate key in provenance manifest")
+        root_path = Path(root).resolve()
+        if not root_path.is_dir():
+            raise ValueError("provenance manifest root must be an existing directory")
+        for name, artifact in [("atlas", atlas)]:
+            resolved_path = (root_path / artifact.relative_path).resolve()
+            try:
+                resolved_path.relative_to(root_path)
+            except ValueError as error:
+                raise ValueError(f"{name} path escapes manifest root") from error
+            if not resolved_path.is_file():
+                raise ValueError(f"{name} file is missing: {artifact.relative_path}")
+        for candidate in candidates:
+            for name, artifact in (("checkpoint", candidate.checkpoint), ("normalizer", candidate.normalizer)):
+                resolved_path = (root_path / artifact.relative_path).resolve()
+                try:
+                    resolved_path.relative_to(root_path)
+                except ValueError as error:
+                    raise ValueError(f"{name} path escapes manifest root") from error
+                if not resolved_path.is_file():
+                    raise ValueError(f"{name} file is missing: {artifact.relative_path}")
+            artifacts_root = (root_path / candidate.concept_artifacts_root).resolve()
+            try:
+                artifacts_root.relative_to(root_path)
+            except ValueError as error:
+                raise ValueError("concept artifact root escapes manifest root") from error
+            if not artifacts_root.is_dir():
+                raise ValueError(f"concept artifact root is missing: {candidate.concept_artifacts_root}")
+            for artifact_name, artifact in (("atlas", atlas), ("checkpoint", candidate.checkpoint), ("normalizer", candidate.normalizer)):
+                if artifact.roi_order_sha256 != roi_hash:
+                    raise ValueError(f"{artifact_name} ROI order hash conflicts with manifest")
+        return cls(PROVENANCE_MANIFEST_SCHEMA_VERSION, labels, roi_hash, atlas, candidates, root_path)
+
+    @classmethod
+    def from_json(cls, path: str | Path) -> ProvenanceManifest:
+        manifest_path = Path(path).resolve()
+        try:
+            raw_bytes = manifest_path.read_bytes()
+            payload = json.loads(raw_bytes.decode("utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            raise ValueError(f"provenance manifest is unreadable: {manifest_path}") from error
+        parsed = cls.from_mapping(payload, manifest_path.parent)
+        object.__setattr__(parsed, "raw_bytes", raw_bytes)
+        return parsed
+
+    def candidate_for(self, key: tuple[Any, ...]) -> ManifestCandidate | None:
+        normalized = tuple(item.value if isinstance(item, Enum) else item for item in key)
+        return next((candidate for candidate in self.candidates if candidate.key == normalized), None)
 
 
 class AtlasROIOrderHash(str):
@@ -143,7 +531,12 @@ class ConceptSubjectRecord:
             ("latent_probabilities", self.latent_probabilities),
             ("concept_probabilities", self.concept_probabilities),
         ]:
-            validate_finite_array(np.asarray(values, dtype=np.float64), name)
+            array = np.asarray(values, dtype=np.float64)
+            validate_finite_array(array, name)
+            if name in {"predicted_concepts", "concept_targets", "anatomical_targets"} and np.any(
+                (array < 0.0) | (array > 1.0)
+            ):
+                raise ValueError(f"{name} must be in [0, 1]")
         alpha = np.asarray(self.attention_alpha, dtype=np.float64)
         if np.any(alpha < 0.0):
             raise ValueError("attention_alpha must be nonnegative")
@@ -267,57 +660,165 @@ class ConceptEvaluationConfig:
     atlas_roi_order_hash: AtlasROIOrderHash | None
     atlas_hash: str | None
     device: str
+    manifest_path: str | None = None
+    atlas_path: str | None = None
+    output_root: str | None = None
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Self:
         import yaml
-        with open(path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        # Validate required fields
-        required = [
-            "schema_version", "protocol_version", "class_order", "methods",
-            "directions", "expected_folds", "expected_seeds",
-            "checkpoint_policies", "primary_policy", "bootstrap_replicates",
-            "bootstrap_seed", "ci_policy", "stratification", "top_k",
-            "real_gate", "device"
-        ]
-        for r in required:
-            if r not in data:
-                raise ConfigurationError(f"Missing required config field: {r}")
-        # Parse enums
-        methods = tuple(MethodId(m) for m in data["methods"])
-        directions = tuple(Direction(d) for d in data["directions"])
-        policies = tuple(CheckpointPolicy(p) for p in data["checkpoint_policies"])
-        primary = CheckpointPolicy(data["primary_policy"])
-        sensitivity = CheckpointPolicy(data["sensitivity_policy"]) if data.get("sensitivity_policy") else None
-        # Gate
-        gate = data["real_gate"]
-        authorized = bool(gate.get("authorized", False))
-        # Hashes
-        norm_hash = gate.get("concept_normalizer_hash")
-        roi_hash = gate.get("atlas_roi_order_hash")
-        atlas_hash = gate.get("atlas_hash")
+
+        with open(path, encoding="utf-8") as stream:
+            data = yaml.safe_load(stream)
+        if not isinstance(data, Mapping):
+            raise ConfigurationError("concept evaluation config must be a mapping")
+        required = ("schema_version", "protocol_version", "class_order", "methods", "directions", "expected_folds", "expected_seeds", "checkpoint_policies", "bootstrap", "top_k", "real_evaluation_gate", "device")
+        missing = [name for name in required if name not in data]
+        if missing:
+            raise ConfigurationError(f"Missing required config field: {missing[0]}")
+        if not isinstance(data["schema_version"], str) or not isinstance(data["protocol_version"], str):
+            raise ConfigurationError("schema and protocol versions must be strings")
+        if data["class_order"] != {"CN": 0, "MCI": 1, "AD": 2}:
+            raise ConfigurationError("class_order must be exactly CN=0, MCI=1, AD=2")
+
+        def sequence(name: str) -> tuple[Any, ...]:
+            value = data[name]
+            if isinstance(value, (str, bytes)) or not isinstance(value, Sequence) or not value:
+                raise ConfigurationError(f"{name} must be a non-empty sequence")
+            if len(set(value)) != len(value):
+                raise ConfigurationError(f"{name} must not contain duplicates")
+            return tuple(value)
+
+        try:
+            methods = tuple(MethodId(value) for value in sequence("methods"))
+            directions = tuple(Direction(value) for value in sequence("directions"))
+            policy_data = data["checkpoint_policies"]
+            if not isinstance(policy_data, Mapping):
+                raise ConfigurationError("checkpoint_policies must be a mapping")
+            def parse_policy(value: Any) -> CheckpointPolicy:
+                aliases = {"best_source_f1": CheckpointPolicy.PRIMARY_BEST_SOURCE_F1.value, "last": CheckpointPolicy.SENSITIVITY_LAST.value}
+                return CheckpointPolicy(aliases.get(value, value))
+            primary = parse_policy(policy_data["primary"])
+            sensitivity = parse_policy(policy_data["sensitivity"]) if policy_data.get("sensitivity") else None
+            policies = tuple(policy for policy in (primary, sensitivity) if policy is not None)
+        except (KeyError, TypeError, ValueError) as error:
+            raise ConfigurationError(f"invalid method, direction, or checkpoint policy: {error}") from error
+
+        def nonnegative_int(name: str, values: Sequence[Any]) -> tuple[int, ...]:
+            result = []
+            for value in values:
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise ConfigurationError(f"{name} must contain non-negative integers")
+                result.append(value)
+            return tuple(result)
+
+        folds = nonnegative_int("expected_folds", sequence("expected_folds"))
+        seeds = nonnegative_int("expected_seeds", sequence("expected_seeds"))
+        top_k = nonnegative_int("top_k", sequence("top_k"))
+        if any(value == 0 for value in top_k):
+            raise ConfigurationError("top_k values must be positive")
+        bootstrap = data["bootstrap"]
+        if not isinstance(bootstrap, Mapping):
+            raise ConfigurationError("bootstrap must be a mapping")
+        replicates, bootstrap_seed = bootstrap.get("replicates"), bootstrap.get("seed")
+        if isinstance(replicates, bool) or not isinstance(replicates, int) or replicates < 0:
+            raise ConfigurationError("bootstrap.replicates must be a non-negative integer")
+        if isinstance(bootstrap_seed, bool) or not isinstance(bootstrap_seed, int) or bootstrap_seed < 0:
+            raise ConfigurationError("bootstrap.seed must be a non-negative integer")
+        for name in ("ci_policy", "stratification"):
+            if not isinstance(bootstrap.get(name), str) or not bootstrap[name]:
+                raise ConfigurationError(f"bootstrap.{name} must be a non-empty string")
+        gate = data["real_evaluation_gate"]
+        if not isinstance(gate, Mapping) or not isinstance(gate.get("authorized"), bool):
+            raise ConfigurationError("real_evaluation_gate.authorized must be boolean")
+        if not isinstance(data["device"], str) or not data["device"]:
+            raise ConfigurationError("device must be a non-empty string")
+
+        def gate_hash(name: str) -> str | None:
+            entry = gate.get(name)
+            if not isinstance(entry, Mapping) or not isinstance(entry.get("resolved"), bool):
+                raise ConfigurationError(f"real_evaluation_gate.{name} must be a mapping with boolean resolved")
+            value = entry.get("sha256")
+            if entry["resolved"] and value is None:
+                raise ConfigurationError(f"real_evaluation_gate.{name}.sha256 is required when evidence is resolved")
+            if value is not None:
+                value = validate_sha256(value, f"real_evaluation_gate.{name}.sha256")
+            if gate["authorized"] and entry["resolved"] is not True:
+                raise ConfigurationError(f"authorized real evaluation requires resolved {name} evidence")
+            return value
+
+        _ = gate_hash("authorized_exports")
+        norm_hash = gate_hash("concept_normalizer")
+        atlas_hash = gate_hash("atlas_hash")
+        _ = gate_hash("protocol_approval")
+        atlas = data.get("atlas") or {}
+        normalizer = data.get("concept_normalizer") or {}
+        if not isinstance(atlas, Mapping) or not isinstance(normalizer, Mapping):
+            raise ConfigurationError("atlas and concept_normalizer must be mappings")
+        roi_hash = atlas.get("expected_roi_order_hash")
+        if roi_hash is not None:
+            roi_hash = validate_sha256(roi_hash, "atlas.expected_roi_order_hash")
+        if norm_hash is None and normalizer.get("expected_hash") is not None:
+            norm_hash = validate_sha256(normalizer["expected_hash"], "concept_normalizer.expected_hash")
+        if atlas_hash is None and atlas.get("expected_atlas_hash") is not None:
+            atlas_hash = validate_sha256(atlas["expected_atlas_hash"], "atlas.expected_atlas_hash")
+        manifest_path = data.get("manifest_path")
+        atlas_path = data.get("atlas_path")
+        output_root = data.get("output_root")
+        for name, value in (("manifest_path", manifest_path), ("atlas_path", atlas_path), ("output_root", output_root)):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ConfigurationError(f"{name} must be a non-empty path string")
+        if gate["authorized"]:
+            def required_path(name: str, kind: str) -> Path:
+                value = data.get(name)
+                if not isinstance(value, str) or not value.strip():
+                    raise ConfigurationError(f"{name} must be a non-empty path string")
+                resolved = (Path(path).resolve().parent / value).resolve()
+                valid = resolved.is_file() if kind == "file" else resolved.is_dir()
+                if not valid:
+                    raise ConfigurationError(f"{name} does not exist as a {kind}: {resolved}")
+                return resolved
+
+            manifest_file = required_path("manifest_path", "file")
+            atlas_file = required_path("atlas_path", "file")
+            output_dir = required_path("output_root", "directory")
+            try:
+                manifest = ProvenanceManifest.from_json(manifest_file)
+            except (OSError, ValueError) as error:
+                raise ConfigurationError(f"manifest_path is invalid: {error}") from error
+            if (manifest.root / manifest.atlas.relative_path).resolve() != atlas_file:
+                raise ConfigurationError("atlas_path does not match the manifest atlas assignment")
+            if atlas_hash is not None and compute_sha256_file(atlas_file) != atlas_hash:
+                raise ConfigurationError("atlas_path does not match the configured atlas hash")
+            manifest_normalizers = {entry.normalizer.sha256 for entry in manifest.candidates}
+            if norm_hash is not None and manifest_normalizers and manifest_normalizers != {norm_hash}:
+                raise ConfigurationError("manifest normalizer assignments conflict with configured hash")
+            input_values = data.get("input_roots", data.get("input_root", ()))
+            if isinstance(input_values, str):
+                input_values = (input_values,)
+            if input_values is None or isinstance(input_values, (bytes, Mapping)) or not isinstance(input_values, Sequence):
+                raise ConfigurationError("input_roots must be a sequence of paths")
+            input_paths = []
+            for index, value in enumerate(input_values):
+                if not isinstance(value, str) or not value.strip():
+                    raise ConfigurationError(f"input_roots[{index}] must be a path string")
+                input_paths.append((Path(path).resolve().parent / value).resolve())
+            for input_path in input_paths:
+                if input_path == output_dir or input_path in output_dir.parents or output_dir in input_path.parents:
+                    raise ConfigurationError("input and output roots must not overlap")
+            manifest_path, atlas_path, output_root = str(manifest_file), str(atlas_file), str(output_dir)
+        if gate["authorized"] and (norm_hash is None or atlas_hash is None or roi_hash is None):
+            raise ConfigurationError("authorized real evaluation requires atlas, normalizer, and ROI hashes")
         return cls(
-            schema_version=data["schema_version"],
-            protocol_version=data["protocol_version"],
-            class_order=data["class_order"],
-            methods=methods,
-            directions=directions,
-            expected_folds=tuple(data["expected_folds"]),
-            expected_seeds=tuple(data["expected_seeds"]),
-            checkpoint_policies=policies,
-            primary_policy=primary,
-            sensitivity_policy=sensitivity,
-            bootstrap_replicates=int(data["bootstrap_replicates"]),
-            bootstrap_seed=int(data["bootstrap_seed"]),
-            ci_policy=data["ci_policy"],
-            stratification=data["stratification"],
-            top_k=tuple(data["top_k"]),
-            real_gate_authorized=authorized,
+            schema_version=data["schema_version"], protocol_version=data["protocol_version"], class_order=data["class_order"],
+            methods=methods, directions=directions, expected_folds=folds, expected_seeds=seeds,
+            checkpoint_policies=policies, primary_policy=primary, sensitivity_policy=sensitivity,
+            bootstrap_replicates=replicates, bootstrap_seed=bootstrap_seed, ci_policy=bootstrap["ci_policy"],
+            stratification=bootstrap["stratification"], top_k=top_k, real_gate_authorized=gate["authorized"],
             concept_normalizer_hash=ConceptNormalizerHash(norm_hash) if norm_hash else None,
-            atlas_roi_order_hash=AtlasROIOrderHash(roi_hash) if roi_hash else None,
-            atlas_hash=atlas_hash,
-            device=data["device"],
+            atlas_roi_order_hash=AtlasROIOrderHash(roi_hash) if roi_hash else None, atlas_hash=atlas_hash,
+            device=data["device"], manifest_path=manifest_path, atlas_path=atlas_path,
+            output_root=output_root,
         )
 
 

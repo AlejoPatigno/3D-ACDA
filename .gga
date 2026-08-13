@@ -22,7 +22,7 @@
 #   PROVIDER="github:deepseek-r1"
 #   PROVIDER="minimax"
 #   PROVIDER="minimax:MiniMax-M3"
-PROVIDER="opencode"
+PROVIDER="claude"
 
 # File patterns to include in review (comma-separated)
 # Default: * (all files)
@@ -50,7 +50,7 @@ STRICT_MODE="true"
 # Timeout in seconds for AI provider response
 # Default: 300 (5 minutes)
 # Increase for large changesets or slow connections
-TIMEOUT="600"
+TIMEOUT="300"
 
 # OpenCode provider: optional reasoning effort / variant
 # Examples: minimal, low, medium, high, max

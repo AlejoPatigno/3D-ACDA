@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 import torch
+import yaml
 
 from pada3dacb.evaluation.concepts.discovery import (
     DiscoveryConfig,
@@ -244,6 +245,24 @@ class TestDiscoverCandidates:
         assert len(candidates) == 0
         assert any("not_applicable" in issue for issue in issues)
 
+    def test_reports_not_applicable_without_checkpoint(self):
+        config = DiscoveryConfig(
+            runs_root=self.runs_root,
+            artifact_root=self.artifact_root,
+            methods=frozenset([MethodId.FASTER_SNN]),
+            directions=frozenset([Direction.ADNI_TO_OASIS]),
+            checkpoint_policies=frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]),
+            expected_folds=[0],
+            expected_seeds=[42],
+        )
+
+        candidates, issues = discover_candidates(config)
+
+        assert candidates == []
+        assert issues == [
+            "not_applicable:faster_snn:not_applicable_no_pada3dacb_concept_head"
+        ]
+
     def test_discover_hash_mismatch(self):
         config = DiscoveryConfig(
             runs_root=self.runs_root,
@@ -341,6 +360,162 @@ class TestDiscoverCandidates:
 
         issues = validate_candidate_hashes(candidate, "norm1", "roi1", "atlas1")
         assert len(issues) == 0
+
+    def test_strict_config_rejects_invalid_selectors(self, tmp_path):
+        config = DiscoveryConfig(
+            runs_root=tmp_path,
+            artifact_root=tmp_path,
+            methods=frozenset([MethodId.SOURCE_ONLY]),
+            directions=frozenset([Direction.ADNI_TO_OASIS]),
+            checkpoint_policies=frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]),
+            expected_folds=[-1],
+            expected_seeds=["42"],
+            strict=True,
+        )
+        with pytest.raises(ValueError, match="fold|seed"):
+            config.validate()
+
+    def test_strict_config_requires_runtime_roi_identity_and_atlas_manager(self, tmp_path):
+        config = DiscoveryConfig(
+            runs_root=tmp_path,
+            artifact_root=tmp_path,
+            methods=frozenset([MethodId.SOURCE_ONLY]),
+            directions=frozenset([Direction.ADNI_TO_OASIS]),
+            checkpoint_policies=frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]),
+            expected_folds=[0],
+            expected_seeds=[42],
+            strict=True,
+            manifest_path=tmp_path / "manifest.json",
+            runtime_roi_labels=None,
+        )
+        config.manifest_path.write_text("{}")
+        with pytest.raises(ValueError, match="runtime ROI labels|atlas manager"):
+            config.validate()
+
+    def test_strict_config_rejects_mismatched_artifact_root(self, tmp_path):
+        config = DiscoveryConfig(
+            runs_root=tmp_path,
+            artifact_root=tmp_path / "configured-artifacts",
+            methods=frozenset([MethodId.SOURCE_ONLY]),
+            directions=frozenset([Direction.ADNI_TO_OASIS]),
+            checkpoint_policies=frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]),
+            expected_folds=[0],
+            expected_seeds=[42],
+            strict=True,
+            manifest_path=tmp_path / "manifest.json",
+            runtime_roi_labels=[2, 4],
+        )
+        config.manifest_path.write_text("{}")
+        with pytest.raises(ValueError, match="atlas manager|manifest"):
+            config.validate()
+
+    def test_strict_config_rejects_invalid_gate_evidence_and_paths(self, tmp_path):
+        payload = {
+            "schema_version": "1.0", "protocol_version": "1.0", "class_order": {"CN": 0, "MCI": 1, "AD": 2},
+            "methods": ["source_only"], "directions": ["adni_to_oasis"], "expected_folds": [0], "expected_seeds": [42],
+            "checkpoint_policies": {"primary": "best_source_f1"}, "bootstrap": {"replicates": 1, "seed": 0, "ci_policy": "x", "stratification": "y"}, "top_k": [1], "device": "cpu",
+            "real_evaluation_gate": {"authorized": False, "authorized_exports": {"resolved": True, "sha256": None}, "concept_normalizer": {"resolved": False, "sha256": None}, "atlas_hash": {"resolved": False, "sha256": None}, "protocol_approval": {"resolved": False, "sha256": None}},
+        }
+        path = tmp_path / "config.yaml"
+        path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+        from pada3dacb.evaluation.concepts.schemas import (
+            ConceptEvaluationConfig,
+            ConfigurationError,
+        )
+        with pytest.raises(ConfigurationError, match="authorized_exports"):
+            ConceptEvaluationConfig.from_yaml(path)
+
+    def test_strict_config_rejects_real_path_types_and_input_output_overlap(self, tmp_path):
+        from pada3dacb.evaluation.concepts.provenance import compute_sha256_file
+        from pada3dacb.evaluation.concepts.schemas import (
+            ConceptEvaluationConfig,
+            ConfigurationError,
+            canonical_roi_order_hash,
+        )
+
+        payload = {
+            "schema_version": "1.0", "protocol_version": "1.0", "class_order": {"CN": 0, "MCI": 1, "AD": 2},
+            "methods": ["source_only"], "directions": ["adni_to_oasis"], "expected_folds": [0], "expected_seeds": [42],
+            "checkpoint_policies": {"primary": "best_source_f1"}, "bootstrap": {"replicates": 1, "seed": 0, "ci_policy": "x", "stratification": "y"}, "top_k": [1], "device": "cpu",
+            "real_evaluation_gate": {"authorized": True, "authorized_exports": {"resolved": True, "sha256": "a" * 64}, "concept_normalizer": {"resolved": True, "sha256": "b" * 64}, "atlas_hash": {"resolved": True, "sha256": "c" * 64}, "protocol_approval": {"resolved": True, "sha256": "d" * 64}},
+            "atlas": {"expected_roi_order_hash": canonical_roi_order_hash([2, 4]), "expected_atlas_hash": "c" * 64},
+        }
+        path = tmp_path / "config.yaml"
+        payload.update({"manifest_path": 7, "atlas_path": "atlas.bin", "output_root": "out"})
+        path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+        with pytest.raises(ConfigurationError, match="manifest_path"):
+            ConceptEvaluationConfig.from_yaml(path)
+
+        payload["manifest_path"] = "missing-manifest.json"
+        path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+        with pytest.raises(ConfigurationError, match="does not exist"):
+            ConceptEvaluationConfig.from_yaml(path)
+
+        atlas = tmp_path / "atlas.bin"
+        atlas.write_bytes(b"atlas")
+        payload["atlas"]["expected_atlas_hash"] = compute_sha256_file(atlas)
+        payload["real_evaluation_gate"]["atlas_hash"]["sha256"] = compute_sha256_file(atlas)
+        payload.update({"manifest_path": "manifest.json", "atlas_path": "atlas.bin", "output_root": "out", "input_roots": ["out"]})
+        (tmp_path / "manifest.json").write_text(json.dumps({"schema_version": "phase16-concept-provenance-v1", "roi_order": {"labels": [2, 4], "sha256": canonical_roi_order_hash([2, 4])}, "atlas": {"relative_path": "atlas.bin", "sha256": compute_sha256_file(atlas), "roi_order_sha256": canonical_roi_order_hash([2, 4])}, "candidates": []}), encoding="utf-8")
+        (tmp_path / "out").mkdir()
+        path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+        with pytest.raises(ConfigurationError, match="overlap"):
+            ConceptEvaluationConfig.from_yaml(path)
+
+    def test_strict_discovery_requires_manifest_assignment(self, tmp_path):
+        config = DiscoveryConfig(
+            runs_root=tmp_path,
+            artifact_root=tmp_path,
+            methods=frozenset([MethodId.SOURCE_ONLY]),
+            directions=frozenset([Direction.ADNI_TO_OASIS]),
+            checkpoint_policies=frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]),
+            expected_folds=[0],
+            expected_seeds=[42],
+            strict=True,
+            manifest_path=tmp_path / "missing-manifest.json",
+        )
+        candidates, issues = discover_candidates(config)
+        assert candidates == []
+        assert any("manifest" in issue for issue in issues)
+
+
+    def test_strict_discovery_accepts_exact_manifest_assignment(self, tmp_path):
+        from pada3dacb.evaluation.concepts.provenance import compute_sha256_file
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        root = tmp_path
+        atlas = root / "atlas.bin"
+        normalizer = root / "normalizer.json"
+        checkpoint = root / "runs" / "checkpoints" / "source_only__adni_to_oasis__seed_42__fold_0" / "primary_best_source_f1" / "best_source_f1_epoch_1.pt"
+        checkpoint.parent.mkdir(parents=True)
+        (root / "artifacts" / "concept_targets" / "adni_to_oasis" / "seed_42" / "fold_0").mkdir(parents=True)
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        roi_hash = canonical_roi_order_hash([2, 4])
+        payload = {"experiment_hash": "e" * 64, "model_hash": "m" * 64, "training_hash": "t" * 64, "epoch": 1, "atlas_hash": compute_sha256_file(atlas), "roi_order_hash": roi_hash, "concept_normalizer_hash": compute_sha256_file(normalizer), "model_state_dict": {}}
+        torch.save(payload, checkpoint)
+        manifest = {"schema_version": "phase16-concept-provenance-v1", "roi_order": {"labels": [2, 4], "sha256": roi_hash}, "atlas": {"relative_path": "atlas.bin", "sha256": compute_sha256_file(atlas), "roi_order_sha256": roi_hash}, "candidates": [{"key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"}, "checkpoint": {"relative_path": str(checkpoint.relative_to(root)).replace("\\", "/"), "sha256": compute_sha256_file(checkpoint), "roi_order_sha256": roi_hash}, "normalizer": {"relative_path": "normalizer.json", "sha256": compute_sha256_file(normalizer), "roi_order_sha256": roi_hash}, "concept_artifacts_root": "artifacts/concept_targets/adni_to_oasis/seed_42/fold_0"}]}
+        manifest_path = root / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": compute_sha256_file(atlas)})()
+        config = DiscoveryConfig(root / "runs", root / "artifacts", frozenset([MethodId.SOURCE_ONLY]), frozenset([Direction.ADNI_TO_OASIS]), frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]), [0], [42], strict=True, manifest_path=manifest_path, runtime_roi_labels=[2, 4], atlas_manager=manager)
+
+        candidates, issues = discover_candidates(config)
+        assert len(candidates) == 1
+        assert issues == []
+
+        manifest["candidates"][0]["concept_artifacts_root"] = "artifacts"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        candidates, issues = discover_candidates(config)
+        assert candidates == []
+        assert any("artifact assignment" in issue for issue in issues)
+
+        manifest["candidates"][0]["concept_artifacts_root"] = "artifacts/concept_targets/adni_to_oasis/seed_42/fold_0"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        config = DiscoveryConfig(root / "runs", root / "artifacts", frozenset([MethodId.SOURCE_ONLY]), frozenset([Direction.ADNI_TO_OASIS]), frozenset([CheckpointPolicy.PRIMARY_BEST_SOURCE_F1]), [0], [42], strict=True, manifest_path=manifest_path, runtime_roi_labels=[4, 2], atlas_manager=manager)
+        candidates, issues = discover_candidates(config)
+        assert candidates == []
+        assert any("runtime ROI labels" in issue for issue in issues)
 
 
 if __name__ == "__main__":

@@ -80,6 +80,37 @@ class TestConceptEvaluationSample:
                 checkpoint_epoch=50,
             )
 
+    def test_rejects_probability_shape_mismatch(self):
+        with pytest.raises(ValueError, match="latent_probabilities must have shape \(3,\)"):
+            sample = self._sample_kwargs()
+            sample["latent_probabilities"] = torch.tensor([1.0, 0.0])
+            ConceptEvaluationSample(**sample)
+
+    @staticmethod
+    def _sample_kwargs():
+        return {
+            "subject_id": "sub-001",
+            "subject_hash": "a" * 64,
+            "cohort": "ADNI",
+            "true_label": 0,
+            "label_name": "CN",
+            "predicted_concepts": torch.full((5,), 0.5),
+            "concept_targets": torch.full((5,), 0.5),
+            "anatomical_targets": torch.full((5,), 0.5),
+            "attention_alpha": torch.full((5,), 0.2),
+            "latent_probabilities": torch.tensor([0.8, 0.1, 0.1]),
+            "concept_probabilities": torch.tensor([0.7, 0.2, 0.1]),
+            "latent_prediction": 0,
+            "concept_prediction": 0,
+            "experiment_hash": "exp123",
+            "direction": "adni_to_oasis",
+            "checkpoint_policy": "best_source_f1",
+            "seed": 42,
+            "fold": 0,
+            "logical_checkpoint": "best_source_f1",
+            "checkpoint_epoch": 50,
+        }
+
 
 class TestConceptEvaluationDataset:
     def setup_method(self):

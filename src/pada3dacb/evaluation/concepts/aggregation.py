@@ -27,6 +27,27 @@ _IMMUTABLE_FIELDS = (
     "true_label", "label_name", "concept_targets", "anatomical_targets",
     "K", "roi_order_hash", "normalizer_hash",
 )
+_AGGREGATION_AXIS_FIELDS = (
+    "method_id", "direction", "logical_checkpoint", "checkpoint_policy",
+    "source_domain", "target_domain",
+)
+
+
+def _validate_expected_axis(values: Sequence[int], name: str) -> tuple[int, ...]:
+    result = tuple(int(value) for value in values)
+    if not result or len(set(result)) != len(result):
+        raise ValueError(f"{name} must be non-empty and contain unique values")
+    return result
+
+
+def _require_aggregation_axes(records: Sequence[ConceptSubjectRecord]) -> None:
+    if not records:
+        raise ValueError("concept records must be non-empty")
+    base = records[0]
+    for record in records[1:]:
+        for field_name in _AGGREGATION_AXIS_FIELDS:
+            if getattr(record, field_name) != getattr(base, field_name):
+                raise ValueError(f"inconsistent {field_name} across aggregation records")
 
 
 def _require_consistent(records: Sequence[ConceptSubjectRecord | FoldEnsembleRecord]) -> None:
@@ -52,7 +73,8 @@ def aggregate_source_oof(
     expected_subject_hashes: Sequence[str],
 ) -> dict[tuple[str, int], ConceptSubjectRecord]:
     """Validate true OOF membership and retain one row per subject and seed."""
-    expected = set(expected_folds)
+    _require_aggregation_axes(records)
+    expected = set(_validate_expected_axis(expected_folds, "expected_folds"))
     expected_subjects = set(expected_subject_hashes)
     if not expected or not expected_subjects:
         raise ValueError("source OOF expected folds and subjects must be non-empty")
@@ -91,7 +113,10 @@ def aggregate_target_evaluation(
     dict[str, SeedEnsembleRecord] | None,
 ]:
     """Aggregate target rows across folds first and seeds second."""
-    expected_fold_tuple = tuple(sorted(expected_folds))
+    _require_aggregation_axes(records)
+    expected_fold_tuple = tuple(sorted(_validate_expected_axis(expected_folds, "expected_folds")))
+    if expected_seeds is not None:
+        expected_seeds = _validate_expected_axis(expected_seeds, "expected_seeds")
     grouped: dict[tuple[str, int], list[ConceptSubjectRecord]] = defaultdict(list)
     for record in records:
         grouped[(record.subject_hash, record.seed)].append(record)
@@ -128,10 +153,18 @@ def aggregate_target_evaluation(
             normalizer_hash=base.normalizer_hash,
         )
 
-    if expected_seeds is None or len(expected_seeds) <= 1:
+    if expected_seeds is None:
         return fold_ensembles, None
 
     expected_seed_set = set(expected_seeds)
+    observed_seed_set = {seed for _, seed in fold_ensembles}
+    if observed_seed_set != expected_seed_set:
+        raise ValueError(
+            f"observed seeds {observed_seed_set} != expected seeds {expected_seed_set}"
+        )
+    if len(expected_seeds) <= 1:
+        return fold_ensembles, None
+
     by_subject: dict[str, list[FoldEnsembleRecord]] = defaultdict(list)
     for record in fold_ensembles.values():
         by_subject[record.subject_hash].append(record)

@@ -1,5 +1,14 @@
 # Phase 16 — Tasks
 
+## Current persisted status
+
+- **Status:** BLOCKED.
+- **Task ledger:** 63 complete / 2 open; both open rows are parent-owned lifecycle tasks.
+- **Implementation ownership:** no implementation task completion is claimed by this remediation.
+- **Full pytest:** the prior run timed out; it is incomplete evidence, not a pass.
+- **Native review:** `review-047ae7d944d9e975` remains escalated with introduced CRITICAL findings under native review issue #1793.
+- **Next recommendation:** resolve blockers; do not archive or start Phase 17.
+
 ## Action graph
 
 ```yaml
@@ -110,7 +119,7 @@ actions:
     owns:
       - tests/test_concept_metrics_reference.py
       - tests/test_concept_statistics_reference.py
-      - tests/test_concept_edge_cases.py
+      - tests/test_concept_statistics_edge_cases.py
     description: |
       Verify metric equations; verify constant-ROI behavior;
       verify aggregation; verify bootstrap unit; verify method pairing;
@@ -180,105 +189,105 @@ actions:
 ## Task details
 
 ### T-16-01: Phase 15 closure and concept audit
-- Close T-15-16 (final-validation) and T-15-17 (OpenSpec mirrors)
-- Reconcile Phase 15 status: final_audit.md PASS, agent_plan.yaml ownership 14/60/0
-- Correct A-A-GAN → AAGN in all docs
-- Record native receipt #1793 as administrative blocker
-- Inventory: concept outputs, c_target, g_bar, alpha, checkpoints, artifacts
-- Confirm no Phase 16 production files existed pre-authorization
+- [ ] Close T-15-16 (final-validation) and T-15-17 (OpenSpec mirrors)
+- [ ] Reconcile Phase 15 status: final_audit.md PASS, agent_plan.yaml ownership 14/60/0
+- [ ] Correct A-A-GAN → AAGN in all docs
+- [ ] Record native receipt #1793 as administrative blocker
+- [ ] Inventory: concept outputs, c_target, g_bar, alpha, checkpoints, artifacts
+- [ ] Confirm no Phase 16 production files existed pre-authorization
 
 ### T-16-02: Manuscript extraction
-- Read `notebooks/archive/training_original.ipynb` for concept/anatomy/head semantics
-- Read `notebooks/archive/precompute_original.ipynb` for concept targets and normalizer
-- Read `docs/PROPOSED_METHOD_EXPERIMENT.md` for manuscript methodology
-- Search for CFS, ACS, PCS, QIS definitions
-- Record exact equations or mark BLOCKED
-- Output: `manuscript_extraction.md`
+- [ ] Read `notebooks/archive/training_original.ipynb` for concept/anatomy/head semantics
+- [ ] Read `notebooks/archive/precompute_original.ipynb` for concept targets and normalizer
+- [ ] Read `docs/PROPOSED_METHOD_EXPERIMENT.md` for manuscript methodology
+- [ ] Search for CFS, ACS, PCS, QIS definitions
+- [ ] Record exact equations or mark BLOCKED
+- [ ] Output: `manuscript_extraction.md`
 
 ### T-16-03: Requirements and design
-- Complete `requirements.md` with all FR/NFR
-- Complete `design.md` with tensor contracts, metric equations, config
-- Output: `requirements.md`, `design.md`
+- [ ] Complete `requirements.md` with all FR/NFR
+- [ ] Complete `design.md` with tensor contracts, metric equations, config
+- [ ] Output: `requirements.md`, `design.md`
 
 ### T-16-04: Tasks, acceptance, metric protocol, output schema
-- Complete `tasks.md` (this file)
-- Complete `acceptance.md` with executable criteria
-- Complete `metric_protocol.md` with exact equations
-- Complete `output_schema.md` with table/figure specs
-- Complete `agent_plan.yaml` with action graph
+- [ ] Complete `tasks.md` (this file)
+- [ ] Complete `acceptance.md` with executable criteria
+- [ ] Complete `metric_protocol.md` with exact equations
+- [ ] Complete `output_schema.md` with table/figure specs
+- [ ] Complete `agent_plan.yaml` with action graph
 
 ### T-16-05: Independent scientific review
-- Reviewer: kimi
-- Reject invented score definitions
-- Verify target-label isolation
-- Verify subject-level aggregation
-- Verify no causal overclaiming
-- Output: `spec_review.md` with PASS/BLOCKED
+- [ ] Reviewer: kimi
+- [ ] Reject invented score definitions
+- [ ] Verify target-label isolation
+- [ ] Verify subject-level aggregation
+- [ ] Verify no causal overclaiming
+- [ ] Output: `spec_review.md` with PASS/BLOCKED
 
 ### T-16-06: Concept discovery and inference
-- `schemas.py`: Concept-specific dataclasses, enums, validation
-- `dataset.py`: Read-only concept-evaluation dataset
-- `discovery.py`: Checkpoint/artifact discovery with provenance
-- `provenance.py`: Hash validation, artifact assignment
-- `inference.py`: No-grad forward pass, tensor extraction
-- Focused tests for each module
+- [ ] `schemas.py`: Concept-specific dataclasses, enums, validation
+- [ ] `dataset.py`: Read-only concept-evaluation dataset
+- [ ] `discovery.py`: Checkpoint/artifact discovery with provenance
+- [ ] `provenance.py`: Hash validation, artifact assignment
+- [ ] `inference.py`: No-grad forward pass, tensor extraction
+- [ ] Focused tests for each module
 
 ### T-16-07: Aggregation and fidelity
-- `aggregation.py`: OOF, fold-ensemble, seed aggregation
-- `fidelity.py`: Concept fidelity metrics (MAE, RMSE, bias, correlations)
-- `anatomy.py`: Anatomical consistency metrics (weighted/unweighted)
-- Focused tests with synthetic fixtures
+- [ ] `aggregation.py`: OOF, fold-ensemble, seed aggregation
+- [ ] `fidelity.py`: Concept fidelity metrics (MAE, RMSE, bias, correlations)
+- [ ] `anatomy.py`: Anatomical consistency metrics (weighted/unweighted)
+- [ ] Focused tests with synthetic fixtures
 
 ### T-16-08: Agreement, stability, profiles
-- `agreement.py`: Head agreement (predictive, top-1, JS, consistency direction)
-- `stability.py`: ROI stability (Spearman rank, Jaccard, dispersion)
-- `class_profiles.py`: Class-conditional descriptive profiles
-- Focused tests
+- [ ] `agreement.py`: Head agreement (predictive, top-1, JS, consistency direction)
+- [ ] `stability.py`: ROI stability (Spearman rank, Jaccard, dispersion)
+- [ ] `class_profiles.py`: Class-conditional descriptive profiles
+- [ ] Focused tests
 
 ### T-16-09: Statistics, figures, tables
-- `statistics.py`: Subject bootstrap, paired comparisons, Holm correction
-- `figures.py`: Heatmaps, matrices, profiles (matplotlib/seaborn)
-- `tables.py`: CSV generation for all required tables
-- Focused tests
+- [ ] `statistics.py`: Subject bootstrap, paired comparisons, Holm correction
+- [ ] `figures.py`: Heatmaps, matrices, profiles (matplotlib/seaborn)
+- [ ] `tables.py`: CSV generation for all required tables
+- [ ] Focused tests
 
 ### T-16-10: Independent mathematical verification
-- Reference tests for metric equations
-- Constant-ROI behavior
-- Aggregation correctness
-- Bootstrap unit (subject-level, not ROI)
-- Method pairing (ROI)
-- No target adaptation/gradients
+- [ ] Reference tests for metric equations
+- [ ] Constant-ROI behavior
+- [ ] Aggregation correctness
+- [ ] Bootstrap unit (subject-level, not ROI)
+- [ ] Method pairing (ROI)
+- [ ] No target adaptation/gradients
 
 ### T-16-11: Report, CLI, integration
-- `report.py`: Manifest, output tree, atomic write, reuse
-- `scripts/evaluate_concepts.py`: CLI with all flags
-- `configs/evaluation/concepts.yaml`: Configuration
-- Dry-run, validate-only, real gate
-- Integration tests: all PADA methods, both directions, folds/seeds/checkpoints
-- Regression tests: Phase 15, all prior methods
+- [ ] `report.py`: Manifest, output tree, atomic write, reuse
+- [ ] `scripts/evaluate_concepts.py`: CLI with all flags
+- [ ] `configs/evaluation/concepts.yaml`: Configuration
+- [ ] Dry-run, validate-only, real gate
+- [ ] Integration tests: all PADA methods, both directions, folds/seeds/checkpoints
+- [ ] Regression tests: Phase 15, all prior methods
 
 ### T-16-12: Documentation
-- `docs/CONCEPT_EVALUATION.md`: User-facing guide
-- `docs/PHASE16_REPORT.md`: Complete report with evidence
-- `docs/IMPLEMENTATION_AUDIT.md`: Technical audit
+- [ ] `docs/CONCEPT_EVALUATION.md`: User-facing guide
+- [ ] `docs/PHASE16_REPORT.md`: Complete report with evidence
+- [ ] `docs/IMPLEMENTATION_AUDIT.md`: Technical audit
 
 ### T-16-13: Final audit
-- Scientific validity audit
-- ROI and concept provenance audit
-- Target-label firewall audit
-- Previous-phase regression audit
-- No Phase 17 work verification
-- Output: `final_audit.md`
+- [ ] Scientific validity audit
+- [ ] ROI and concept provenance audit
+- [ ] Target-label firewall audit
+- [ ] Previous-phase regression audit
+- [ ] No Phase 17 work verification
+- [ ] Output: `final_audit.md`
 
 ### T-16-14: Final validation
-- `pip install -e .`
-- Import check
-- Full pytest (focused + regression)
-- Ruff check
-- `git diff --check`
-- Synthetic lifecycle: dry-run, validate-only, evaluate, reuse
-- Engram summary
-- Stop before Phase 17
+ - [x] `pip install -e .`
+- [x] Import check
+- [ ] Full pytest (focused + regression; prior run timed out, incomplete evidence)
+- [x] Ruff check
+- [x] `git diff --check`
+- [x] Synthetic lifecycle: dry-run, validate-only, evaluate, reuse
+- [x] Engram summary
+- [x] Stop before Phase 17
 
 ## File ownership summary
 

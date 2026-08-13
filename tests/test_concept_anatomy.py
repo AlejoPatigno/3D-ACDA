@@ -51,6 +51,35 @@ def test_weighted_anatomy_is_explicitly_unavailable_without_weights() -> None:
     assert result.reason == "weights_unavailable"
 
 
+def test_anatomy_correlation_prioritizes_insufficient_samples() -> None:
+    from pada3dacb.evaluation.concepts.anatomy import compute_per_roi_anatomy
+
+    results = compute_per_roi_anatomy(
+        np.array([[0.0, 1.0]]),
+        np.array([[1.0, 2.0]]),
+    )
+
+    assert results[0].status is ValueStatus.UNAVAILABLE
+    assert results[0].pearson is None
+    assert results[0].spearman is None
+    assert results[0].reason == "insufficient_samples"
+
+
+def test_per_roi_anatomy_reports_constant_roi_as_unavailable() -> None:
+    from pada3dacb.evaluation.concepts.anatomy import compute_per_roi_anatomy
+
+    results = compute_per_roi_anatomy(
+        np.array([[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]]),
+        np.array([[0.0, 5.0], [2.0, 5.0], [4.0, 5.0]]),
+    )
+
+    assert results[0].status is ValueStatus.AVAILABLE
+    assert results[0].pearson == pytest.approx(1.0)
+    assert results[1].status is ValueStatus.UNAVAILABLE
+    assert results[1].pearson is None
+    assert results[1].reason == "constant_roi"
+
+
 @pytest.mark.parametrize(
     "weights",
     [

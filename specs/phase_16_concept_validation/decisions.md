@@ -95,3 +95,10 @@
 ## D-16-20: Method comparison Holm families
 **Decision**: Separate by direction, checkpoint policy, metric family (concept MAE, anatomy MAE, JS divergence). Each family contains exactly four comparisons: prototype_pseudo versus source_only, CORAL, MMD, and CDAN.
 **Rationale**: FR-09 explicitly excludes AAGN and FasterSNN from concept comparisons. Holm correction still controls family-wise error within each predeclared four-comparator family.
+
+## D-16-21: WU-01 executable contract reconciliation
+**Decision**: The canonical Phase 16 contract is reconciled across the nine WU-01 specification files. Tensor records use `[B, K]` concept/anatomy/attention fields and `[B, 3]` class-head fields with CN/MCI/AD order `0/1/2`; `alpha` is normalized per subject and `c_target`/`g_bar` remain immutable.
+**Aggregation**: Source validation is true OOF; target evaluation averages folds into one subject record; multiple seeds aggregate only after fold aggregation; transfer directions remain separate.
+**Metrics and provenance**: Fidelity, anatomy, head agreement, stability, and descriptive class profiles use the equations and unavailable states in `metric_protocol.md`. The 14 provenance fields, ordered input hashes, explicit ROI/normalizer hashes, and `authorized: false` gate are required before real evaluation.
+**Outputs and manuscript disposition**: Output names and ROI-indexed vectors follow `output_schema.md`; AAGN/FasterSNN are not applicable, and CFS/ACS/PCS/QIS remain **BLOCKED** with transparent metric fallbacks only.
+**Verification**: All WU-01 source and authoritative-input paths exist; `agent_plan.yaml` parses, has 14 actions and 66 owned paths with no duplicates, and WU-01 has a 400-line hard ceiling with a 370-line per-path forecast envelope. The corrected reference-test path is `tests/test_concept_statistics_edge_cases.py`.

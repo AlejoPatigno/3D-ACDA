@@ -7,6 +7,12 @@ from scipy.stats import spearmanr
 
 from .schemas import ROIStabilityMetrics
 
+STABILITY_TERMINOLOGY = frozenset({
+    "attention profile",
+    "concept profile",
+    "ROI stability",
+})
+
 # ============================================================================
 # Rank correlation stability
 # ============================================================================
@@ -195,6 +201,7 @@ def compute_roi_rank_dispersion(profiles: np.ndarray) -> tuple[np.ndarray, np.nd
         - rank_std: standard deviation of ranks across instances
         - rank_range: max rank - min rank for each ROI
     """
+    _validate_profiles(profiles)
     M, K = profiles.shape
     if M < 2:
         return np.zeros(K), np.zeros(K)

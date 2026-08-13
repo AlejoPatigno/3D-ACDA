@@ -8,6 +8,7 @@ import pytest
 from pada3dacb.evaluation.concepts.agreement import (
     compute_all_agreement,
     compute_consistency_direction,
+    compute_head_predictive_metrics,
     compute_js_divergence,
     compute_per_class_disagreement,
     compute_top1_agreement,
@@ -92,4 +93,57 @@ def test_consistency_direction_rejects_unknown_loss() -> None:
             np.ones((1, 3)) / 3,
             np.ones((1, 3)) / 3,
             consistency_loss_type="unknown",
+        )
+
+
+def test_complete_agreement_exposes_per_class_disagreement_counts() -> None:
+    latent = np.array(
+        [
+            [0.8, 0.1, 0.1],
+            [0.1, 0.8, 0.1],
+            [0.1, 0.1, 0.8],
+            [0.8, 0.1, 0.1],
+        ]
+    )
+    concept = np.array(
+        [
+            [0.1, 0.8, 0.1],
+            [0.1, 0.8, 0.1],
+            [0.8, 0.1, 0.1],
+            [0.8, 0.1, 0.1],
+        ]
+    )
+
+    latent_predictions = np.argmax(latent, axis=1)
+    concept_predictions = np.argmax(concept, axis=1)
+    result = compute_per_class_disagreement(
+        latent_predictions,
+        concept_predictions,
+        true_labels=np.array([0, 1, 2, 2]),
+    )
+
+    assert [(item.class_label, item.disagree_count, item.total_count) for item in result] == [
+        ("CN", 1, 1),
+        ("MCI", 0, 1),
+        ("AD", 1, 2),
+    ]
+
+
+def test_agreement_rejects_labels_outside_fixed_class_order() -> None:
+    probabilities = np.ones((2, 3)) / 3
+
+    with pytest.raises(ValueError, match="true_labels"):
+        compute_head_predictive_metrics(
+            probabilities,
+            probabilities.copy(),
+            true_labels=np.array([0, 3]),
+        )
+
+
+def test_per_class_disagreement_rejects_mismatched_vectors() -> None:
+    with pytest.raises(ValueError, match="same length"):
+        compute_per_class_disagreement(
+            latent_pred=np.array([0, 1]),
+            concept_pred=np.array([0]),
+            true_labels=np.array([0, 1]),
         )

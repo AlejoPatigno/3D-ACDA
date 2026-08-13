@@ -2,16 +2,25 @@
 
 from __future__ import annotations
 
+from collections.abc import Hashable, Mapping, Sequence
+
 import numpy as np
 from scipy import stats
 
-from pada3dacb.evaluation.bootstrap import _draw_indices
-from pada3dacb.evaluation.schemas import McNemarResult, MethodId, ValueStatus
+from pada3dacb.evaluation import bootstrap as phase15_bootstrap
+from pada3dacb.evaluation.schemas import (
+    CheckpointPolicy,
+    Direction,
+    McNemarResult,
+    MethodId,
+    ValueStatus,
+)
 
 from .schemas import (
     ConceptBootstrapInterval,
     ConceptHolmRow,
     ConceptPairedDifference,
+    PairedMethodComparison,
 )
 
 CONCEPT_COMPARATOR_METHODS = (
@@ -20,6 +29,7 @@ CONCEPT_COMPARATOR_METHODS = (
     MethodId.MMD,
     MethodId.CDAN,
 )
+CONCEPT_COMPARISON_METRIC_ORDER = ("concept_mae", "anatomy_mae", "js_divergence")
 
 
 # ============================================================================
@@ -89,7 +99,7 @@ def bootstrap_metric(
     bootstrapped = []
 
     for _ in range(n_replicates):
-        idx = _draw_indices(rng, strata)
+        idx = phase15_bootstrap._draw_indices(rng, strata)
         bootstrapped.append(np.mean(values[idx]))
 
     bootstrapped = np.array(bootstrapped)
@@ -242,7 +252,7 @@ def paired_bootstrap_diff(
     rng = np.random.Generator(np.random.PCG64(seed))
     bootstrapped = np.empty(n_replicates, dtype=np.float64)
     for index in range(n_replicates):
-        indices = _draw_indices(rng, strata)
+        indices = phase15_bootstrap._draw_indices(rng, strata)
         bootstrapped[index] = np.mean(differences[indices])
 
     ci_low, ci_high = np.percentile(
@@ -332,3 +342,186 @@ def adjust_holm_families(
     for fam_name, p_vals in families.items():
         results[fam_name] = adjust_holm(p_vals, metric=fam_name)
     return results
+
+def _subject_metric_vector(
+    values: np.ndarray | Mapping[Hashable, float],
+    *,
+    metric: str,
+    source: str,
+    explicit_subject_ids: Sequence[Hashable] | None,
+) -> tuple[tuple[Hashable, ...], np.ndarray]:
+    """Return a metric vector and the subject identities that order it."""
+    if isinstance(values, Mapping):
+        subject_ids = tuple(values.keys())
+        raw_values = tuple(values.values())
+        if explicit_subject_ids is not None and tuple(explicit_subject_ids) != subject_ids:
+            raise ValueError(
+                f"{source} metric {metric} subject IDs must have identical ordering and set"
+            )
+    else:
+        if explicit_subject_ids is None:
+            raise ValueError(
+                f"{source} metric {metric} requires explicit subject IDs or a keyed mapping"
+            )
+        subject_ids = tuple(explicit_subject_ids)
+        raw_values = values
+
+    try:
+        if len(set(subject_ids)) != len(subject_ids):
+            raise ValueError(f"{source} metric {metric} subject IDs must be unique")
+    except TypeError as error:
+        raise ValueError(f"{source} metric {metric} subject IDs must be hashable") from error
+
+    vector = np.asarray(raw_values, dtype=np.float64)
+    if vector.ndim != 1 or vector.size != len(subject_ids):
+        raise ValueError(f"{source} metric {metric} must be a one-dimensional subject vector")
+    return subject_ids, vector
+
+
+def _comparator_subject_ids(
+    subject_ids: Mapping[MethodId | str, Sequence[Hashable]] | None,
+    comparator: MethodId,
+) -> Sequence[Hashable] | None:
+    if subject_ids is None:
+        return None
+    if comparator in subject_ids:
+        return subject_ids[comparator]
+    if comparator.value in subject_ids:
+        return subject_ids[comparator.value]
+    raise ValueError(f"missing explicit subject IDs for comparator {comparator.value}")
+
+
+def compute_paired_method_comparisons(
+    prototype_metrics: Mapping[str, np.ndarray | Mapping[Hashable, float]],
+    comparator_metrics: Mapping[
+        MethodId | str, Mapping[str, np.ndarray | Mapping[Hashable, float]]
+    ],
+    *,
+    labels: np.ndarray | Mapping[Hashable, int],
+    direction: Direction,
+    checkpoint_policy: CheckpointPolicy,
+    n_replicates: int = 10000,
+    seed: int = 0,
+    subject_ids: Sequence[Hashable] | None = None,
+    comparator_subject_ids: Mapping[MethodId | str, Sequence[Hashable]] | None = None,
+) -> list[PairedMethodComparison]:
+    """Compare prototype-pseudo with each approved PADA comparator.
+
+    Every metric must carry subject identities either as a keyed mapping or
+    through the explicit ``subject_ids``/``comparator_subject_ids`` arguments.
+    The canonical subject order must be identical for every metric and method;
+    otherwise the comparison fails before the approved paired-bootstrap
+    equations are applied.
+    """
+    from .schemas import CONCEPT_COMPARISON_METRICS, PairedMethodComparison
+
+    required_metrics = CONCEPT_COMPARISON_METRIC_ORDER
+    if any(metric not in prototype_metrics for metric in required_metrics):
+        raise ValueError("prototype metrics must contain concept_mae, anatomy_mae, and js_divergence")
+    normalized = {
+        method if isinstance(method, MethodId) else MethodId(method): metrics
+        for method, metrics in comparator_metrics.items()
+    }
+    if set(normalized) != set(CONCEPT_COMPARATOR_METHODS):
+        raise ValueError("paired comparisons require exactly the four PADA-3DACB comparators")
+    if set(required_metrics) != set(CONCEPT_COMPARISON_METRICS):
+        raise ValueError("concept comparison metric contract is inconsistent")
+    if any(metric not in metrics for metrics in normalized.values() for metric in required_metrics):
+        raise ValueError("each comparator must provide all concept comparison metrics")
+
+    prototype_vectors: dict[str, np.ndarray] = {}
+    canonical_ids: tuple[Hashable, ...] | None = None
+    for metric in required_metrics:
+        metric_ids, vector = _subject_metric_vector(
+            prototype_metrics[metric],
+            metric=metric,
+            source="prototype",
+            explicit_subject_ids=subject_ids,
+        )
+        if canonical_ids is None:
+            canonical_ids = metric_ids
+        elif metric_ids != canonical_ids:
+            raise ValueError("prototype metric subject IDs must have identical ordering and set")
+        prototype_vectors[metric] = vector
+    assert canonical_ids is not None
+
+    if not isinstance(labels, Mapping):
+        raise ValueError("diagnosis labels must be a keyed subject mapping")
+    label_ids = tuple(labels.keys())
+    if label_ids != canonical_ids:
+        raise ValueError("label subject IDs must have identical ordering and set")
+    label_values = np.asarray(tuple(labels.values()))
+    if label_values.ndim != 1 or label_values.size != len(canonical_ids):
+        raise ValueError("diagnosis labels must align with paired subject identities")
+
+    comparator_vectors: dict[MethodId, dict[str, np.ndarray]] = {}
+    for comparator in CONCEPT_COMPARATOR_METHODS:
+        comparator_ids: tuple[Hashable, ...] | None = None
+        explicit_ids = _comparator_subject_ids(comparator_subject_ids, comparator)
+        comparator_vectors[comparator] = {}
+        for metric in required_metrics:
+            metric_ids, vector = _subject_metric_vector(
+                normalized[comparator][metric],
+                metric=metric,
+                source=comparator.value,
+                explicit_subject_ids=explicit_ids,
+            )
+            if comparator_ids is None:
+                comparator_ids = metric_ids
+            elif metric_ids != comparator_ids:
+                raise ValueError(
+                    f"{comparator.value} metric subject IDs must have identical ordering and set"
+                )
+            comparator_vectors[comparator][metric] = vector
+        assert comparator_ids is not None
+        if comparator_ids != canonical_ids:
+            if set(comparator_ids) != set(canonical_ids):
+                raise ValueError("subject IDs must have identical ordering and set")
+            raise ValueError("subject IDs must have identical ordering")
+
+    by_metric: dict[str, dict[MethodId, ConceptPairedDifference]] = {
+        metric: {} for metric in required_metrics
+    }
+    for metric in required_metrics:
+        for comparator in CONCEPT_COMPARATOR_METHODS:
+            by_metric[metric][comparator] = paired_bootstrap_diff(
+                prototype_vectors[metric],
+                comparator_vectors[comparator][metric],
+                labels=label_values,
+                comparator_method=comparator,
+                metric=metric,
+                n_replicates=n_replicates,
+                seed=seed,
+            )
+
+    rows: list[PairedMethodComparison] = []
+    for metric in required_metrics:
+        raw = [by_metric[metric][method].raw_p_value for method in CONCEPT_COMPARATOR_METHODS]
+        if any(value is None for value in raw):
+            raise ValueError("Holm correction requires one available p-value per comparator")
+        holm_rows = adjust_holm([float(value) for value in raw], metric=metric)
+        holm_by_method = {row.comparator_method: row for row in holm_rows}
+        for comparator in CONCEPT_COMPARATOR_METHODS:
+            paired = by_metric[metric][comparator]
+            holm = holm_by_method[comparator]
+            rows.append(
+                PairedMethodComparison(
+                    comparator_method=comparator,
+                    direction=direction,
+                    checkpoint_policy=checkpoint_policy,
+                    metric_family=metric,
+                    mean_difference=paired.observed_difference,
+                    ci_low=paired.ci_low,
+                    ci_high=paired.ci_high,
+                    p_value=paired.raw_p_value,
+                    adjusted_p_value=holm.adjusted_p_value,
+                    holm_rank=holm.holm_rank,
+                    status=paired.status,
+                    reason=paired.reason,
+                )
+            )
+    return rows
+
+
+# Descriptive alias used by report orchestration callers.
+paired_subject_comparisons = compute_paired_method_comparisons

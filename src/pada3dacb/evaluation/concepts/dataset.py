@@ -61,15 +61,40 @@ class ConceptEvaluationSample:
             if not torch.isfinite(tensor).all():
                 raise ValueError(f"{name} contains non-finite values")
 
-        # Validate shapes
-        if self.latent_probabilities.shape != (3,):
-            raise ValueError("latent_probabilities must have 3 entries")
-        if self.concept_probabilities.shape != (3,):
-            raise ValueError("concept_probabilities must have 3 entries")
+        # Validate shapes and normalized tensor contracts
+        roi_tensors = {
+            "predicted_concepts": self.predicted_concepts,
+            "concept_targets": self.concept_targets,
+            "anatomical_targets": self.anatomical_targets,
+            "attention_alpha": self.attention_alpha,
+        }
+        if any(tensor.ndim != 1 for tensor in roi_tensors.values()):
+            raise ValueError("ROI tensors must have shape (K,)")
+        roi_shape = self.predicted_concepts.shape
+        if any(tensor.shape != roi_shape for tensor in roi_tensors.values()):
+            raise ValueError("ROI tensors must share shape (K,)")
+        for name in ("predicted_concepts", "concept_targets", "anatomical_targets"):
+            tensor = roi_tensors[name]
+            if torch.any((tensor < 0.0) | (tensor > 1.0)):
+                raise ValueError(f"{name} must be in [0, 1]")
+        for name, probabilities in (
+            ("latent_probabilities", self.latent_probabilities),
+            ("concept_probabilities", self.concept_probabilities),
+        ):
+            if probabilities.shape != (3,):
+                raise ValueError(f"{name} must have shape (3,)")
+            if torch.any((probabilities < 0.0) | (probabilities > 1.0)):
+                raise ValueError(f"{name} must be in [0, 1]")
+            if not torch.isclose(probabilities.sum(), torch.tensor(1.0, device=probabilities.device), atol=1e-6):
+                raise ValueError(f"{name} must sum to one")
         if not (0 <= self.latent_prediction <= 2):
             raise ValueError("latent_prediction must be 0, 1, or 2")
         if not (0 <= self.concept_prediction <= 2):
             raise ValueError("concept_prediction must be 0, 1, or 2")
+        if self.latent_prediction != int(torch.argmax(self.latent_probabilities)):
+            raise ValueError("latent_prediction must equal probability argmax")
+        if self.concept_prediction != int(torch.argmax(self.concept_probabilities)):
+            raise ValueError("concept_prediction must equal probability argmax")
 
 
 class ConceptEvaluationDataset(Dataset[ConceptEvaluationSample]):

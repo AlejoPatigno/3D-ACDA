@@ -343,6 +343,268 @@ class TestProvenanceReport:
         assert len(report["validation_issues"]) == 1
         assert report["validation_issues"][0]["issues"] == ["roi_order_hash_mismatch"]
 
+    def test_strict_manifest_rejects_unsafe_path_and_uppercase_hash(self, tmp_path):
+        from pada3dacb.evaluation.concepts.schemas import (
+            ProvenanceManifest,
+            canonical_roi_order_hash,
+        )
+
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": canonical_roi_order_hash([2, 4])},
+            "atlas": {"relative_path": "../atlas.bin", "sha256": "b" * 64, "roi_order_sha256": "a" * 64},
+            "candidates": [],
+        }
+        with pytest.raises(ValueError, match="safe POSIX-relative"):
+            ProvenanceManifest.from_mapping(payload, tmp_path)
+
+        payload["atlas"]["relative_path"] = "atlas.bin"
+        payload["atlas"]["sha256"] = "A" * 64
+        with pytest.raises(ValueError, match="lowercase SHA-256"):
+            ProvenanceManifest.from_mapping(payload, tmp_path)
+
+    def test_canonical_roi_order_hash_preserves_order(self):
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        assert canonical_roi_order_hash([2, 4]) != canonical_roi_order_hash([4, 2])
+
+    def test_safe_relative_path_rejects_single_backslash(self):
+        from pada3dacb.evaluation.concepts.schemas import validate_safe_relative_path
+
+        with pytest.raises(ValueError, match="safe POSIX-relative"):
+            validate_safe_relative_path("atlas\\labels.nii.gz")
+
+    def test_manifest_rejects_duplicate_candidate_keys_and_missing_files(self, tmp_path):
+        from pada3dacb.evaluation.concepts.schemas import (
+            ProvenanceManifest,
+            canonical_roi_order_hash,
+        )
+
+        roi_hash = canonical_roi_order_hash([2, 4])
+        candidate = {
+            "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+            "checkpoint": {"relative_path": "missing.pt", "sha256": "a" * 64, "roi_order_sha256": roi_hash},
+            "normalizer": {"relative_path": "normalizer.json", "sha256": "b" * 64, "roi_order_sha256": roi_hash},
+            "concept_artifacts_root": "artifacts",
+        }
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": "c" * 64, "roi_order_sha256": roi_hash},
+            "candidates": [candidate, dict(candidate)],
+        }
+        with pytest.raises(ValueError, match="duplicate candidate key"):
+            ProvenanceManifest.from_mapping(payload, tmp_path)
+        payload["candidates"] = [candidate]
+        with pytest.raises(ValueError, match="atlas file is missing"):
+            ProvenanceManifest.from_mapping(payload, tmp_path)
+
+    def test_verified_manifest_requires_actual_atlas_labels_and_identity(self, tmp_path):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        roi_hash = canonical_roi_order_hash([2, 4])
+        torch.save({"roi_order_hash": roi_hash, "atlas_hash": compute_sha256_file(atlas), "concept_normalizer_hash": compute_sha256_file(normalizer)}, checkpoint)
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": compute_sha256_file(atlas), "roi_order_sha256": roi_hash},
+            "candidates": [{
+                "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+                "checkpoint": {"relative_path": "checkpoint.pt", "sha256": compute_sha256_file(checkpoint), "roi_order_sha256": roi_hash},
+                "normalizer": {"relative_path": "normalizer.json", "sha256": compute_sha256_file(normalizer), "roi_order_sha256": roi_hash},
+                "concept_artifacts_root": "artifacts",
+            }],
+        }
+        (tmp_path / "artifacts").mkdir()
+        with pytest.raises(ValueError, match="atlas manager|atlas ROI labels"):
+            verify_provenance_manifest(payload, tmp_path)
+
+    def test_verified_manifest_rejects_reordered_atlas_labels(self, tmp_path):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        roi_hash = canonical_roi_order_hash([2, 4])
+        torch.save({"roi_order_hash": roi_hash, "atlas_hash": compute_sha256_file(atlas), "concept_normalizer_hash": compute_sha256_file(normalizer)}, checkpoint)
+        payload = {"schema_version": "phase16-concept-provenance-v1", "roi_order": {"labels": [2, 4], "sha256": roi_hash}, "atlas": {"relative_path": "atlas.bin", "sha256": compute_sha256_file(atlas), "roi_order_sha256": roi_hash}, "candidates": [{"key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"}, "checkpoint": {"relative_path": "checkpoint.pt", "sha256": compute_sha256_file(checkpoint), "roi_order_sha256": roi_hash}, "normalizer": {"relative_path": "normalizer.json", "sha256": compute_sha256_file(normalizer), "roi_order_sha256": roi_hash}, "concept_artifacts_root": "artifacts"}]}
+        (tmp_path / "artifacts").mkdir()
+        manager = type("Atlas", (), {"label_values": [4, 2], "atlas_hash": compute_sha256_file(atlas)})()
+        with pytest.raises(ValueError, match="atlas ROI labels"):
+            verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)
+
+    def test_verified_manifest_rejects_atlas_file_hash_mismatch(self, tmp_path, monkeypatch):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        artifacts = tmp_path / "artifacts"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        checkpoint.write_bytes(b"checkpoint")
+        artifacts.mkdir()
+        roi_hash = canonical_roi_order_hash([2, 4])
+        atlas_hash = compute_sha256_file(atlas)
+        normalizer_hash = compute_sha256_file(normalizer)
+        checkpoint_hash = compute_sha256_file(checkpoint)
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": "0" * 64, "roi_order_sha256": roi_hash},
+            "candidates": [{
+                "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+                "checkpoint": {"relative_path": "checkpoint.pt", "sha256": checkpoint_hash, "roi_order_sha256": roi_hash},
+                "normalizer": {"relative_path": "normalizer.json", "sha256": normalizer_hash, "roi_order_sha256": roi_hash},
+                "concept_artifacts_root": "artifacts",
+            }],
+        }
+        checkpoint_loads = []
+        monkeypatch.setattr(
+            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            lambda path: checkpoint_loads.append(path),
+        )
+
+        with pytest.raises(ValueError) as error:
+            verify_provenance_manifest(payload, tmp_path)
+
+        message = str(error.value)
+        assert "atlas hash mismatch" in message
+        assert "expected " + "0" * 64 in message
+        assert "got " + atlas_hash in message
+        assert checkpoint_loads == []
+
+    def test_verified_manifest_rejects_normalizer_file_hash_mismatch(self, tmp_path, monkeypatch):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        artifacts = tmp_path / "artifacts"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        checkpoint.write_bytes(b"checkpoint")
+        artifacts.mkdir()
+        roi_hash = canonical_roi_order_hash([2, 4])
+        atlas_hash = compute_sha256_file(atlas)
+        normalizer_hash = compute_sha256_file(normalizer)
+        checkpoint_hash = compute_sha256_file(checkpoint)
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": atlas_hash, "roi_order_sha256": roi_hash},
+            "candidates": [{
+                "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+                "checkpoint": {"relative_path": "checkpoint.pt", "sha256": checkpoint_hash, "roi_order_sha256": roi_hash},
+                "normalizer": {"relative_path": "normalizer.json", "sha256": "0" * 64, "roi_order_sha256": roi_hash},
+                "concept_artifacts_root": "artifacts",
+            }],
+        }
+        manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": atlas_hash})()
+        checkpoint_loads = []
+        monkeypatch.setattr(
+            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            lambda path: checkpoint_loads.append(path),
+        )
+
+        with pytest.raises(ValueError) as error:
+            verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)
+
+        message = str(error.value)
+        assert "normalizer" in message
+        assert "hash mismatch" in message
+        assert "expected " + "0" * 64 in message
+        assert "got " + normalizer_hash in message
+        assert checkpoint_loads == []
+
+    def test_verified_manifest_rejects_checkpoint_file_hash_mismatch(self, tmp_path, monkeypatch):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        artifacts = tmp_path / "artifacts"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        checkpoint.write_bytes(b"checkpoint")
+        artifacts.mkdir()
+        roi_hash = canonical_roi_order_hash([2, 4])
+        atlas_hash = compute_sha256_file(atlas)
+        normalizer_hash = compute_sha256_file(normalizer)
+        checkpoint_hash = compute_sha256_file(checkpoint)
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": atlas_hash, "roi_order_sha256": roi_hash},
+            "candidates": [{
+                "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+                "checkpoint": {"relative_path": "checkpoint.pt", "sha256": "0" * 64, "roi_order_sha256": roi_hash},
+                "normalizer": {"relative_path": "normalizer.json", "sha256": normalizer_hash, "roi_order_sha256": roi_hash},
+                "concept_artifacts_root": "artifacts",
+            }],
+        }
+        manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": atlas_hash})()
+        checkpoint_loads = []
+        monkeypatch.setattr(
+            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            lambda path: checkpoint_loads.append(path),
+        )
+
+        with pytest.raises(ValueError) as error:
+            verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)
+
+        message = str(error.value)
+        assert "checkpoint" in message
+        assert "hash mismatch" in message
+        assert "expected " + "0" * 64 in message
+        assert "got " + checkpoint_hash in message
+        assert checkpoint_loads == []
+
+    def test_verified_manifest_hashes_files_before_checkpoint_inspection(self, tmp_path, monkeypatch):
+        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
+        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+
+        atlas = tmp_path / "atlas.bin"
+        normalizer = tmp_path / "normalizer.json"
+        checkpoint = tmp_path / "checkpoint.pt"
+        atlas.write_bytes(b"atlas")
+        normalizer.write_text(json.dumps({"roi_labels": [2, 4]}), encoding="utf-8")
+        checkpoint.write_bytes(b"checkpoint")
+        (tmp_path / "artifacts").mkdir()
+        def digest(path):
+            return compute_sha256_file(path)
+        roi_hash = canonical_roi_order_hash([2, 4])
+        payload = {
+            "schema_version": "phase16-concept-provenance-v1",
+            "roi_order": {"labels": [2, 4], "sha256": roi_hash},
+            "atlas": {"relative_path": "atlas.bin", "sha256": digest(atlas), "roi_order_sha256": roi_hash},
+            "candidates": [{
+                "key": {"method_id": "source_only", "direction": "adni_to_oasis", "seed": 42, "fold": 0, "checkpoint_policy": "primary_best_source_f1"},
+                "checkpoint": {"relative_path": "checkpoint.pt", "sha256": digest(checkpoint), "roi_order_sha256": roi_hash},
+                "normalizer": {"relative_path": "normalizer.json", "sha256": digest(normalizer), "roi_order_sha256": roi_hash},
+                "concept_artifacts_root": "artifacts",
+            }],
+        }
+        events = []
+        monkeypatch.setattr("pada3dacb.evaluation.concepts.provenance.compute_sha256_file", lambda path: events.append("hash") or digest(path))
+        monkeypatch.setattr("pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata", lambda path: events.append("parse") or {})
+        manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": digest(atlas)})()
+        with pytest.raises(ValueError, match="checkpoint metadata"):
+            verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)
+        assert events.index("hash") < events.index("parse")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

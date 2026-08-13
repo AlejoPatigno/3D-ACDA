@@ -5,14 +5,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import torch
 
+from .provenance import verify_provenance_manifest
 from .schemas import (
     CheckpointPolicy,
     ConceptCandidate,
     Direction,
     MethodId,
+    ProvenanceManifest,
+    validate_sha256,
 )
 
 # PADA-3DACB eligible methods for concept evaluation
@@ -29,6 +33,7 @@ NOT_APPLICABLE_METHODS = frozenset({
     MethodId.AAGN,
     MethodId.FASTER_SNN,
 })
+NOT_APPLICABLE_STATUS = "not_applicable_no_pada3dacb_concept_head"
 
 
 @dataclass(frozen=True)
@@ -45,6 +50,35 @@ class DiscoveryConfig:
     expected_concept_normalizer_hash: str | None = None
     expected_atlas_roi_order_hash: str | None = None
     expected_atlas_hash: str | None = None
+    strict: bool = False
+    manifest_path: Path | None = None
+    runtime_roi_labels: Sequence[int] | None = None
+    atlas_manager: Any | None = None
+
+    def validate(self) -> None:
+        if not isinstance(self.runs_root, Path) or not isinstance(self.artifact_root, Path):
+            raise ValueError("discovery roots must be pathlib.Path values")
+        for name, values in (("methods", self.methods), ("directions", self.directions), ("checkpoint_policies", self.checkpoint_policies)):
+            if not isinstance(values, (set, frozenset)) or not values:
+                raise ValueError(f"{name} must be a non-empty set")
+        for name, values in (("expected_folds", self.expected_folds), ("expected_seeds", self.expected_seeds)):
+            if isinstance(values, (str, bytes)) or not isinstance(values, Sequence) or not values:
+                raise ValueError(f"{name} must be a non-empty sequence")
+            if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in values):
+                raise ValueError(f"{name} must contain non-negative integers")
+            if len(set(values)) != len(values):
+                raise ValueError(f"{name} must not contain duplicates")
+        for name, value in (("expected_concept_normalizer_hash", self.expected_concept_normalizer_hash), ("expected_atlas_roi_order_hash", self.expected_atlas_roi_order_hash), ("expected_atlas_hash", self.expected_atlas_hash)):
+            if value is not None:
+                validate_sha256(value, name)
+        if self.strict and (self.manifest_path is None or not self.manifest_path.is_file()):
+            raise ValueError("strict discovery requires an existing provenance manifest")
+        if self.strict and (self.runtime_roi_labels is None or not self.runtime_roi_labels):
+            raise ValueError("strict discovery requires runtime ROI labels")
+        if self.strict and self.atlas_manager is None:
+            raise ValueError("strict discovery requires an atlas manager")
+        if self.runtime_roi_labels is not None and (isinstance(self.runtime_roi_labels, (str, bytes)) or not isinstance(self.runtime_roi_labels, Sequence) or not self.runtime_roi_labels):
+            raise ValueError("runtime ROI labels must be a non-empty sequence")
 
 
 def discover_candidates(config: DiscoveryConfig) -> tuple[list[ConceptCandidate], list[str]]:
@@ -56,14 +90,38 @@ def discover_candidates(config: DiscoveryConfig) -> tuple[list[ConceptCandidate]
     """
     candidates = []
     issues = []
+    if config.strict:
+        try:
+            config.validate()
+            manifest = ProvenanceManifest.from_json(config.manifest_path)  # type: ignore[arg-type]
+            expected_keys = {(method.value, direction.value, seed, fold, policy.value) for method in config.methods for direction in config.directions for seed in config.expected_seeds for fold in config.expected_folds for policy in config.checkpoint_policies}
+            if {entry.key for entry in manifest.candidates} != expected_keys:
+                raise ValueError("provenance manifest assignments do not exactly match requested candidates")
+            if list(config.runtime_roi_labels) != list(manifest.labels):
+                raise ValueError("runtime ROI labels conflict with provenance manifest")
+            for method in config.methods:
+                for direction in config.directions:
+                    for seed in config.expected_seeds:
+                        for fold in config.expected_folds:
+                            for policy in config.checkpoint_policies:
+                                assigned = manifest.candidate_for((method, direction, seed, fold, policy))
+                                derived = config.artifact_root / "concept_targets" / direction.value / f"seed_{seed}" / f"fold_{fold}"
+                                if assigned is None or (manifest.root / assigned.concept_artifacts_root).resolve() != derived.resolve():
+                                    raise ValueError(f"manifest artifact assignment conflicts for {method.value}:{direction.value}:seed{seed}:fold{fold}:{policy.value}")
+            verify_provenance_manifest(manifest, atlas_manager=config.atlas_manager)
+        except (OSError, ValueError, TypeError) as error:
+            return [], [f"provenance_manifest_invalid:{error}"]
+    else:
+        # Loose fixture callers retain issue-list behavior and legacy roots.
+        manifest = None
 
-    for method in config.methods:
-        for direction in config.directions:
-            for seed in config.expected_seeds:
-                for fold in config.expected_folds:
-                    for policy in config.checkpoint_policies:
+    for method in sorted(config.methods, key=lambda item: item.value):
+        for direction in sorted(config.directions, key=lambda item: item.value):
+            for seed in sorted(config.expected_seeds):
+                for fold in sorted(config.expected_folds):
+                    for policy in sorted(config.checkpoint_policies, key=lambda item: item.value):
                         candidate, candidate_issues = _discover_single(
-                            config, method, direction, seed, fold, policy
+                            config, method, direction, seed, fold, policy, manifest
                         )
                         if candidate:
                             candidates.append(candidate)
@@ -79,8 +137,12 @@ def _discover_single(
     seed: int,
     fold: int,
     policy: CheckpointPolicy,
+    manifest: ProvenanceManifest | None = None,
 ) -> tuple[ConceptCandidate | None, list[str]]:
     """Discover one candidate."""
+    if method in NOT_APPLICABLE_METHODS:
+        return None, [f"not_applicable:{method.value}:{NOT_APPLICABLE_STATUS}"]
+
     issues = []
 
     # Build expected checkpoint directory
@@ -114,10 +176,19 @@ def _discover_single(
         return None, issues
 
     checkpoint_path = checkpoint_files[0]
+    artifact_root = config.artifact_root / "concept_targets" / direction.value / f"seed_{seed}" / f"fold_{fold}"
+    if config.strict and manifest is not None:
+        assigned = manifest.candidate_for((method, direction, seed, fold, policy))
+        if assigned is None:
+            return None, [f"manifest_assignment_missing:{method.value}:{direction.value}:seed{seed}:fold{fold}:{policy.value}"]
+        expected_path = manifest.root / assigned.checkpoint.relative_path
+        expected_artifact_root = manifest.root / assigned.concept_artifacts_root
+        if checkpoint_path.resolve() != expected_path.resolve() or artifact_root.resolve() != expected_artifact_root.resolve():
+            return None, [f"manifest_assignment_conflict:{method.value}:{direction.value}:seed{seed}:fold{fold}:{policy.value}"]
 
-    # Load checkpoint metadata (weights_only=False for metadata dicts)
+    # Safe tensor-only metadata inspection; arbitrary object reconstruction is forbidden.
     try:
-        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     except Exception as e:
         issues.append(f"checkpoint_load_failed:{method.value}:{direction.value}:seed{seed}:fold{fold}:{e}")
         return None, issues
@@ -137,8 +208,8 @@ def _discover_single(
     if manifest_path.exists():
         import json
         with open(manifest_path) as f:
-            manifest = json.load(f)
-        split_hashes = manifest.get("split_hashes", {})
+            run_manifest_payload = json.load(f)
+        split_hashes = run_manifest_payload.get("split_hashes", {})
 
     # Atlas and ROI order hashes
     atlas_hash = checkpoint.get("atlas_hash", "")
@@ -156,14 +227,8 @@ def _discover_single(
         issues.append(f"atlas_hash_mismatch:{method.value}:{direction.value}:seed{seed}:fold{fold}")
 
     # Concept artifacts root
-    artifact_root = config.artifact_root / "concept_targets" / direction.value / f"seed_{seed}" / f"fold_{fold}"
     if not artifact_root.exists():
         issues.append(f"concept_artifacts_not_found:{method.value}:{direction.value}:seed{seed}:fold{fold}")
-
-    # Skip non-PADA methods for concept evaluation
-    if method in NOT_APPLICABLE_METHODS:
-        issues.append(f"not_applicable:{method.value}:no_pada3dacb_concept_head")
-        return None, issues
 
     candidate = ConceptCandidate(
         method_id=method,

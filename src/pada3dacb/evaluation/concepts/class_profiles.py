@@ -12,6 +12,32 @@ from .schemas import (
 )
 
 
+def _validate_records(records: list[FoldEnsembleRecord | SeedEnsembleRecord]) -> int | None:
+    """Validate subject-level profile inputs before class aggregation."""
+    if not records:
+        return None
+
+    widths: set[int] = set()
+    for record in records:
+        if record.true_label not in {0, 1, 2}:
+            raise ValueError("true_label must use the fixed class order indices 0, 1, and 2")
+        vectors = (
+            record.predicted_concepts,
+            record.concept_targets,
+            record.anatomical_targets,
+        )
+        lengths = {len(vector) for vector in vectors}
+        if len(lengths) != 1:
+            raise ValueError("profile vectors must have the same ROI width")
+        widths.update(lengths)
+        if any(not np.isfinite(np.asarray(vector, dtype=np.float64)).all() for vector in vectors):
+            raise ValueError("class profile vectors must contain only finite values")
+
+    if len(widths) != 1:
+        raise ValueError("all records must have the same ROI width")
+    return widths.pop()
+
+
 def _bootstrap_mean_ci(
     values: np.ndarray,
     *,
@@ -21,6 +47,8 @@ def _bootstrap_mean_ci(
     """Bootstrap ROI means by resampling subjects with fixed PCG64 draws."""
     if isinstance(replicates, bool) or not isinstance(replicates, int) or replicates <= 0:
         raise ValueError("bootstrap_replicates must be a positive integer")
+    if values.ndim != 2 or values.shape[0] == 0 or not np.isfinite(values).all():
+        raise ValueError("bootstrap values must be a non-empty finite matrix")
     rng = np.random.Generator(np.random.PCG64(seed))
     draws = np.empty((replicates, values.shape[1]), dtype=np.float64)
     for index in range(replicates):
@@ -50,6 +78,7 @@ def compute_class_profiles(
     Returns:
         List of ClassConditionalProfile for each class
     """
+    _validate_records(records)
     if class_labels is None:
         class_labels = ["CN", "MCI", "AD"]
     if class_labels != ["CN", "MCI", "AD"]:
@@ -129,14 +158,12 @@ def compute_per_roi_class_means(
     records: list,
     class_labels: list[str] | None = None,
 ) -> dict[str, np.ndarray]:
+    """Compute per-ROI mean predicted concepts per class."""
+    _validate_records(records)
     if class_labels is None:
         class_labels = ["CN", "MCI", "AD"]
-    """
-    Compute per-ROI mean predicted concepts per class.
-
-    Returns:
-        Dict mapping class_label -> [K] mean predicted concepts per ROI
-    """
+    if class_labels != ["CN", "MCI", "AD"]:
+        raise ValueError("class_labels must preserve the fixed CN, MCI, AD order")
     results = {}
 
     for c in range(3):

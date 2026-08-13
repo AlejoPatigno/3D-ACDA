@@ -29,23 +29,16 @@ testing:
     integration: ""
     e2e: ""
   commands:
-    unit:
-      []
-    integration:
-      []
-    e2e:
-      []
+    unit: []
+    integration: []
+    e2e: []
   coverage:
     command: ""
-    commands:
-      []
+    commands: []
 quality:
   lint: ""
-  lint_commands:
-    []
+  lint_commands: []
   typecheck: ""
-  typecheck_commands:
-    []
+  typecheck_commands: []
   format: ""
-  format_commands:
-    []
+  format_commands: []

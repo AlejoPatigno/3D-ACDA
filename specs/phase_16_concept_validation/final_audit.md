@@ -1,60 +1,34 @@
-# Phase 16 final technical audit
+# Phase 16 Final Independent Audit
 
-## Current verdict
+## Verdict
 
-**Pending final rerun after remediation.** The implementation is eligible for a second independent verification only after every command in the evidence matrix below passes on the remediated bytes.
+**BLOCKED WITH REMEDIATION EVIDENCE.** The two introduced CRITICAL findings RISK-001 and RISK-002 from native review lineage `review-047ae7d944d9e975` were remediated in the authorized Phase 16 paths. Native review issue #1793 remains escalated, so Phase 16 is not complete and no archive recommendation is made.
 
-## Scope
+## Remediation evidence
 
-- Phase 16 only.
-- Synthetic fixtures and deterministic evaluation only.
-- No real ADNI/OASIS evaluation.
-- No archive, commit, push, PR, release, or publication.
-- No Phase 17 work.
+- `tests/test_concept_metrics_reference.py` now supplies a non-empty canonical `(K,h,w,d)` ROI mask, exercises the two-argument `model(x, roi_masks)` contract, and asserts a B>1 inference batch while preserving the independent metric mathematics.
+- `tests/test_concept_inference.py` now places strict checkpoint compatibility coverage at class-method scope so pytest collects it.
+- The Phase 16 task and agent-plan evidence reports 63 complete / 2 open, with both open rows parent-owned lifecycle tasks. No implementation task completion was invented.
+- The full pytest row remains incomplete because the prior full-suite run timed out; it is not represented as a pass.
 
-## Scientific audit
+## Validation evidence
 
-| Control | Expected disposition |
-|---|---|
-| Fixed class order | CN=0, MCI=1, AD=2 |
-| Concept fidelity | `c_hat` versus immutable `c_target` |
-| Anatomy consistency | `c_hat` versus immutable `g_bar` |
-| Consistency direction | Explicitly derived from configured `L_cons` |
-| ROI stability | Separate fidelity/anatomy/concept/alpha profiles |
-| Bootstrap unit | Diagnosis-stratified subjects after aggregation |
-| Method family | prototype_pseudo versus source_only/CORAL/MMD/CDAN |
-| AAGN/FasterSNN | Not applicable to concept evaluation |
-| Target-label firewall | Posthoc evaluation only |
-| CFS/ACS/PCS/QIS | BLOCKED; no equation invented |
+- `PYTHONDONTWRITEBYTECODE=1 python -m pytest --collect-only -q -p no:cacheprovider tests/test_concept_inference.py` — 20 tests collected, exit 0.
+- `PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_concept_metrics_reference.py tests/test_concept_inference.py -q -p no:cacheprovider` — 27 passed, exit 0.
+- `PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_concept_inference.py::TestLoadCheckpoint::test_load_checkpoint_rejects_incompatible_state_dict tests/test_concept_inference.py::TestRunSubjectInference::test_run_subject_inference_requires_roi_masks tests/test_concept_inference.py::TestRunSubjectInference::test_run_subject_inference_rejects_inconsistent_batched_roi_masks tests/test_concept_metrics_reference.py::test_synthetic_inference_is_no_grad_and_does_not_regenerate_targets -q -p no:cacheprovider` — 4 passed, exit 0.
+- `python -m ruff check tests/test_concept_metrics_reference.py tests/test_concept_inference.py` — all checks passed, exit 0.
+- `python -m py_compile tests/test_concept_metrics_reference.py tests/test_concept_inference.py` — exit 0.
+- `git diff --check -- <authorized Phase 16 remediation paths>` — exit 0.
+- Strict TDD RED: the pre-edit focused run observed 1 failure at the missing canonical ROI-mask contract, exit 1.
+- Strict TDD GREEN: the focused two-file run completed with 27 tests, exit 0.
+- Strict TDD TRIANGULATE: the four negative/alternate contract tests completed, exit 0.
+- Strict TDD REFACTOR: Ruff, py_compile, and diff checks completed, exit 0.
 
-## Provenance audit
+## Unresolved blockers
 
-- Precomputed concept and anatomical targets are required.
-- Candidate validation issues block inference.
-- Checkpoint, normalizer, ROI-order, atlas, and target artifacts fail closed.
-- Subject outputs require valid lowercase SHA-256 metadata.
-- Output publication uses an exact file allowlist, artifact index, manifest-last commit, and hash-verified read-only reuse.
+1. Native review lineage `review-047ae7d944d9e975` remains escalated after RISK-001/RISK-002 remediation under issue #1793; parent owns lifecycle handling.
+2. The prior full `python -m pytest -q` run timed out at 180 seconds; no full-suite completion evidence exists.
+3. The two parent-owned lifecycle rows remain unchecked; no archive, commit, push, PR, release, or Phase 17 action is authorized.
+4. Real evaluation remains closed (`authorized: false`), and CFS/ACS/PCS/QIS remain blocked without authoritative equations.
 
-## Verification matrix
-
-| Evidence | Required result | Final result |
-|---|---|---|
-| Independent metric/statistics references | PASS | Pending rerun |
-| Complete `tests/test_concept_*.py` | PASS | Pending rerun |
-| Previous-method regressions | PASS | Pending rerun |
-| Full `python -m pytest -q` | PASS | Pending rerun |
-| `python -m ruff check .` | PASS | Pending rerun |
-| `git diff --check` | PASS | Pending rerun |
-| Synthetic dry-run and validate-only | Exit 0, no output | Pending rerun |
-| Synthetic evaluate repeated | Exit 0, byte-identical | Pending rerun |
-| Synthetic reuse | Exit 0, no mtime change | Pending rerun |
-| Real gate | Blocked before output | Pending rerun |
-| Graph update | Exit 0 | Pending rerun |
-
-## Administrative boundary
-
-Native incident #1793 remains a hard blocker for archive and every delivery/publication operation. It does not authorize lock deletion, authority repair, or changes to earlier scientific phases.
-
-## Phase boundary
-
-Phase 17 has not started and remains prohibited until Phase 16 receives independent PASS and explicit human approval.
+Phase 17 has not started.

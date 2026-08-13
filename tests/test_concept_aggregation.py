@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 
 import pytest
 
@@ -146,6 +147,16 @@ def test_target_aggregation_rejects_changed_immutable_targets() -> None:
         aggregate_target_evaluation(records, expected_folds=(0, 1))
 
 
+def test_target_aggregation_rejects_changed_immutable_anatomy_targets() -> None:
+    records = (
+        _record("subject-a", seed=42, fold=0),
+        replace(_record("subject-a", seed=42, fold=1), anatomical_targets=(0.2, 0.8)),
+    )
+
+    with pytest.raises(ValueError, match="inconsistent anatomical_targets"):
+        aggregate_target_evaluation(records, expected_folds=(0, 1))
+
+
 def test_target_aggregation_rejects_missing_seed() -> None:
     records = (
         _record("subject-a", seed=42, fold=0),
@@ -157,4 +168,56 @@ def test_target_aggregation_rejects_missing_seed() -> None:
             records,
             expected_folds=(0, 1),
             expected_seeds=(42, 99),
+        )
+
+
+def test_target_aggregation_rejects_unexpected_single_seed() -> None:
+    records = (
+        _record("subject-a", seed=99, fold=0),
+        _record("subject-a", seed=99, fold=1),
+    )
+
+    with pytest.raises(ValueError, match="seeds"):
+        aggregate_target_evaluation(
+            records,
+            expected_folds=(0, 1),
+            expected_seeds=(42,),
+        )
+
+
+def test_target_aggregation_rejects_mixed_transfer_directions() -> None:
+    adni_to_oasis = _record("subject-a", seed=42, fold=0)
+    oasis_to_adni = replace(
+        _record("subject-b", seed=42, fold=0),
+        direction=Direction.OASIS_TO_ADNI,
+        source_domain="OASIS",
+        target_domain="ADNI",
+        cohort="ADNI",
+    )
+
+    with pytest.raises(ValueError, match="direction"):
+        aggregate_target_evaluation(
+            (adni_to_oasis, oasis_to_adni),
+            expected_folds=(0,),
+        )
+
+
+def test_source_oof_rejects_mixed_transfer_directions() -> None:
+    adni_to_oasis = _record("subject-a", seed=42, fold=0)
+    oasis_to_adni = replace(
+        _record("subject-b", seed=42, fold=0),
+        direction=Direction.OASIS_TO_ADNI,
+        source_domain="OASIS",
+        target_domain="ADNI",
+        cohort="OASIS",
+    )
+
+    with pytest.raises(ValueError, match="direction"):
+        aggregate_source_oof(
+            (adni_to_oasis, oasis_to_adni),
+            expected_folds=(0,),
+            expected_subject_hashes=(
+                _digest("subject-a"),
+                _digest("subject-b"),
+            ),
         )

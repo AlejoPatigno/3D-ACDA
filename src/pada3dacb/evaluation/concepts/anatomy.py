@@ -118,14 +118,14 @@ def _compute_correlations(
     y: np.ndarray,
 ) -> tuple[float | None, float | None, ValueStatus, str | None]:
     """Compute Pearson and Spearman with unavailable handling."""
-    if np.allclose(x, x[0]) or np.allclose(y, y[0]):
-        return None, None, ValueStatus.UNAVAILABLE, "constant_roi"
+    if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
+        return None, None, ValueStatus.UNAVAILABLE, "numerical_error"
 
     if len(x) < 3:
         return None, None, ValueStatus.UNAVAILABLE, "insufficient_samples"
 
-    if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
-        return None, None, ValueStatus.UNAVAILABLE, "numerical_error"
+    if np.allclose(x, x[0]) or np.allclose(y, y[0]):
+        return None, None, ValueStatus.UNAVAILABLE, "constant_roi"
 
     try:
         pearson_r, _ = stats.pearsonr(x, y)

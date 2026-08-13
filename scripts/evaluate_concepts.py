@@ -3,24 +3,45 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.metadata
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from enum import IntEnum
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, NamedTuple
 
 import numpy as np
+import torch
 import yaml
+from torch.utils.data import DataLoader
 
+from pada3dacb.artifacts.concepts import ConceptNormalizer
 from pada3dacb.evaluation.concepts.agreement import compute_all_agreement
 from pada3dacb.evaluation.concepts.anatomy import compute_global_anatomy
-from pada3dacb.evaluation.concepts.discovery import DiscoveryConfig, discover_candidates
+from pada3dacb.evaluation.concepts.discovery import (
+    NOT_APPLICABLE_STATUS,
+    DiscoveryConfig,
+    discover_candidates,
+)
 from pada3dacb.evaluation.concepts.fidelity import compute_global_fidelity
+from pada3dacb.evaluation.concepts.inference import (
+    load_checkpoint,
+    run_real_evaluation,
+    run_subject_inference,
+)
+from pada3dacb.evaluation.concepts.provenance import load_provenance_manifest
 from pada3dacb.evaluation.concepts.report import (
     build_synthetic_fixture_bundle,
     commit_output,
     verify_completed_output,
+)
+from pada3dacb.evaluation.concepts.schemas import (
+    VerifiedFixtureManifest,
+    _is_verified_fixture_manifest,
+    issue_real_evaluation_capability,
+    verify_fixture_manifest,
 )
 from pada3dacb.evaluation.concepts.stability import compute_all_stability
 from pada3dacb.evaluation.concepts.statistics import (
@@ -42,6 +63,7 @@ from pada3dacb.evaluation.schemas import (
     UnsafePathError,
     canonical_sha256,
 )
+from pada3dacb.models.pada3dacb import PADA3DACB
 
 PADA_CONCEPT_METHODS = (
     MethodId.SOURCE_ONLY,
@@ -89,6 +111,15 @@ def _positive_integer(value: str) -> int:
     return parsed
 
 
+def _direction_value(value: str) -> str:
+    normalized = value.lower().replace("-", "_")
+    try:
+        Direction(normalized)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"unsupported direction: {value}") from error
+    return normalized
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
 
@@ -98,7 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path)
 
     directions = parser.add_mutually_exclusive_group(required=True)
-    directions.add_argument("--direction", choices=[item.value for item in Direction])
+    directions.add_argument(
+        "--direction",
+        type=_direction_value,
+        choices=[item.value for item in Direction],
+    )
     directions.add_argument("--both-directions", action="store_true")
 
     methods = parser.add_mutually_exclusive_group(required=True)
@@ -214,6 +249,7 @@ def _load_configuration(selection: CliSelection) -> Mapping[str, Any]:
         raise ConfigurationError("evaluation class order is unsupported")
 
     approved_methods = set(config.get("methods", ()))
+    approved_methods.update(config.get("baselines", ()))
     if any(item.value not in approved_methods for item in selection.methods):
         raise ConfigurationError("method selector is not approved by configuration")
 
@@ -248,7 +284,130 @@ def _library_versions() -> dict[str, str]:
     }
 
 
-def _synthetic_fixture_metrics() -> dict[str, Any]:
+def _load_verified_fixture_manifest(
+    config: Mapping[str, Any],
+    config_path: Path,
+) -> VerifiedFixtureManifest:
+    values = {
+        name: config.get(name)
+        for name in (
+            "fixture_manifest_path",
+            "fixture_manifest_sha256",
+            "fixture_allowed_root",
+        )
+    }
+    if any(not isinstance(value, str) or not value.strip() for value in values.values()):
+        raise ConfigurationError(
+            "synthetic execution requires fixture_manifest_path, "
+            "fixture_manifest_sha256, and fixture_allowed_root"
+        )
+    base = config_path.resolve().parent
+
+    def resolve(value: str) -> Path:
+        path = Path(value)
+        return path.resolve() if path.is_absolute() else (base / path).resolve()
+
+    try:
+        return verify_fixture_manifest(
+            resolve(values["fixture_manifest_path"]),
+            values["fixture_manifest_sha256"],
+            resolve(values["fixture_allowed_root"]),
+        )
+    except (OSError, TypeError, ValueError) as error:
+        raise ConfigurationError(f"fixture manifest is invalid: {error}") from error
+
+
+def _validate_synthetic_fixture(
+    device: str = "cpu",
+    fixture_manifest: VerifiedFixtureManifest | object = None,
+) -> str:
+    """Run the deterministic validate-only checkpoint/model tensor contract."""
+    if not _is_verified_fixture_manifest(fixture_manifest):
+        raise ConfigurationError("synthetic validate-only requires a verified fixture manifest")
+    if device != "cpu":
+        raise ConfigurationError("synthetic validate-only fixtures are CPU-only")
+    assert isinstance(fixture_manifest, VerifiedFixtureManifest)
+    fixture_payload_sha256 = fixture_manifest.fixture_payload_sha256
+
+    # The fixture identity is part of the deterministic test execution, not a
+    # scientific input: a different verified bundle produces a different
+    # synthetic checkpoint while preserving the closed test-only seam.
+    torch.manual_seed(16 ^ int(fixture_payload_sha256[:8], 16))
+    model_config = {
+        "num_rois": 3,
+        "feature_dim": 8,
+        "token_dim": 4,
+        "num_classes": 3,
+        "base_channels": 4,
+        "concept_hidden_dim": 4,
+        "token_dropout": 0.0,
+        "concept_dropout": 0.0,
+        "validate_inputs": True,
+    }
+    model = PADA3DACB(**model_config)
+    checkpoint = {
+        "model_state_dict": model.state_dict(),
+        "experiment_hash": "1" * 64,
+        "model_hash": "2" * 64,
+        "training_hash": "3" * 64,
+        "epoch": 1,
+        "logical_checkpoint": "best_source_f1",
+        "config": model_config,
+    }
+
+    class _Atlas:
+        K = 3
+
+        @staticmethod
+        def get_binary_masks() -> torch.Tensor:
+            return torch.ones(3, 2, 2, 2, dtype=torch.float32)
+
+    with TemporaryDirectory(prefix="pada3dacb-validate-only-") as directory:
+        checkpoint_path = Path(directory) / "checkpoint.pt"
+        torch.save(checkpoint, checkpoint_path)
+        bundle = load_checkpoint(checkpoint_path, device)
+        batch = {
+            "x": torch.ones(1, 1, 16, 16, 16, dtype=torch.float32),
+            "roi_masks": torch.ones(3, 2, 2, 2, dtype=torch.float32),
+            "subject_id": ["synthetic-subject"],
+            "subject_hash": ["4" * 64],
+            "cohort": ["ADNI"],
+            "label": torch.tensor([0]),
+            "label_name": ["CN"],
+            "concept_targets": torch.full((1, 3), 0.5, dtype=torch.float32),
+            "anatomical_targets": torch.full((1, 3), 0.4, dtype=torch.float32),
+        }
+        dataloader = DataLoader(
+            [batch], batch_size=1, collate_fn=lambda items: items[0]
+        )
+        records = run_subject_inference(
+            model=bundle.model,
+            dataloader=dataloader,
+            concept_normalizer=ConceptNormalizer(
+                np.zeros(3, dtype=np.float32), np.ones(3, dtype=np.float32)
+            ),
+            device=device,
+            atlas_mgr=_Atlas(),
+            method_id=MethodId.SOURCE_ONLY,
+            direction=Direction.ADNI_TO_OASIS,
+            source_domain="ADNI",
+            target_domain="OASIS",
+            seed=42,
+            fold=0,
+            logical_checkpoint="best_source_f1",
+            checkpoint_epoch=bundle.epoch,
+            checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+            experiment_hash=bundle.experiment_hash,
+            roi_order_hash="5" * 64,
+            normalizer_hash="6" * 64,
+            concept_config_hash=canonical_sha256({}),
+        )
+    if len(records) != 1 or records[0].K != 3:
+        raise ConfigurationError("synthetic validate-only inference returned an invalid record")
+    return fixture_payload_sha256
+
+
+def _synthetic_fixture_metrics(fixture_payload_sha256: str | None = None) -> dict[str, Any]:
     """Evaluate one fixed, deterministic, fixture-only subject matrix."""
     predicted = np.array(
         [
@@ -307,6 +466,7 @@ def _synthetic_fixture_metrics() -> dict[str, Any]:
     )
     return {
         "fixture_only": True,
+        "fixture_payload_sha256": fixture_payload_sha256,
         "subject_count": int(labels.size),
         "roi_count": int(predicted.shape[1]),
         "concept_mae": fidelity.mae,
@@ -321,6 +481,23 @@ def _synthetic_fixture_metrics() -> dict[str, Any]:
         "paired_concept_mae_difference": paired.observed_difference,
         "paired_concept_mae_p_value": paired.raw_p_value,
     }
+
+
+def _issue_cli_capability(config: Mapping[str, Any], gate: Mapping[str, Any], config_path: Path):
+    manifest_value = config.get("manifest_path")
+    if not isinstance(manifest_value, str) or not manifest_value.strip():
+        raise ConfigurationError("authorized real evaluation requires a canonical manifest_path")
+    manifest_path = (config_path.parent / manifest_value).resolve()
+    try:
+        manifest_bytes = manifest_path.read_bytes()
+        load_provenance_manifest(manifest_path)
+    except (OSError, UnicodeError, ValueError) as error:
+        raise ConfigurationError("configured canonical manifest is invalid or unreadable") from error
+    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    try:
+        return issue_real_evaluation_capability(gate, manifest_sha256, issuer="cli")
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError("canonical manifest or authorization evidence is invalid") from error
 
 
 def _unresolved_real_gates(gate: Mapping[str, Any]) -> tuple[str, ...]:
@@ -342,6 +519,87 @@ def _unresolved_real_gates(gate: Mapping[str, Any]) -> tuple[str, ...]:
     if not unresolved and gate.get("authorized") is not True:
         unresolved.extend(names)
     return tuple(unresolved)
+
+
+def _identity_configuration(config: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Exclude reuse routing controls from the configuration identity."""
+    return {key: value for key, value in config.items() if key != "completed_reuse"}
+
+
+def _verify_reuse_selection_match(
+    output_manifest: Mapping[str, Any],
+    selection: CliSelection,
+    *,
+    config: Mapping[str, Any],
+    authorization_gate: Mapping[str, Any],
+    resolved_top_k: Sequence[int] = (),
+) -> None:
+    """Reject reuse when the stored evaluation identity differs from the request."""
+    stored = {
+        "methods": output_manifest.get("methods"),
+        "directions": output_manifest.get("directions"),
+        "checkpoint_policies": output_manifest.get("checkpoint_policies"),
+    }
+    current = {
+        "methods": [method.value for method in selection.methods],
+        "directions": [direction.value for direction in selection.directions],
+        "checkpoint_policies": [
+            policy.logical_checkpoint for policy in selection.checkpoint_policies
+        ],
+    }
+    for selector in ("methods", "directions", "checkpoint_policies"):
+        if stored[selector] != current[selector]:
+            raise ReuseVerificationError(
+                "completed reuse output selector mismatch for "
+                f"{selector}: stored {stored[selector]!r} does not match "
+                f"the current CLI selection {current[selector]!r}"
+            )
+
+    identity_inputs = output_manifest.get("identity_inputs")
+    if not isinstance(identity_inputs, Mapping):
+        raise ReuseVerificationError(
+            "completed reuse output is missing its identity_inputs mapping"
+        )
+
+    effective_top_k = tuple(selection.top_k) or tuple(resolved_top_k)
+    analysis_mode = config.get("analysis_mode")
+    if not isinstance(analysis_mode, str) or not analysis_mode:
+        raise ReuseVerificationError(
+            "completed reuse request configuration is missing analysis_mode"
+        )
+    current_identity = {
+        "methods": current["methods"],
+        "directions": current["directions"],
+        "checkpoint_policies": [
+            policy.value for policy in selection.checkpoint_policies
+        ],
+        "analysis_mode": analysis_mode,
+        "configuration_sha256": canonical_sha256(_identity_configuration(config)),
+        "authorization_sha256": canonical_sha256(authorization_gate),
+        "bootstrap_replicates": selection.bootstrap_replicates,
+        "bootstrap_seed": selection.bootstrap_seed,
+        "top_k": list(effective_top_k),
+        "device": selection.device,
+    }
+    for selector, expected in current_identity.items():
+        if selector not in identity_inputs:
+            raise ReuseVerificationError(
+                "completed reuse output identity_inputs is missing "
+                f"required selector {selector}"
+            )
+        stored_value = identity_inputs[selector]
+        if stored_value != expected:
+            raise ReuseVerificationError(
+                "completed reuse output identity_inputs mismatch for "
+                f"{selector}: stored {stored_value!r} does not match "
+                f"the current CLI selection {expected!r}"
+            )
+
+    expected_evaluation_identity = canonical_sha256(identity_inputs)
+    if output_manifest.get("evaluation_identity") != expected_evaluation_identity:
+        raise ReuseVerificationError(
+            "completed reuse output evaluation_identity does not match its identity_inputs"
+        )
 
 
 def _execute(selection: CliSelection) -> ExitCode:
@@ -366,10 +624,40 @@ def _execute(selection: CliSelection) -> ExitCode:
         assert reuse_output is not None
         if reuse_output.resolve() not in approved_reuse_roots:
             raise ReuseVerificationError("completed reuse output is not approved")
+        fixture_manifest = None
+        if config.get("analysis_mode") == AnalysisMode.SYNTHETIC_TEST_ONLY.value:
+            try:
+                fixture_manifest = _load_verified_fixture_manifest(config, selection.config_path)
+            except (ConfigurationError, OSError, ValueError) as error:
+                raise ReuseVerificationError(
+                    "current synthetic fixture manifest verification failed"
+                ) from error
         try:
-            verify_completed_output(reuse_output)
+            output_manifest = verify_completed_output(reuse_output)
         except (OSError, ValueError) as error:
             raise ReuseVerificationError("completed reuse verification failed") from error
+        configured_top_k = config.get("top_k", ())
+        if isinstance(configured_top_k, (str, bytes)) or not isinstance(configured_top_k, Sequence):
+            raise ReuseVerificationError("configured top_k is not a valid sequence")
+        _verify_reuse_selection_match(
+            output_manifest,
+            selection,
+            config=config,
+            authorization_gate=config.get("real_evaluation_gate", {}),
+            resolved_top_k=tuple(int(value) for value in configured_top_k),
+        )
+        if fixture_manifest is not None:
+            identity_inputs = output_manifest.get("identity_inputs")
+            expected_fixture_files = list(fixture_manifest.fixture_files)
+            if (
+                not isinstance(identity_inputs, Mapping)
+                or identity_inputs.get("fixture_manifest_sha256") != fixture_manifest.manifest_sha256
+                or identity_inputs.get("fixture_payload_sha256") != fixture_manifest.fixture_payload_sha256
+                or identity_inputs.get("fixture_files") != expected_fixture_files
+            ):
+                raise ReuseVerificationError(
+                    "completed reuse output is bound to a different synthetic fixture"
+                )
         return ExitCode.SUCCESS
 
     request = _evaluation_request(selection, config)
@@ -401,9 +689,24 @@ def _execute(selection: CliSelection) -> ExitCode:
             ),
         )
         candidates, issues = discover_candidates(discovery_config)
-        if issues or any(candidate.issues for candidate in candidates):
+        not_applicable_issues = sorted(
+            issue for issue in issues if issue.startswith("not_applicable:")
+        )
+        for issue in not_applicable_issues:
+            _, method, status = issue.split(":", 2)
+            if status != NOT_APPLICABLE_STATUS:
+                raise ConfigurationError(f"unknown not-applicable discovery status: {issue}")
+            print(f"{method}: {status}")
+        blocking_issues = [
+            issue for issue in issues if not issue.startswith("not_applicable:")
+        ]
+        candidate_issues = [
+            issue for candidate in candidates for issue in candidate.issues
+        ]
+        if blocking_issues or candidate_issues:
             raise ConfigurationError(
-                "real dry-run discovery failed: " + ", ".join(sorted(set(issues)))
+                "real dry-run discovery failed: "
+                + ", ".join(sorted(set(blocking_issues + candidate_issues)))
             )
         return ExitCode.SUCCESS
     if (
@@ -413,7 +716,26 @@ def _execute(selection: CliSelection) -> ExitCode:
         unresolved = _unresolved_real_gates(gate)
         if unresolved:
             raise AuthorizationGateError("unresolved real evaluation gates: " + ", ".join(unresolved))
-        raise AuthorizationGateError("real concept evaluation remains closed in Phase 16")
+        capability = _issue_cli_capability(config, gate, selection.config_path)
+        # Route the authorized request through the real orchestration seam. The
+        # repository deliberately has no approved local data/statistics/publish
+        # callbacks, so the seam returns the actionable closed error without
+        # constructing a model or treating synthetic fixtures as real.
+        run_real_evaluation(
+            candidates=(),
+            dataloader_factory=None,
+            device=selection.device,
+            concept_normalizer=None,
+            atlas_mgr=None,
+            capability=capability,
+            verified_inputs=None,
+            authorization_evidence=gate,
+            statistics_callback=None,
+            publish_callback=None,
+        )
+        raise ConfigurationError(
+            "real concept evaluation remains closed: no approved local orchestration callback is configured"
+        )
 
     if request.run_mode is RunMode.DRY_RUN:
         return ExitCode.SUCCESS
@@ -421,13 +743,18 @@ def _execute(selection: CliSelection) -> ExitCode:
         RunMode.VALIDATE_ONLY,
         RunMode.EVALUATE,
     }:
-        metrics = _synthetic_fixture_metrics()
+        fixture_manifest = _load_verified_fixture_manifest(config, selection.config_path)
+        fixture_payload_sha256 = fixture_manifest.fixture_payload_sha256
         if request.run_mode is RunMode.VALIDATE_ONLY:
+            _validate_synthetic_fixture(selection.device, fixture_manifest)
             return ExitCode.SUCCESS
+
+        metrics = _synthetic_fixture_metrics(fixture_payload_sha256)
 
         assert selection.output_root is not None
         identity_inputs = {
-            "configuration_sha256": canonical_sha256(config),
+            "analysis_mode": request.analysis_mode.value,
+            "configuration_sha256": canonical_sha256(_identity_configuration(config)),
             "authorization_sha256": canonical_sha256(gate),
             "ordered_input_sha256s": [],
             "methods": selection.methods,
@@ -438,6 +765,9 @@ def _execute(selection: CliSelection) -> ExitCode:
             "top_k": selection.top_k or tuple(config.get("top_k", ())),
             "device": selection.device,
             "fixture_only": True,
+            "fixture_manifest_sha256": fixture_manifest.manifest_sha256,
+            "fixture_payload_sha256": fixture_payload_sha256,
+            "fixture_files": list(fixture_manifest.fixture_files),
         }
         evaluation_identity = canonical_sha256(identity_inputs)
         plan, artifacts = build_synthetic_fixture_bundle(
@@ -472,12 +802,14 @@ def main(argv: Sequence[str] | None = None, *, executor: Executable = _execute) 
         return int(executor(selection))
     except SystemExit as error:
         return int(ExitCode.SUCCESS if error.code == 0 else ExitCode.CONFIGURATION_ERROR)
-    except (ConfigurationError, SelectorConflictError, UnsafePathError):
+    except (ConfigurationError, SelectorConflictError, UnsafePathError) as error:
+        print(f"configuration error: {error}", file=sys.stderr)
         return int(ExitCode.CONFIGURATION_ERROR)
     except AuthorizationGateError as error:
         print(str(error), file=sys.stderr)
         return int(ExitCode.GATE_BLOCKED)
-    except ReuseVerificationError:
+    except ReuseVerificationError as error:
+        print(f"reuse verification failed: {error}", file=sys.stderr)
         return int(ExitCode.REUSE_REJECTED)
     except OutputCommitError:
         return int(ExitCode.OUTPUT_FAILURE)

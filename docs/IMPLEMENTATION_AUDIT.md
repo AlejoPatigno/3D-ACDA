@@ -99,3 +99,21 @@ The implemented runtime boundary is deterministic synthetic evaluation. Real ADN
 ## Verification and delivery
 
 Final command evidence is recorded in `specs/phase_16_concept_validation/final_audit.md`. Phase 17 is not started. Native incident #1793 continues to block archive, commit, push, PR, release, and publication independently of technical verification.
+
+## Phase 16 documentation audit (WU-10)
+
+This addendum audits the Phase 16 documentation boundary without changing implementation behavior.
+
+| Control | Documentation evidence | Disposition |
+|---|---|---|
+| Fixed class order | `docs/CONCEPT_EVALUATION.md`, `docs/PHASE16_REPORT.md` state `CN=0, MCI=1, AD=2` | PASS |
+| Target-label firewall | Labels are posthoc-only and excluded from adaptation, checkpoint, and method selection | PASS |
+| Read-only artifacts | `c_target` and `g_bar` are precomputed and immutable; training/adaptation mutation is excluded | PASS |
+| Metric availability | Undefined correlations retain `constant_roi`, `insufficient_samples`, or `numerical_error` | PASS |
+| No causal overclaiming | Documentation rejects causal importance, biomarker, disease-mechanism, and publication claims | PASS |
+| Real-data authorization | Synthetic-only lifecycle is documented; real execution remains closed by `authorized: false` and required hashes | PASS |
+| Blocked manuscript scores | CFS, ACS, PCS, and QIS are explicitly `BLOCKED` without invented equations | PASS |
+| Phase boundary | Phase 17 is explicitly not started | PASS |
+| Delivery boundary | Native receipt #1793 is recorded as an administrative blocker, not a scientific result | PASS |
+
+Validation evidence is intentionally bounded: the focused WU-09 suite passed 23 tests, Ruff and diff checks passed, and the full pytest command timed out at 180 seconds. No documentation statement treats that timeout as a passing full-suite result or claims real-data scientific validity.

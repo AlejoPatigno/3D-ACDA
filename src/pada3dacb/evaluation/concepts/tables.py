@@ -407,3 +407,84 @@ def write_all_tables(
         fieldnames = list(rows[0].keys())
         path = Path(output_root) / "tables" / f"{name}.csv"
         write_csv(path, rows, fieldnames)
+
+def anatomy_consistency_per_subject_rows(
+    per_subject: list[dict],
+    method: str,
+    direction: str,
+    checkpoint_policy: str,
+) -> list[dict]:
+    """Build subject-level anatomy rows without collapsing unavailable values."""
+    return [
+        {
+            "method": method,
+            "direction": direction,
+            "checkpoint_policy": checkpoint_policy,
+            "subject_hash": row["subject_hash"],
+            "MAE": row["mae"],
+            "RMSE": row["rmse"],
+            "status": row.get("status", "available"),
+            "reason": row.get("reason", ""),
+        }
+        for row in per_subject
+    ]
+
+
+_REQUIRED_TABLE_FIELDS: dict[str, tuple[str, ...]] = {
+    "concept_fidelity_global": (
+        "method", "direction", "checkpoint_policy", "metric", "value", "status", "reason"
+    ),
+    "concept_fidelity_per_subject": (
+        "method", "direction", "checkpoint_policy", "subject_hash", "MAE", "RMSE", "status", "reason"
+    ),
+    "concept_fidelity_per_roi": (
+        "method", "direction", "checkpoint_policy", "roi_index", "MAE", "RMSE", "Bias",
+        "Pearson", "Pearson_status", "Pearson_reason", "Spearman", "Spearman_status", "Spearman_reason"
+    ),
+    "anatomy_consistency_global": (
+        "method", "direction", "checkpoint_policy", "metric", "value", "status", "reason"
+    ),
+    "anatomy_consistency_per_subject": (
+        "method", "direction", "checkpoint_policy", "subject_hash", "MAE", "RMSE", "status", "reason"
+    ),
+    "anatomy_consistency_per_roi": (
+        "method", "direction", "checkpoint_policy", "roi_index", "MAE", "RMSE", "Bias",
+        "Pearson", "Pearson_status", "Pearson_reason", "Spearman", "Spearman_status", "Spearman_reason"
+    ),
+    "head_agreement": (
+        "method", "direction", "checkpoint_policy", "metric", "value", "status", "reason"
+    ),
+    "roi_stability": (
+        "method", "direction", "checkpoint_policy", "metric", "roi_index", "k", "value", "status", "reason"
+    ),
+    "class_conditional_profiles": (
+        "class_label", "roi_index", "mean_predicted_concept", "ci_low", "ci_high",
+        "mean_c_target", "mean_g_bar", "support", "status", "reason"
+    ),
+    "paired_method_comparisons": (
+        "comparator_method", "direction", "checkpoint_policy", "metric_family", "mean_difference",
+        "ci_low", "ci_high", "raw_p_value", "adjusted_p_value", "holm_rank", "significant", "status", "reason"
+    ),
+    "method_status": (
+        "method", "direction", "checkpoint_policy", "status", "reason_code"
+    ),
+}
+
+
+def write_required_tables(
+    output_root: str | Path,
+    tables: dict[str, list[dict]],
+) -> None:
+    """Write every required machine-readable table in a stable schema.
+
+    Empty inputs still produce a header-only table so downstream consumers can
+    distinguish an unavailable result from a missing output contract.
+    """
+    root = Path(output_root) / "tables"
+    root.mkdir(parents=True, exist_ok=True)
+    unknown = set(tables) - set(_REQUIRED_TABLE_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown concept table names: {sorted(unknown)}")
+    for name, fieldnames in _REQUIRED_TABLE_FIELDS.items():
+        rows = tables.get(name, [])
+        write_csv(str(root / f"{name}.csv"), rows, list(fieldnames))

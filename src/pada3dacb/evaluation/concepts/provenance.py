@@ -8,9 +8,11 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
+import torch
 
 from pada3dacb.evaluation.schemas import canonical_json
 
@@ -18,7 +20,12 @@ from .schemas import (
     AtlasROIOrderHash,
     ConceptCandidate,
     ConceptNormalizerHash,
+    FileIdentity,
+    ManifestArtifact,
+    ProvenanceManifest,
+    canonical_roi_order_hash,
     compute_sha256_file,
+    validate_sha256,
 )
 
 # ============================================================================
@@ -75,6 +82,122 @@ def validate_roi_order_hash(
     if actual_hash != expected:
         return [f"roi_order_hash_mismatch: expected {expected_hash}, got {actual_hash}"]
     return []
+
+
+@dataclass(frozen=True)
+class VerifiedEvaluationInputs:
+    """Immutable, provenance-verified inputs handed to a real execution boundary."""
+
+    manifest_sha256: str
+    roi_labels: tuple[int, ...]
+    roi_order_hash: AtlasROIOrderHash
+    atlas: FileIdentity
+    normalizers: Mapping[tuple, FileIdentity]
+    checkpoints: Mapping[tuple, FileIdentity]
+    checkpoint_metadata: Mapping[tuple, Mapping[str, Any]]
+
+    def __post_init__(self) -> None:
+        validate_sha256(self.manifest_sha256, "manifest sha256")
+        object.__setattr__(self, "normalizers", MappingProxyType(dict(self.normalizers)))
+        object.__setattr__(self, "checkpoints", MappingProxyType(dict(self.checkpoints)))
+        object.__setattr__(self, "checkpoint_metadata", MappingProxyType({key: MappingProxyType(dict(value)) for key, value in self.checkpoint_metadata.items()}))
+
+
+def _safe_checkpoint_metadata(path: Path) -> Mapping[str, Any]:
+    """Inspect only safe tensor-compatible checkpoint mappings."""
+    try:
+        payload = torch.load(path, map_location="cpu", weights_only=True)
+    except Exception as error:
+        raise ValueError(f"checkpoint metadata inspection failed: {path}") from error
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"checkpoint metadata must be a mapping: {path}")
+    return payload
+
+
+def _artifact_identity(root: Path, artifact: ManifestArtifact, field_name: str) -> FileIdentity:
+    path = root / artifact.relative_path
+    if not path.is_file():
+        raise ValueError(f"{field_name} file is missing: {artifact.relative_path}")
+    actual = compute_sha256_file(path)
+    if actual != artifact.sha256:
+        raise ValueError(f"{field_name} hash mismatch: expected {artifact.sha256}, got {actual}")
+    return FileIdentity(path, actual, path.stat().st_size)
+
+
+def verify_provenance_manifest(
+    manifest: ProvenanceManifest | Mapping[str, Any] | str | Path,
+    root: str | Path | None = None,
+    *,
+    atlas_manager: Any | None = None,
+    atlas_manager_factory: Any | None = None,
+) -> VerifiedEvaluationInputs:
+    """Verify canonical files and cross-artifact ROI identity before checkpoint parsing."""
+    if isinstance(manifest, ProvenanceManifest):
+        resolved = manifest
+    elif isinstance(manifest, (str, Path)):
+        resolved = ProvenanceManifest.from_json(manifest)
+    else:
+        if root is None:
+            raise ValueError("manifest root is required for a mapping")
+        resolved = ProvenanceManifest.from_mapping(manifest, root)
+    manifest_bytes = resolved.raw_bytes or canonical_json({
+        "schema_version": resolved.schema_version,
+        "roi_order": {"labels": list(resolved.labels), "sha256": resolved.roi_order_sha256},
+        "atlas": {"relative_path": resolved.atlas.relative_path, "sha256": resolved.atlas.sha256, "roi_order_sha256": resolved.atlas.roi_order_sha256},
+        "candidates": [{"key": list(candidate.key), "checkpoint": candidate.checkpoint.__dict__, "normalizer": candidate.normalizer.__dict__, "concept_artifacts_root": candidate.concept_artifacts_root} for candidate in resolved.candidates],
+    }).encode("utf-8")
+    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    atlas_identity = _artifact_identity(resolved.root, resolved.atlas, "atlas")
+    if atlas_manager_factory is not None:
+        atlas_manager = atlas_manager_factory(atlas_identity.path)
+    if atlas_manager is None:
+        raise ValueError("atlas manager is required for strict provenance verification")
+    atlas_labels = getattr(atlas_manager, "label_values", None)
+    atlas_hash = getattr(atlas_manager, "atlas_hash", None)
+    if not isinstance(atlas_labels, Sequence) or isinstance(atlas_labels, (str, bytes)) or not atlas_labels:
+        raise ValueError("atlas ROI labels are missing or conflict with manifest")
+    if list(atlas_labels) != list(resolved.labels):
+        raise ValueError("atlas ROI labels are missing or conflict with manifest")
+    if not isinstance(atlas_hash, str) or atlas_hash != atlas_identity.sha256:
+        raise ValueError("atlas manager hash conflicts with manifest")
+
+    normalizers: dict[tuple, FileIdentity] = {}
+    checkpoints: dict[tuple, FileIdentity] = {}
+    metadata: dict[tuple, Mapping[str, Any]] = {}
+    normalizer_hashes: set[str] = set()
+    for entry in resolved.candidates:
+        key = entry.key
+        normalizer_identity = _artifact_identity(resolved.root, entry.normalizer, f"normalizer {key}")
+        try:
+            normalizer_data = json.loads(normalizer_identity.path.read_text(encoding="utf-8"))
+            labels = normalizer_data["roi_labels"]
+            if list(labels) != list(resolved.labels) or canonical_roi_order_hash(labels) != resolved.roi_order_sha256:
+                raise ValueError("normalizer ROI labels conflict with manifest")
+        except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            if isinstance(error, ValueError) and "conflict" in str(error):
+                raise
+            raise ValueError(f"normalizer ROI labels are missing or unreadable for {key}") from error
+        normalizers[key] = normalizer_identity
+        normalizer_hashes.add(normalizer_identity.sha256)
+        checkpoint_identity = _artifact_identity(resolved.root, entry.checkpoint, f"checkpoint {key}")
+        checkpoint_metadata = _safe_checkpoint_metadata(checkpoint_identity.path)
+        metadata[key] = checkpoint_metadata
+        for field_name, expected in (("roi_order_hash", resolved.roi_order_sha256), ("atlas_hash", atlas_identity.sha256), ("concept_normalizer_hash", normalizer_identity.sha256)):
+            actual = checkpoint_metadata.get(field_name)
+            if actual != expected:
+                raise ValueError(f"checkpoint metadata {field_name} conflicts for {key}")
+        checkpoints[key] = checkpoint_identity
+    if len(normalizer_hashes) > 1:
+        raise ValueError("normalizer file identities conflict across candidates")
+    return VerifiedEvaluationInputs(
+        manifest_sha256, resolved.labels, AtlasROIOrderHash(resolved.roi_order_sha256),
+        atlas_identity, normalizers, checkpoints, metadata,
+    )
+
+
+def load_provenance_manifest(path: str | Path) -> ProvenanceManifest:
+    """Load and strictly parse a canonical provenance manifest."""
+    return ProvenanceManifest.from_json(path)
 
 
 # ============================================================================

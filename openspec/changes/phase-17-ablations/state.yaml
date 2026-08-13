@@ -1,0 +1,96 @@
+change: phase-17-ablations
+phase: completed
+status: completed
+artifact_store: both
+execution_mode: interactive
+current_phase: phase17-closed
+source_of_truth:
+  repository_artifacts: specs/phase_17_ablations/
+  independent_review: specs/phase_17_ablations/spec_review.md
+review:
+  status: passed
+  result: PASS
+  reviewer: gentle-ai-verify
+  requested_reviewer: kimi
+  reviewer_role: independent fallback
+  fallback_reason: requested reviewer unavailable
+  scope: synthetic-only implementation of explicitly approved contracts
+  validation_evidence:
+    full_suite: "python -m pytest -q; exit 0; 1178 passed, 7 warnings, 1012.14s (0:16:52)"
+    focused_phase_17: "python -m pytest -q -p no:cacheprovider tests/phase_17 --basetemp=artifacts/pytest-tmp-phase17-full-recheck; 119 passed, 0 warnings"
+    lifecycle_and_regressions: "60 synthetic CLI plans; approved validate-only; blocked no_domain_adaptation/no_ctx_encoder/invalid rejection exit 2; complete lifecycle 1 passed; target firewall 5 passed; prior-method/Phase15/Phase16 subset 66 passed; registry/CLI subset 43 passed"
+  real_data_authorized: false
+  publication_authorized: false
+  phase_18_authorized: false
+approval_boundary:
+  source: specs/phase_17_ablations/decisions.md and ablation_inventory.yaml
+  synthetic_implementation_authorized: true
+  real_execution_authorized: false
+  approved_candidates:
+    - id: no_proto
+      intervention: lambda_proto = 0.0
+    - id: no_pl
+      intervention: lambda_pl = 0.0
+    - id: no_cons
+      intervention: lambda_cons = 0.0
+    - id: no_concept
+      intervention: lambda_cbm = 0.0
+    - id: no_anat
+      intervention: lambda_anat = 0.0
+    - id: mean_pool
+      intervention: Replace attention aggregation with the exact notebook-defined uniform mean operation
+  unresolved:
+    - lambda_proto = 0.2 versus lambda_proto = 1.0 remains unresolved
+    - no_domain_adaptation is not approved as Source-Only
+    - aliases are not independently approved candidates
+blocked_boundaries:
+  - real ADNI/OASIS training or evaluation
+  - publication metrics, statistical comparisons, or scientific conclusions
+  - Phase 18 files, planning, implementation, or evaluation
+  - full, no_ctx_encoder, identity_ctx, no_domain_adaptation, unsupported aliases, CFS, ACS, PCS, and QIS
+  - target diagnosis labels in adaptation
+  - early stopping or target-guided checkpoint selection
+administrative_boundaries:
+  - Preserve Phase 16 cleanup files and approved native receipt provenance.
+  - "Preserve incident #1793 as an administrative delivery issue, not a scientific result; no current Phase 17 native receipt was created."
+  - Preserve collision-free exclusive ownership from specs/phase_17_ablations/agent_plan.yaml.
+next_phase: stop-await-human-approval
+next_action: Stop and await explicit human approval; do not start Phase 18 or authorize real execution.
+
+closure_readiness:
+  implementation_complete: true
+  validation_evidence_complete: true
+  final_audit:
+    path: specs/phase_17_ablations/final_audit.md
+    result: PASS
+    mode: fallback_audit
+    requested_agent: kimi
+    availability: unavailable
+  authoritative_post_phase_17_full_suite:
+    command: python -m pytest -q
+    result: "exit 0; 1178 passed, 7 warnings, 1012.14s (0:16:52)"
+    warnings:
+      - four sklearn UndefinedMetricWarning instances
+      - two preprocessing standard-deviation warnings
+      - existing Windows pytest-cache permission warning
+  focused_phase_17_recheck:
+    command: python -m pytest -q -p no:cacheprovider tests/phase_17 --basetemp=artifacts/pytest-tmp-phase17-full-recheck
+    result: "119 passed, 0 warnings"
+  lifecycle_evidence:
+    result: "60 synthetic CLI plans; approved validate-only; blocked no_domain_adaptation/no_ctx_encoder/invalid rejection exit 2; complete lifecycle 1 passed; target firewall 5 passed; prior-method/Phase15/Phase16 subset 66 passed; registry/CLI subset 43 passed"
+    real_data: false
+  install_version_ruff_diff:
+    install: "python -m pip install -e .; exit 0"
+    import_version: "exit 0; 0.1.0"
+    ruff: "python -m ruff check .; exit 0; all checks passed"
+    diff_check: "git diff --check; exit 0"
+  pre_phase_17_baseline: "1059 passed; historical baseline only"
+  native_review_receipt:
+    current_phase_17_receipt: not_created
+    reason: parent_bootstrap_timeout
+    fabricated: false
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_18_authorized: false
+  final_closure: true
+  next_action: Stop and await explicit human approval; do not start Phase 18 or authorize real execution.

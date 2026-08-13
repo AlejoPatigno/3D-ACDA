@@ -9,10 +9,11 @@ from pada3dacb.evaluation.concepts.statistics import (
     CONCEPT_COMPARATOR_METHODS,
     adjust_holm,
     bootstrap_metric,
+    compute_paired_method_comparisons,
     exact_mcnemar,
     paired_bootstrap_diff,
 )
-from pada3dacb.evaluation.schemas import MethodId, ValueStatus
+from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId, ValueStatus
 
 
 def test_subject_bootstrap_is_deterministic() -> None:
@@ -105,3 +106,207 @@ def test_holm_uses_only_the_four_pada_comparators() -> None:
     assert all(row.status is ValueStatus.AVAILABLE for row in rows)
     adjusted = [row.adjusted_p_value for row in rows]
     assert all(value is not None and 0.0 <= value <= 1.0 for value in adjusted)
+
+
+def test_concept_bootstrap_reuses_phase15_subject_sampler(monkeypatch) -> None:
+    import pada3dacb.evaluation.bootstrap as phase15_bootstrap
+
+    calls = []
+    sampler = phase15_bootstrap._draw_indices
+
+    def recording_sampler(rng, strata):
+        calls.append(tuple(len(group) for group in strata))
+        return sampler(rng, strata)
+
+    monkeypatch.setattr(phase15_bootstrap, "_draw_indices", recording_sampler)
+    result = bootstrap_metric(
+        np.array([0.1, 0.2, 0.3, 0.4]),
+        labels=np.array([0, 0, 1, 1]),
+        metric="concept_mae",
+        n_replicates=8,
+        seed=23,
+    )
+
+    assert result.requested == result.successful == 8
+    assert len(calls) == 8
+    assert all(item == (2, 2, 0) for item in calls)
+
+
+def test_paired_method_comparisons_use_four_slots_per_metric() -> None:
+    from pada3dacb.evaluation.concepts.statistics import compute_paired_method_comparisons
+    from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction
+
+    subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
+    labels = dict(zip(subject_ids, [0, 0, 1, 1, 2, 2], strict=True))
+    prototype_values = {
+        "concept_mae": np.array([0.1, 0.2, 0.3, 0.4, 0.2, 0.1]),
+        "anatomy_mae": np.array([0.2, 0.2, 0.4, 0.3, 0.2, 0.3]),
+        "js_divergence": np.array([0.1, 0.1, 0.2, 0.2, 0.3, 0.2]),
+    }
+    prototype = {
+        metric: dict(zip(subject_ids, values, strict=True))
+        for metric, values in prototype_values.items()
+    }
+    comparators = {
+        method: {
+            metric: dict(zip(subject_ids, values + 0.05, strict=True))
+            for metric, values in prototype_values.items()
+        }
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    rows = compute_paired_method_comparisons(
+        prototype,
+        comparators,
+        labels=labels,
+        direction=Direction.ADNI_TO_OASIS,
+        checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+        n_replicates=20,
+        seed=31,
+    )
+
+    assert len(rows) == 12
+    assert {row.metric_family for row in rows} == {
+        "concept_mae", "anatomy_mae", "js_divergence"
+    }
+    for metric in ("concept_mae", "anatomy_mae", "js_divergence"):
+        family = [row for row in rows if row.metric_family == metric]
+        assert {row.comparator_method for row in family} == set(CONCEPT_COMPARATOR_METHODS)
+        assert all(row.adjusted_p_value is not None for row in family)
+
+
+def test_paired_method_comparisons_rejects_unkeyed_metric_arrays() -> None:
+    prototype = {metric: np.ones(6) for metric in ("concept_mae", "anatomy_mae", "js_divergence")}
+    comparators = {
+        method: {metric: np.ones(6) for metric in prototype}
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    with pytest.raises(ValueError, match="requires explicit subject IDs or a keyed mapping"):
+        compute_paired_method_comparisons(
+            prototype,
+            comparators,
+            labels=np.array([0, 0, 1, 1, 2, 2]),
+            direction=Direction.ADNI_TO_OASIS,
+            checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+            n_replicates=10,
+            seed=31,
+        )
+
+
+def test_paired_method_comparisons_rejects_unkeyed_labels_even_with_keyed_metrics() -> None:
+    subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
+    prototype = {
+        metric: dict(zip(subject_ids, np.ones(6), strict=True))
+        for metric in ("concept_mae", "anatomy_mae", "js_divergence")
+    }
+    comparators = {
+        method: {
+            metric: dict(zip(subject_ids, np.ones(6), strict=True))
+            for metric in prototype
+        }
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    with pytest.raises(ValueError, match="diagnosis labels must be a keyed subject mapping"):
+        compute_paired_method_comparisons(
+            prototype,
+            comparators,
+            labels=np.array([0, 0, 1, 1, 2, 2]),
+            direction=Direction.ADNI_TO_OASIS,
+            checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+            n_replicates=10,
+            seed=31,
+        )
+
+
+def test_paired_method_comparisons_rejects_permuted_and_stale_labels() -> None:
+    subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
+    prototype = {
+        metric: dict(zip(subject_ids, np.ones(6), strict=True))
+        for metric in ("concept_mae", "anatomy_mae", "js_divergence")
+    }
+    comparators = {
+        method: {
+            metric: dict(zip(subject_ids, np.ones(6), strict=True))
+            for metric in prototype
+        }
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    for labels in (
+        {subject_id: index % 3 for index, subject_id in enumerate(reversed(subject_ids))},
+        {**{subject_id: index % 3 for index, subject_id in enumerate(subject_ids[:5])}, "stale": 2},
+    ):
+        with pytest.raises(ValueError, match="label subject IDs must have identical ordering and set"):
+            compute_paired_method_comparisons(
+                prototype,
+                comparators,
+                labels=labels,
+                direction=Direction.ADNI_TO_OASIS,
+                checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+                n_replicates=10,
+                seed=31,
+            )
+
+
+def test_paired_method_comparisons_rejects_subject_order_mismatch() -> None:
+    subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
+    prototype = {
+        metric: dict(zip(subject_ids, values, strict=True))
+        for metric, values in {
+            "concept_mae": np.linspace(0.1, 0.6, 6),
+            "anatomy_mae": np.linspace(0.2, 0.7, 6),
+            "js_divergence": np.linspace(0.3, 0.8, 6),
+        }.items()
+    }
+    comparator_ids = (subject_ids[1], *subject_ids[2:], subject_ids[0])
+    comparators = {
+        method: {
+            metric: dict(zip(comparator_ids, values, strict=True))
+            for metric, values in {
+                "concept_mae": np.linspace(0.2, 0.7, 6),
+                "anatomy_mae": np.linspace(0.3, 0.8, 6),
+                "js_divergence": np.linspace(0.4, 0.9, 6),
+            }.items()
+        }
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    with pytest.raises(ValueError, match="subject IDs must have identical ordering"):
+        compute_paired_method_comparisons(
+            prototype,
+            comparators,
+            labels={subject_id: index % 3 for index, subject_id in enumerate(subject_ids)},
+            direction=Direction.ADNI_TO_OASIS,
+            checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+            n_replicates=10,
+            seed=31,
+        )
+
+
+def test_paired_method_comparisons_rejects_subject_set_mismatch() -> None:
+    subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
+    prototype = {
+        metric: dict(zip(subject_ids, np.ones(6), strict=True))
+        for metric in ("concept_mae", "anatomy_mae", "js_divergence")
+    }
+    mismatched_ids = (*subject_ids[:5], "subject-other")
+    comparators = {
+        method: {
+            metric: dict(zip(mismatched_ids, np.ones(6), strict=True))
+            for metric in ("concept_mae", "anatomy_mae", "js_divergence")
+        }
+        for method in CONCEPT_COMPARATOR_METHODS
+    }
+
+    with pytest.raises(ValueError, match="subject IDs must have identical ordering and set"):
+        compute_paired_method_comparisons(
+            prototype,
+            comparators,
+            labels={subject_id: index % 3 for index, subject_id in enumerate(subject_ids)},
+            direction=Direction.ADNI_TO_OASIS,
+            checkpoint_policy=CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
+            n_replicates=10,
+            seed=31,
+        )

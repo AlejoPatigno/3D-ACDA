@@ -1,0 +1,84 @@
+schema_version: phase18.real-run-gate.v1
+phase_18_authorized: true
+freeze_approved: false
+real_execution_authorized: false
+publication_authorized: false
+phase_19_forbidden: true
+authorized: false
+freeze_payload:
+  schema_version: phase18.freeze.v1
+  phase: 18
+  status: blocked_planning
+  phase_18_authorized: true
+  freeze_approved: false
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_19_forbidden: true
+  scientific_resolution_hash: unresolved
+  matrix_hash: unresolved
+  provenance_freeze_hash: unresolved
+  feasibility_hash: unresolved
+  resource_budget_hash: unresolved
+  independent_review_hash: unresolved
+  human_authorization_hash: unresolved
+  blockers: [lambda_proto_0.2_vs_1.0_unresolved]
+freeze_hash: unresolved
+scientific_resolution_hash: unresolved
+method_parameter_ledger_hash: unresolved
+canonicalization_conformance_hash: unresolved
+matrix_hash: unresolved
+method_inventory_hash: unresolved
+seed_policy: [42]
+seed_policy_hash: unresolved
+split_manifest_hashes: {ADNI: unresolved, OASIS: unresolved}
+assignment_hashes: {source: unresolved, target_adaptation: unresolved, target_evaluation: unresolved}
+assignment_manifest_contents:
+  target_adaptation_subject_hashes: []
+  target_evaluation_subject_hashes: []
+  required_intersection: []
+  aggregate_hashes_alone_are_insufficient: true
+artifact_hashes:
+  atlas: unresolved
+  roi_order: unresolved
+  roi_masks: unresolved
+  concept_normalizer: unresolved
+  concept_targets: unresolved
+  jacobians: unresolved
+artifact_index: {}
+configuration_hash: unresolved
+configuration: unresolved
+code_revision: unresolved
+environment_hash: unresolved
+command_hash: unresolved
+privacy_data_access_record_hash: unresolved
+resource_budget_hash: unresolved
+feasibility_observation_hash: unresolved
+independent_review_hash: unresolved
+human_authorization_hash: unresolved
+native_receipt_hash: unresolved
+method_inventory: [source_only, coral, mmd, cdan, prototype_pseudo, aagn, faster_snn]
+scientific_resolution:
+  lambda_proto: unresolved
+  coral_mmd_cdan_parameters: unresolved
+resource_budget:
+  status: unresolved_blocking
+  real_budget_closed: false
+feasibility:
+  schema_version: phase18.feasibility.v1
+  mode: synthetic_only
+  real_data_accessed: false
+  publication_metrics_present: false
+  real_resource_fields_resolved: false
+  status: blocked
+  failure_reasons: [production_shape_unavailable]
+matrix:
+  schema_version: phase18.matrix.v1
+  methods: [source_only, coral, mmd, cdan, prototype_pseudo, aagn, faster_snn]
+  directions: [adni_to_oasis, oasis_to_adni]
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
+  checkpoint_policies: [best_source_f1, last]
+blockers:
+  - lambda_proto_0.2_vs_1.0_unresolved
+  - checked_in_coral_mmd_cdan_parameters_unresolved
+  - independent_specification_approval_pending

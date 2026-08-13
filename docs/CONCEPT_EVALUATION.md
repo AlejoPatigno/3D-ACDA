@@ -76,10 +76,36 @@ Each direction and checkpoint policy contains:
 
 Publication is atomic: all ordinary artifacts are staged first, `artifact_index.json` is self-excluding, and `evaluation_manifest.json` is written last.
 
+## Metric and aggregation contract
+
+The evaluator applies these equations after subject-level aggregation:
+
+- Concept fidelity and anatomy consistency use `MAE = mean(abs(x - y))`, `RMSE = sqrt(mean((x - y)^2))`, and `bias = mean(x - y)` globally, per subject, and per ROI. Pearson and Spearman are emitted per ROI only when defined.
+- Anatomical consistency compares `c_hat` with immutable `g_bar`; it is reported separately from concept fidelity. A canonical weighted anatomy score is `sum_k(w_k * MAE_k)` only when canonical weights are available.
+- Head agreement reports predictive metrics separately from fidelity, top-1 agreement/disagreement, mean Jensen-Shannon divergence, the configured consistency-loss direction, and per-class disagreement counts. `JS(p,q) = 0.5*KL(p||m) + 0.5*KL(q||m)` where `m = (p + q) / 2`.
+- Source outputs are out-of-fold and unique by subject. Target outputs are averaged fold-first, then seed; repeated folds are never independent subjects and transfer directions are never pooled.
+- ROI stability keeps fidelity, anatomy, predicted-concept, and attention profiles separate. It reports pairwise rank correlation, per-ROI dispersion, explicit top-k Jaccard overlap, and rank dispersion.
+- Class profiles are descriptive CN/MCI/AD summaries with subject-level bootstrap hooks, not unrestricted ROI-by-ROI inference.
+
+Undefined correlations remain unavailable with an explicit reason: `constant_roi`, `insufficient_samples`, or `numerical_error`. Missing or conflicting provenance excludes a candidate rather than producing a fabricated value. Bootstrap counts retain requested, successful, invalid, and unavailable replicates.
+
+## Validation evidence and limits
+
+The WU-09 focused integration/regression command was run against the current workspace:
+
+```text
+python -m pytest tests/test_concept_integration.py tests/test_concept_modes.py tests/test_concept_boundaries.py tests/test_concept_regressions.py tests/test_all_methods_regression_phase16.py tests/test_proposed_method_cli.py -q --basetemp=artifacts/pytest-tmp-phase16
+23 passed; one Windows pytest cache-permission warning.
+```
+
+A full `python -m pytest -q --basetemp=artifacts/pytest-tmp-phase16-full` run exceeded the 180-second execution window and is not represented as passing evidence. `python -m ruff check .` and `git diff --check` passed. These results validate the synthetic/documented boundary only; they are not scientific results from ADNI/OASIS data.
+
 ## Explicit exclusions
 
 - No real ADNI/OASIS data are read by the synthetic lifecycle.
-- No training or checkpoint mutation occurs.
-- No result is a publication claim.
-- CFS, ACS, PCS, and QIS remain blocked because no authoritative equations were found. The code does not invent them.
-- Phase 17 behavior is not present.
+- No training, adaptation, optimizer, checkpoint, or target-artifact mutation occurs.
+- Target labels are posthoc-only and never enter adaptation, checkpoint selection, or method selection.
+- No result is a publication claim; causal importance, biomarkers, and disease mechanisms are not inferred.
+- CFS, ACS, PCS, and QIS remain `BLOCKED` because no authoritative equations were found. The code does not invent them.
+- Phase 17 behavior is not present or started.
+- Native receipt #1793 remains an administrative delivery blocker for review lifecycle, commit, push, PR, archive, release, and publication actions.

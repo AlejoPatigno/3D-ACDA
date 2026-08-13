@@ -1,0 +1,147 @@
+phase: 18
+slug: experiment_freeze
+status: implementation_complete_but_blocked_for_real_execution
+language: en
+artifact_store: openspec
+execution_mode: implementation_only
+phase_18_authorized: true
+freeze_approved: false
+real_execution_authorized: false
+publication_authorized: false
+phase_19_forbidden: true
+single_writer_for_current_action: true
+current_action_owner: Codex
+ownership_rules:
+  no_collisions: true
+  no_unlisted_paths: true
+  no_runtime_source_changes_in_closure: true
+  no_real_data: true
+  no_publication_analysis: true
+  no_native_review_lifecycle: true
+  no_phase_19: true
+file_ownership:
+  docs/PHASE18_REPORT.md: Codex
+  openspec/changes/phase-18-experiment-freeze/state.yaml: Codex
+  openspec/changes/phase-18-experiment-freeze/tasks.md: Codex
+  specs/phase_18_experiment_freeze/agent_plan.yaml: Codex
+  specs/phase_18_experiment_freeze/implementation_progress.md: Codex
+  openspec/changes/phase-18-experiment-freeze/apply-progress.md: Codex
+actions:
+  - id: phase18-planning-closure
+    owner: Codex
+    depends_on: []
+    status: complete
+    owns:
+      - openspec/changes/phase-18-experiment-freeze/state.yaml
+    evidence: corrected specification package approved for planning only
+  - id: scientific-resolution
+    owner: maintainer
+    depends_on: [phase18-planning-closure]
+    status: blocked
+    owns: []
+    blockers:
+      - lambda_proto_0.2_vs_1.0_unresolved
+      - coral_mmd_cdan_parameters_unresolved
+      - publication_ablations_unresolved
+      - manuscript_endpoints_and_equations_unresolved
+  - id: independent-scientific-resolution-review
+    owner: gentle-ai-explore/gentle-ai-verify
+    fallback_for: Kimi unavailable
+    depends_on: [scientific-resolution]
+    status: complete_with_fallback
+    owns: []
+    evidence: fallback review mapped to Gemini; no scientific blocker was silently resolved
+  - id: canonicalization-and-freeze-core
+    owner: Codex
+    depends_on: [phase18-planning-closure]
+    status: complete
+    owns: []
+    evidence: canonical JSON/schema/freeze implementation and tests complete
+  - id: provenance-and-real-data-inspection
+    owner: Codex
+    mode: metadata-only
+    depends_on: [canonicalization-and-freeze-core]
+    status: complete_metadata_only
+    owns: []
+    evidence: matrix/provenance/target-firewall contracts complete; no real data or real hashes inspected
+  - id: feasibility-and-resource-budget
+    owner: Codex
+    depends_on: [canonicalization-and-freeze-core]
+    status: complete_synthetic_only
+    owns: []
+    evidence: synthetic feasibility and resource-budget boundaries tested; real resource fields remain unresolved
+  - id: independent-identity-and-feasibility-verification
+    owner: gentle-ai-verify
+    fallback_for: Kimi unavailable
+    depends_on: [provenance-and-real-data-inspection, feasibility-and-resource-budget]
+    status: complete_with_findings
+    owns: []
+    evidence: fresh independent fallback verification; acceptance remained partial because full suite timed out and closure artifacts were stale before this consolidation
+  - id: authorization-and-cli
+    owner: Codex
+    depends_on: [provenance-and-real-data-inspection, feasibility-and-resource-budget]
+    status: complete_fail_closed
+    owns: []
+    evidence: planning CLIs and authorization checker fail closed; real authorization remains false
+  - id: complete-phase18-integration-tests
+    owner: Codex
+    depends_on: [canonicalization-and-freeze-core, feasibility-and-resource-budget, authorization-and-cli]
+    status: complete_focused_verified
+    owns: []
+    evidence: 139 Phase 18 tests passed with one PytestCacheWarning
+  - id: documentation
+    owner: Codex
+    depends_on: [phase18-planning-closure, independent-scientific-resolution-review, independent-identity-and-feasibility-verification, complete-phase18-integration-tests]
+    status: complete
+    owns:
+      - docs/PHASE18_REPORT.md
+      - openspec/changes/phase-18-experiment-freeze/tasks.md
+  - id: progress-consolidation
+    owner: Codex
+    depends_on: [canonicalization-and-freeze-core, provenance-and-real-data-inspection, feasibility-and-resource-budget, authorization-and-cli, complete-phase18-integration-tests, documentation]
+    status: complete
+    owns:
+      - specs/phase_18_experiment_freeze/implementation_progress.md
+      - openspec/changes/phase-18-experiment-freeze/apply-progress.md
+  - id: final-independent-audit
+    owner: gentle-ai-verify
+    fallback_for: Kimi unavailable
+    depends_on: [complete-phase18-integration-tests]
+    status: complete_with_limitations
+    owns: []
+    evidence: fresh fallback audit; no Kimi result and no final repository-wide closure claim
+  - id: final-validation
+    owner: maintainer
+    depends_on: [documentation, progress-consolidation, final-independent-audit]
+    status: blocked_timeout_and_pending_native
+    owns: []
+    evidence:
+      - full pytest timed out around 27 percent after 1200 seconds
+      - native lifecycle receipt/approval was not run
+      - global diff check is blocked only by pre-existing AGENTS.md:928 whitespace
+forbidden_transitions:
+  real_execution:
+    owner: maintainer
+    status: forbidden
+    requires: [scientific-resolution, native_lifecycle_approval, real_execution_authorized_true]
+  publication:
+    owner: maintainer
+    status: forbidden
+    requires: [real_execution_complete, publication_authorized_true, separate_publication_gate]
+  phase19:
+    owner: maintainer
+    status: forbidden
+    requires: [explicit_phase19_approval]
+review_workload_forecast:
+  decision_needed_before_apply: true
+  chained_prs_recommended: true
+  four_hundred_line_budget_risk: high
+  implementation_tasks_separable: true
+native_lifecycle:
+  status: pending_not_run
+  receipt: not_created_or_modified
+  approval: pending
+full_regression:
+  status: unverified_timeout
+  command: python -m pytest -q
+  pass_claim: false

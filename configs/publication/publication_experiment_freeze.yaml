@@ -1,0 +1,72 @@
+schema_version: phase18.freeze.v1
+phase: 18
+status: blocked_planning
+phase_18_authorized: true
+freeze_approved: false
+real_execution_authorized: false
+publication_authorized: false
+phase_19_forbidden: true
+scientific_resolution_hash: unresolved
+matrix_hash: unresolved
+provenance_freeze_hash: unresolved
+feasibility_hash: unresolved
+resource_budget_hash: unresolved
+independent_review_hash: unresolved
+human_authorization_hash: unresolved
+blockers:
+  - lambda_proto_0.2_vs_1.0_unresolved
+  - checked_in_coral_mmd_cdan_parameters_unresolved
+  - publication_ablation_subset_not_human_selected
+  - canonicalization_conformance_vectors_unresolved
+  - real_assignments_and_artifact_hashes_missing
+  - content_level_assignment_disjointness_not_verified
+  - privacy_data_access_missing
+  - hardware_and_resource_budget_unresolved
+  - independent_specification_approval_pending
+matrix:
+  schema_version: phase18.matrix.v1
+  methods: [source_only, coral, mmd, cdan, prototype_pseudo, aagn, faster_snn]
+  directions: [adni_to_oasis, oasis_to_adni]
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42]
+  checkpoint_policies: [best_source_f1, last]
+class_order: [CN, MCI, AD]
+value_ledger:
+  lambda_proto:
+    value: unresolved
+    value_class: unresolved_blocking
+    reason: primary 1.0 conflicts with helper/manuscript 0.2
+  coral_mmd_cdan_parameters:
+    value: unresolved
+    value_class: unresolved_blocking
+    reason: authoritative checked-in loader fields are missing
+  publication_ablation_subset:
+    value: unresolved
+    value_class: unresolved_blocking
+    reason: human selection is required
+provenance:
+  split_manifest_hashes: {ADNI: unresolved, OASIS: unresolved}
+  assignment_hashes: {source: unresolved, target_adaptation: unresolved, target_evaluation: unresolved}
+  artifact_hashes: {atlas: unresolved, roi_order: unresolved, roi_masks: unresolved, concept_normalizer: unresolved, concept_targets: unresolved, jacobians: unresolved}
+  canonicalization_conformance_hash: unresolved
+feasibility:
+  schema_version: phase18.feasibility.v1
+  mode: synthetic_only
+  real_data_accessed: false
+  publication_metrics_present: false
+  real_resource_fields_resolved: false
+  status: blocked
+  failure_reasons: [production_shape_unavailable]
+resource_budget:
+  status: unresolved_blocking
+  real_budget_closed: false
+  device_type: unresolved
+  gpu_vram: unresolved
+  host_ram: unresolved
+  storage_per_cell: unresolved
+  wall_time_per_primary_cell: unresolved
+  workers: unresolved
+publication:
+  publication_authorized: false
+  ablation_selection: unresolved
+  metrics: forbidden

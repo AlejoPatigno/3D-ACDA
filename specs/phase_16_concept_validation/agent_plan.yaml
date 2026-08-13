@@ -5,13 +5,13 @@ execution: serial
 conceptual_owner_fallback:
   requested: claude-code
   runtime: package-sdd-tasks
-  applies_to_planning_only: true
+  applies_to_planning_only: false
 review_workload:
   estimated_remediation_authored_changed_lines: 2000-4000
   budget_risk: High
   chained_prs_recommended: true
-  delivery_strategy: blocked-no-pr-native-receipt-1793
-  chain_strategy: pending
+  delivery_strategy: auto-chain
+  chain_strategy: feature-branch-chain
   decision_needed_before_apply: false
   decision_scope: local-serial-synthetic-only-no-delivery
   decision_satisfied_by: [spec-approved, synthetic-implementation, synthetic-verification, native-receipt-1793-delivery-block]
@@ -39,8 +39,8 @@ planning_artifact_delivery:
   blocks_synthetic_apply: false
   note: Existing planning artifacts do not fit a single 400-line PR; their separate future delivery decision is downstream and is not an apply prerequisite.
 chain_delivery:
-  strategy: pending
-  planning_only: true
+  strategy: feature-branch-chain
+  planning_only: false
   no_pr_while_blocked: true
   tracker_or_child_branches_created: false
   commits_created: false
@@ -187,7 +187,7 @@ actions:
       - tests/test_concept_boundaries.py
       - tests/test_concept_regressions.py
       - tests/test_all_methods_regression_phase16.py
-      tests/test_proposed_method_cli.py
+      - tests/test_proposed_method_cli.py
 
   - id: documentation
     agent: claude-code
@@ -217,13 +217,21 @@ actions:
     responsibility: Maintain only the OpenSpec proposal, capability specification, design, task mirror, and repository agent plan; validate ownership without changing scientific or implementation artifacts.
     owned_paths:
       - openspec/changes/phase-16-concept-validation/proposal.md
-      - openspec/changes/phase-16-concept-validation/specs/concept-validation/spec.md
+      - openspec/changes/phase-16-concept-validation/specs/phase-16-concept-validation/spec.md
       - openspec/changes/phase-16-concept-validation/design.md
       - openspec/changes/phase-16-concept-validation/tasks.md
       - specs/phase_16_concept_validation/agent_plan.yaml
 
 implementation_work_units:
-  task_state: {total: 0, complete: 0, open: 0, implementation_owned: 0, parent_owned: 0, next_dependency_ready: T-16-01}
+  task_state: {total: 65, complete: 63, open: 2, implementation_owned: 0, parent_owned: 2, next_dependency_ready: parent-lifecycle}
+  current_status:
+    result: BLOCKED
+    complete: 63
+    open: 2
+    open_owner: parent
+    implementation_owned_open: 0
+    full_pytest: timed_out_incomplete_evidence
+    native_review: review-047ae7d944d9e975 escalated with RISK-001/RISK-002 remediated; issue=#1793
   pre_slice_rule: Before each unit, save failing RED evidence, then measure forecast additions plus deletions for behavior and tests. If forecast or actual would exceed 400, stop and split again before production edits; no size exception is authorized.
   serial_ownership_note: All paths have single owners; no duplicates across actions.
   units:
@@ -235,16 +243,16 @@ implementation_work_units:
       chain_strategy: feature-branch-chain
       decision_needed_before_apply: false
       exact_paths:
-        - {path: specs/phase_16_concept_validation/requirements.md, forecast_ceiling: 100}
-        - {path: specs/phase_16_concept_validation/design.md, forecast_ceiling: 150}
-        - {path: specs/phase_16_concept_validation/tasks.md, forecast_ceiling: 150}
-        - {path: specs/phase_16_concept_validation/acceptance.md, forecast_ceiling: 100}
-        - {path: specs/phase_16_concept_validation/metric_protocol.md, forecast_ceiling: 80}
-        - {path: specs/phase_16_concept_validation/output_schema.md, forecast_ceiling: 80}
-        - {path: specs/phase_16_concept_validation/agent_plan.yaml, forecast_ceiling: 80}
-        - {path: specs/phase_16_concept_validation/decisions.md, forecast_ceiling: 50}
-        - {path: specs/phase_16_concept_validation/manuscript_extraction.md, forecast_ceiling: 80}
-      hard_forecast_ceiling: 870
+        - {path: specs/phase_16_concept_validation/requirements.md, forecast_ceiling: 45}
+        - {path: specs/phase_16_concept_validation/design.md, forecast_ceiling: 55}
+        - {path: specs/phase_16_concept_validation/tasks.md, forecast_ceiling: 50}
+        - {path: specs/phase_16_concept_validation/acceptance.md, forecast_ceiling: 40}
+        - {path: specs/phase_16_concept_validation/metric_protocol.md, forecast_ceiling: 40}
+        - {path: specs/phase_16_concept_validation/output_schema.md, forecast_ceiling: 40}
+        - {path: specs/phase_16_concept_validation/agent_plan.yaml, forecast_ceiling: 60}
+        - {path: specs/phase_16_concept_validation/decisions.md, forecast_ceiling: 20}
+        - {path: specs/phase_16_concept_validation/manuscript_extraction.md, forecast_ceiling: 20}
+      hard_forecast_ceiling: 400
       reserve_under_400: 30
       stop_and_split_if_forecast_or_actual_exceeds: 400
       verification: specs validation complete
@@ -446,9 +454,11 @@ implementation_work_units:
       task: T-16-13
       subset: openspec-maintenance
       depends_on: []
+      chain_strategy: feature-branch-chain
+      decision_needed_before_apply: false
       exact_paths:
         - openspec/changes/phase-16-concept-validation/proposal.md
-        - openspec/changes/phase-16-concept-validation/specs/concept-validation/spec.md
+        - openspec/changes/phase-16-concept-validation/specs/phase-16-concept-validation/spec.md
         - openspec/changes/phase-16-concept-validation/design.md
         - openspec/changes/phase-16-concept-validation/tasks.md
         - specs/phase_16_concept_validation/agent_plan.yaml
@@ -462,9 +472,9 @@ ownership_validation:
     python -c "import collections,yaml; p='specs/phase_16_concept_validation/agent_plan.yaml'; d=yaml.safe_load(open(p,encoding='utf-8')); a=d['actions']; pairs=[(x['id'],q) for x in a for q in x['owned_paths']]; c=collections.Counter(q for _,q in pairs); dup=sorted(q for q,n in c.items() if n>1); print(f'actions={len(a)} paths={len(pairs)} duplicates={len(dup)}'); print('duplicate_paths='+repr(dup)); assert not dup"
   expected_output:
     - "duplicate_paths=[]"
-  action_count: 13
-  path_count: 0
+  action_count: 14
+  path_count: 66
   duplicate_count: 0
   duplicate_owned_paths: []
   static_duplicate_review: pass
-  status: pending
+  status: blocked

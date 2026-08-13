@@ -43,6 +43,31 @@ def test_per_roi_correlation_reports_constant_roi_as_unavailable() -> None:
     assert results[1].reason == "constant_roi"
 
 
+def test_per_roi_correlation_prioritizes_insufficient_samples() -> None:
+    results = compute_per_roi_fidelity(
+        np.array([[0.0, 1.0]]),
+        np.array([[1.0, 2.0]]),
+    )
+
+    assert results[0].status is ValueStatus.UNAVAILABLE
+    assert results[0].pearson is None
+    assert results[0].spearman is None
+    assert results[0].reason == "insufficient_samples"
+
+
+def test_per_roi_fidelity_reports_direct_reference_values() -> None:
+    results = compute_per_roi_fidelity(
+        np.array([[0.0, 1.0], [2.0, 4.0], [4.0, 7.0]]),
+        np.array([[0.0, 0.0], [1.0, 2.0], [2.0, 4.0]]),
+    )
+
+    assert [result.mae for result in results] == pytest.approx([1.0, 2.0])
+    assert [result.rmse for result in results] == pytest.approx(
+        [np.sqrt(5.0 / 3.0), np.sqrt(14.0 / 3.0)]
+    )
+    assert [result.bias for result in results] == pytest.approx([1.0, 2.0])
+
+
 @pytest.mark.parametrize(
     ("predicted", "target", "message"),
     [
