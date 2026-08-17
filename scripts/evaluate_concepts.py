@@ -716,6 +716,7 @@ def _execute(selection: CliSelection) -> ExitCode:
         unresolved = _unresolved_real_gates(gate)
         if unresolved:
             raise AuthorizationGateError("unresolved real evaluation gates: " + ", ".join(unresolved))
+        raise ConfigurationError("real evaluation capability issuance is closed: external authorization issuer is not configured")
         capability = _issue_cli_capability(config, gate, selection.config_path)
         # Route the authorized request through the real orchestration seam. The
         # repository deliberately has no approved local data/statistics/publish

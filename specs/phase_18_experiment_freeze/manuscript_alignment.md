@@ -1,38 +1,22 @@
-# Phase 18 — Manuscript Alignment Audit
+# Phase 18 Manuscript Alignment Audit
 
-## Audit boundary
+## Final alignment decision
 
-No complete manuscript PDF is present in the repository. The audit therefore compares repository documents/configurations and the available manuscript extraction, but it does not invent missing manuscript text and does not rewrite the manuscript. Statuses are:
+No complete manuscript PDF or authoritative methods source is present. Repository-selected pre-run values remain frozen; manuscript-only claims remain `UNRESOLVED` until the complete source is available. No manuscript text, score, endpoint, or publication result was invented.
 
-- `MATCH`: authoritative sources agree.
-- `MANUSCRIPT_OUTDATED`: authoritative manuscript text conflicts with a newer approved repository contract.
-- `REPOSITORY_OUTDATED`: authoritative manuscript text is newer and the repository has not adopted it.
-- `UNRESOLVED`: source/equation/ownership is incomplete or conflicting; no side may be changed by inference.
-
-The last two “outdated” statuses are vocabulary, not a license to assign them without a complete authoritative manuscript and maintainer decision.
-
-## Alignment table
+## Deterministic alignment rows
 
 | Topic | Repository evidence | Manuscript evidence | Status | Freeze action |
 |---|---|---|---|---|
-| Public method name | `PADA-3DACB` in model and proposed-method docs | No complete PDF; extraction names the proposed method | MATCH for available repository sources; manuscript completeness remains limited | Preserve name; do not infer publication claim. |
-| Class order | `CN=0`, `MCI=1`, `AD=2` across AGENTS/configs/evaluation | Extraction records same order | MATCH | Keep fixed order. |
-| Cohorts/directions | ADNI/OASIS and both directions | Partial method extraction only | UNRESOLVED | Require authoritative protocol confirmation. |
-| Architecture | Explicit no-context model; contextual path excluded | Historical notebook contains former contextual path and identity helper | UNRESOLVED | Keep current repository architecture; do not revive historical variant. |
-| `lambda_proto` | Primary path/config `1.0`; later helper `0.2` | D-14-001 records manuscript discrepancy | UNRESOLVED | Do not choose; require explicit decision and hash. |
-| Epoch policy | Primary DA path `5` warm/`50` full; fixed epochs | Available extraction records `5/50`; generic config has `20/30` | UNRESOLVED until publication protocol binds the method-specific config | Preserve fixed epochs; no early stopping. |
-| Best checkpoint | Source-validation macro-F1 only | D-14-002 records manuscript macro-AUC tie-break wording | UNRESOLVED | Repository invariant controls engineering; publication use waits for decision. |
-| Core method inventory | Seven protected methods in Phase 15 config | No complete manuscript inventory | UNRESOLVED | Do not add or remove methods by name inference. |
-| Publication ablation subset | Six Phase 17 synthetic candidates; no publication selection | No complete manuscript subset | UNRESOLVED | Keep subset outside active matrix. |
-| CFS/ACS/PCS/QIS | No verified equations; blocked in Phase 16/17 | Names/descriptions only in extraction | UNRESOLVED | Do not implement or report scores. |
-| Statistical endpoints | Phase 15 protocol defines predictive metrics/bootstrap/Holm for its approved scope | No complete manuscript statistical protocol | UNRESOLVED | Require protocol approval before publication analysis. |
-| Preprocessing/artifact provenance | Canonical notebooks and immutable-artifact rules | Partial extraction, no complete manuscript methods | UNRESOLVED | Require exact hashes and approved provenance. |
-| Forbidden historical variants | Repository explicitly excludes them from runnable inventory | Manuscript evidence unavailable | UNRESOLVED | Do not add rows or rewrite manuscript. |
+| `lambda_proto` | Production value `1.0`; historical `0.2` is explicitly excluded from production. | Complete authoritative manuscript absent. | `UNRESOLVED` | Treat historical `0.2` as an excluded non-production discrepancy, **not `BLOCKED_CONFLICT`**; never target-tune. |
+| Checkpoint criterion | `best_source_f1`, source-validation macro-F1 only; `last` is sensitivity. | Complete source absent. | `UNRESOLVED` | Preserve the selected pre-run policy; macro-AUC remains evaluation-only. |
+| CORAL/MMD/CDAN | Structured selected parameters and equations are frozen in the repository ledger. | Complete parameter source absent. | `UNRESOLVED` | Preserve selected pre-run configuration; require later authoritative comparison. |
+| Seeds and matrix | `[42,43,44]`; 210 training plus 210 projections. | Complete matrix source absent. | `UNRESOLVED` | Keep parser-bound directions and deterministic matrix identity. |
+| Ablations | Primary, supplementary, and excluded classifications are selected pre-run and planning-only. | Complete ablation table absent. | `UNRESOLVED` | Keep later manuscript comparison in a correction ledger; do not report outcomes. |
+| Architecture/endpoints/statistics | Production PADA-3DACB and approved implementation paths are preserved. | Complete source absent. | `UNRESOLVED` | Do not revive historical variants or make endpoint/publication claims. |
 
-## Outdated-status handling
+## Later correction ledger
 
-A future complete manuscript review MAY assign `MANUSCRIPT_OUTDATED` or `REPOSITORY_OUTDATED` only with exact quoted source, version/date, maintainer authority, and a migration decision. This phase assigns neither status to a scientific value because the complete manuscript is absent. The unresolved lambda and checkpoint discrepancies remain blockers.
+When a complete manuscript becomes available, reconcile each `UNRESOLVED` row with dated source references and a maintainer disposition. The ledger must record the manuscript location, repository field, exact discrepancy, whether the repository or manuscript is authoritative, and the resulting freeze/configuration update. The historical `lambda_proto=0.2` entry remains an excluded non-production discrepancy unless a separate pre-run maintainer decision changes it.
 
-## Required alignment evidence before publication
-
-Provide the complete manuscript/methods source, exact equations for all named endpoints, method/ablation list, checkpoint wording, seed/fold policy, and versioned maintainer disposition. Bind the decision record hash to the real-run and publication gates. Until then, this audit is a blocking planning artifact, not a publication approval.
+All selected decisions were made before execution, and target outcomes were not inspected.

@@ -20,9 +20,9 @@ canonical docs/configs/notebook audit
 | Decision | Choice | Rationale / rejected alternative |
 |---|---|---|
 | Scientific authority | Primary repository path plus explicit Phase 15–17 contracts | Avoids promoting later notebook helpers or manuscript names over active evidence. |
-| Matrix | Seven protected methods × parser IDs `adni_to_oasis`/`oasis_to_adni` × folds 0–4 × seed 42; 70 training rows plus 70 linked `last` projections | Preserves complete coverage, exact parser identity, one training invocation per cell, and prevents selective-fold or duplicate-training shortcuts. |
-| `lambda_proto` | Keep unresolved until an external decision binds one value | `1.0` is the primary path; `0.2` is a later helper/manuscript discrepancy. The matrix and gate reject authorization while unresolved; target metrics cannot arbitrate. |
-| Ablations | Keep Phase 17 candidates as inventory evidence; publication subset unresolved | Synthetic approval is not publication approval. This prevents an unauthorized subset from becoming a claim. |
+| Matrix | Seven protected methods × parser IDs `adni_to_oasis`/`oasis_to_adni` × folds 0–4 × predeclared seeds `[42,43,44]`; 210 training rows plus 210 linked `last` projections | Preserves complete coverage, exact parser identity, one training invocation per cell, and prevents selective-fold or duplicate-training shortcuts. |
+| `lambda_proto` | Production `1.0` bound as a pre-run human decision; historical `0.2` retained as `BLOCKED_CONFLICT` non-production discrepancy | The primary path is authoritative for production; target metrics cannot arbitrate. External provenance and authorization blockers still close the gate. |
+| Ablations | Separate pre-run classification: primary four, supplementary two, excluded four | Classification does not add to the core identity, train, or create publication claims. |
 | Checkpointing | Fixed epochs; source-validation macro-F1 only; target monitoring isolated | Matches the protected training contract and rejects manuscript tie-break drift. |
 | Provenance | SHA-256 over versioned `phase18.canonical-json.v1` and exact file bytes, with content-level manifest intersections | Makes assignments, artifacts, code, environment, and commands auditable and resume-safe; aggregate hashes alone cannot prove disjointness. |
 | Feasibility | Synthetic faithful shapes/contracts only; synthetic timing and resource observations remain engineering-only | Provides contract evidence without loading real MRI, claiming real throughput, or resolving real timing/resource fields. |
@@ -49,7 +49,7 @@ This phase uses artifact inspection only; no test command or feasibility probe i
 
 ## Open questions
 
-- Which authoritative decision resolves `lambda_proto=0.2` versus `1.0`?
-- Which human-approved publication ablation subset, if any, is included?
+- Which external manifests, immutable artifact hashes, resources, and human authorization complete the real-run gate?
+- Which authoritative manuscript equations and endpoints complete publication alignment?
 - What are the real split/artifact hashes, privacy-approved paths, hardware observations, resource budget, and final command hash?
 - Are manuscript checkpoint tie-breaking and publication score equations supplied by an authoritative source?

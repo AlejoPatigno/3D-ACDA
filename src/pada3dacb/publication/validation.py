@@ -71,12 +71,14 @@ def validate_matrix_input(matrix: Any) -> tuple[ValidationBlocker, ...]:
             return (ValidationBlocker("incomplete_matrix", str(exc), "matrix"),)
         blockers = list(_check_rows(matrix.rows))
         blockers.extend(_bind_outer_matrix_identity(matrix.matrix_id, matrix.rows))
-        if tuple(matrix.seeds) != (42,) and not (
-            isinstance(matrix.resolved_seed_policy, Mapping)
-            and matrix.resolved_seed_policy.get("resolved") is True
-            and matrix.resolved_seed_policy.get("seeds") == list(matrix.seeds)
-        ):
-            blockers.append(ValidationBlocker("seed_policy_mismatch", "resolved seed policy is required for non-default seeds", "matrix.seeds"))
+        if not _seed_policy_matches(matrix.seeds, matrix.resolved_seed_policy):
+            blockers.append(
+                ValidationBlocker(
+                    "seed_policy_mismatch",
+                    "resolved seed policy is required and must match matrix seeds",
+                    "matrix.seeds",
+                )
+            )
         return tuple(_unique(blockers))
     if not isinstance(matrix, Mapping):
         return (ValidationBlocker("incomplete_matrix", "matrix rows are missing", "matrix"),)
@@ -143,8 +145,14 @@ def validate_matrix_input(matrix: Any) -> tuple[ValidationBlocker, ...]:
             blockers.append(ValidationBlocker("incomplete_matrix", "checkpoint policies are incomplete", "matrix.checkpoint_policies"))
         seeds = metadata.get("seeds")
         policy = metadata.get("resolved_seed_policy")
-        if seeds != [42] and not (isinstance(policy, Mapping) and policy.get("resolved") is True and policy.get("seeds") == seeds):
-            blockers.append(ValidationBlocker("seed_policy_mismatch", "default publication seed policy must be [42] or explicitly resolved", "matrix.seeds"))
+        if not _seed_policy_matches(seeds, policy):
+            blockers.append(
+                ValidationBlocker(
+                    "seed_policy_mismatch",
+                    "resolved seed policy is required and must match matrix seeds",
+                    "matrix.seeds",
+                )
+            )
         typed_rows: list[ExperimentRow] = []
         for raw in rows:
             if not isinstance(raw, Mapping):
@@ -360,6 +368,18 @@ def validate_all(**kwargs: Any) -> ValidationReport:
     """Short compatibility spelling used by preparation callers."""
 
     return aggregate_validators(**kwargs)
+
+
+def _seed_policy_matches(
+    seeds: Sequence[int], policy: Mapping[str, Any] | None
+) -> bool:
+    if tuple(seeds) == (42,) and policy is None:
+        return True
+    return (
+        isinstance(policy, Mapping)
+        and policy.get("resolved") is True
+        and policy.get("seeds") == list(seeds)
+    )
 
 
 def _bind_outer_matrix_identity(

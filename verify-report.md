@@ -1,5 +1,9 @@
 # Verify Report: phase-16-concept-validation
 
+> **Historical snapshot — Not current lifecycle authority**
+>
+> The status and evidence below are preserved as a time-scoped Phase 16 record. For current lifecycle status, use `openspec/changes/phase-17-ablations/state.yaml` and `docs/IMPLEMENTATION_AUDIT.md`.
+
 **Status:** BLOCKED
 
 The two introduced CRITICAL findings RISK-001 and RISK-002 from native review lineage `review-047ae7d944d9e975` were remediated in the authorized Phase 16 paths. Native review issue #1793 remains escalated, so Phase 16 remains blocked; no archive or completion recommendation is made.
@@ -20,7 +24,7 @@ The two introduced CRITICAL findings RISK-001 and RISK-002 from native review li
 - No implementation task completion was invented.
 - The prior full `python -m pytest -q` attempt timed out at 180 seconds; it is not a pass.
 - Real evaluation remains closed and CFS/ACS/PCS/QIS remain blocked by existing scientific gates.
-- Phase 17 has not started.
+- Phase 17 synthetic-only implementation is documented separately; this verification did not execute it or Phase 18.
 
 ## Remaining blockers
 

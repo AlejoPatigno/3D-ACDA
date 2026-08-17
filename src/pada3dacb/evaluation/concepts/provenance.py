@@ -289,6 +289,59 @@ def compute_artifact_hashes(
 # Provenance record construction
 # ============================================================================
 
+# ---------------------------------------------------------------------------
+# Phase 18B task-scoped compatibility
+# ---------------------------------------------------------------------------
+
+
+def validate_binary_concept_compatibility(
+    *,
+    task_id: str,
+    artifact_hashes: Mapping[str, Any] | None = None,
+    expected_artifact_hashes: Mapping[str, Any] | None = None,
+    k: int | None = None,
+    expected_k: int | None = None,
+    roi_order: Sequence[Any] | None = None,
+    expected_roi_order: Sequence[Any] | None = None,
+    roi_order_hash: str | None = None,
+    expected_roi_order_hash: str | None = None,
+    atlas_hash: str | None = None,
+    expected_atlas_hash: str | None = None,
+    mask_hash: str | None = None,
+    expected_mask_hash: str | None = None,
+    task_hash: str | None = None,
+    expected_task_hash: str | None = None,
+    refit: bool = False,
+    regenerate: bool = False,
+) -> None:
+    """Fail closed unless binary evaluation reuses the established artifacts."""
+    if task_id != "cn_vs_impaired":
+        raise ValueError("binary concept compatibility requires task_id='cn_vs_impaired'")
+    if refit:
+        raise ValueError("binary concept evaluation does not permit refit")
+    if regenerate:
+        raise ValueError("binary concept evaluation does not permit regeneration")
+    if expected_task_hash is not None and task_hash != expected_task_hash:
+        raise ValueError("binary concept task hash mismatch")
+    if expected_artifact_hashes is not None and (
+        artifact_hashes is None or dict(artifact_hashes) != dict(expected_artifact_hashes)
+    ):
+        raise ValueError("binary concept artifact hashes changed")
+    if expected_k is not None and k != expected_k:
+        raise ValueError(f"binary concept K changed: got {k}, expected {expected_k}")
+    if expected_roi_order is not None and tuple(roi_order or ()) != tuple(expected_roi_order):
+        raise ValueError("binary concept ROI ordering changed")
+    if expected_roi_order_hash is not None and roi_order_hash != expected_roi_order_hash:
+        raise ValueError("binary concept ROI order hash changed")
+    if expected_atlas_hash is not None and atlas_hash != expected_atlas_hash:
+        raise ValueError("binary concept atlas hash changed")
+    if expected_mask_hash is not None and mask_hash != expected_mask_hash:
+        raise ValueError("binary concept ROI mask identity changed")
+
+
+validate_binary_artifact_compatibility = validate_binary_concept_compatibility
+
+
 def build_provenance_report(
     candidates: Sequence[ConceptCandidate],
     validation_issues: Mapping[tuple, list[str]],

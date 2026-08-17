@@ -31,6 +31,13 @@ COUNT_METRIC_NAMES = AGGREGATE_METRIC_NAMES[:8]
 COUNT_PER_CLASS_NAMES = ("support", "precision", "recall", "sensitivity", "specificity", "f1")
 
 
+def compute_binary_metrics(rows: Sequence[Mapping[str, object]]) -> dict[str, dict[str, object]]:
+    """Compute the Phase 18B fixed-order metric set with nullable failures."""
+    from pada3dacb.binary import evaluate_binary_predictions
+
+    return evaluate_binary_predictions(rows).metrics
+
+
 @dataclass(frozen=True)
 class CountMetricResult:
     subject_count: int
@@ -254,3 +261,6 @@ def compute_metrics(
                 ANALYSIS_CLASS_LABELS[index], index, support, metric, value
             ))
     return MetricSet(len(rows), aggregates, tuple(per_class))
+
+
+compute_task_scoped_binary_metrics = compute_binary_metrics

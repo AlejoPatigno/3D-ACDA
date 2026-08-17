@@ -112,14 +112,15 @@ class PADA3DACB(nn.Module):
         validate_inputs: bool = True,
     ):
         super().__init__()
-        if num_classes != len(CLASS_ORDER):
-            raise ModelContractError("PADA-3DACB has the fixed class order CN/MCI/AD.")
+        if num_classes not in {2, len(CLASS_ORDER)}:
+            raise ModelContractError("PADA-3DACB supports only the historical three-class or Phase 18B binary head.")
         if min(num_rois, feature_dim, token_dim, base_channels, concept_hidden_dim) <= 0:
             raise ModelContractError("All model dimensions must be positive.")
         self.num_rois = num_rois
         self.feature_dim = feature_dim
         self.token_dim = token_dim
         self.num_classes = num_classes
+        self.class_order = ("CN", "Impaired") if num_classes == 2 else CLASS_ORDER
         self.validate_inputs = validate_inputs
         self.encoder = Encoder3D(feature_dim=feature_dim, base_channels=base_channels)
         self.tokenizer = ROITokenizer(num_rois, feature_dim, token_dim)
@@ -196,7 +197,24 @@ def _config_mapping(config: Any) -> dict[str, Any]:
 
 def build_pada3dacb(config: Any, roi_masks: torch.Tensor | None = None) -> PADA3DACB:
     """Validate configuration and instantiate only retained model components."""
+    task_id = getattr(config, "task_id", None)
+    task_type = getattr(config, "task_type", None)
+    if isinstance(config, Mapping):
+        task_id = config.get("task_id", config.get("task"))
+        task_type = config.get("task_type")
+        if isinstance(task_id, str) and task_id.strip().lower() in {"cn_vs_impaired", "cn_vs_impaired_task"}:
+            task_id = "cn_vs_impaired"
     data = _config_mapping(config)
+    if task_id == "cn_vs_impaired":
+        if task_type not in {None, "binary_classification"}:
+            raise ConfigurationError("CN_vs_Impaired requires task_type='binary_classification'.")
+        if int(data.get("num_classes", 3)) != 2:
+            raise ConfigurationError("CN_vs_Impaired is the sole publication class source and requires num_classes=2.")
+        if isinstance(config, Mapping):
+            if config.get("class_order") not in (None, ["CN", "Impaired"], ("CN", "Impaired")):
+                raise ConfigurationError("CN_vs_Impaired requires class_order=[CN, Impaired].")
+            if config.get("class_ids") not in (None, {"CN": 0, "Impaired": 1}):
+                raise ConfigurationError("CN_vs_Impaired requires class_ids CN=0 and Impaired=1.")
     if data.get("name", PUBLIC_MODEL_NAME) != PUBLIC_MODEL_NAME:
         raise ConfigurationError(f"The production model name must be {PUBLIC_MODEL_NAME!r}.")
     if data.get("contextual_encoder", False) is not False:

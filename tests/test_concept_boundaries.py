@@ -39,9 +39,11 @@ def test_inference_loads_precomputed_targets_without_regeneration() -> None:
     assert "optimizer" not in source
 
 
-def test_phase17_has_not_started() -> None:
-    assert not any(Path("specs").glob("phase_17*"))
-    assert not any(Path("src/pada3dacb").rglob("*phase17*"))
+def test_phase16_concept_modules_remain_independent_of_phase17() -> None:
+    assert Path("specs/phase_17_ablations").is_dir()
+    source = "\n".join(path.read_text(encoding="utf-8") for path in PHASE16_ROOT.glob("*.py"))
+    forbidden = ("pada3dacb.ablations", "target_adaptation", "phase_17")
+    assert [token for token in forbidden if token in source.lower()] == []
 
 
 def test_concept_evaluator_has_no_forbidden_adaptation_or_causal_paths() -> None:

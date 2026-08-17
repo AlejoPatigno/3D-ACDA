@@ -1,0 +1,50 @@
+change: phase-18d-kaggle-readiness
+schema: openspec-change-state/v1
+status: preparation_complete
+phase: closed
+artifact_store: openspec
+source_of_truth: openspec
+engram:
+  status: degraded
+  reason: mem_doctor reports a blocking sync-payload defect
+  repair_attempted: false
+authority:
+  document: docs/PHASE18B_REPORT.md
+  status: PHASE18B_IMPLEMENTATION_COMPLETE_EXTERNAL_BLOCKED
+scope:
+  kaggle_only: true
+  real_training: false
+  real_predictive_evaluation: false
+  publication_analysis: false
+  phase_19_forbidden: true
+authorization:
+  authorized: false
+  real_execution_authorized: false
+  freeze_approved: false
+  publication_authorized: false
+    repository_validation: passed
+    independent_review: passed
+readiness_states:
+  allowed:
+    - KAGGLE_NOTEBOOKS_READY_FOR_EXECUTION
+    - KAGGLE_READINESS_EVIDENCE_PRODUCED
+    - KAGGLE_READINESS_EVIDENCE_IMPORTED
+  forbidden_prefix: REAL_RUN_READY
+  current: KAGGLE_NOTEBOOKS_READY_FOR_EXECUTION
+artifacts:
+  proposal: proposal.md
+  design: design.md
+  spec: specs/kaggle-readiness/spec.md
+  tasks: tasks.md
+next_recommended: verify
+blocking_decisions:
+  - runtime-relative Kaggle source path must be discovered by contents
+  - metadata candidate must pass runtime schema and SHA-256 verification
+  - external model-ready root and per-person hashes remain unresolved
+  - independent/native OASIS approval evidence remains unresolved
+  - final evidence-root path is operator supplied
+closure:
+      requires_independent_review_pass: true
+      requires_exact_validation_commands: true
+      kaggle_execution_status: pending_external
+      readiness_bundle_import: pending_external

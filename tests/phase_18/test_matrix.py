@@ -64,6 +64,53 @@ def test_matrix_identity_and_order_are_repeatable() -> None:
     assert [row.seed for row in first.training_rows[:4]] == [7, 7, 7, 7]
 
 
+def test_resolved_publication_seed_policy_materializes_three_seeds() -> None:
+    policy = {
+        "seeds": [42, 43, 44],
+        "resolved": True,
+        "source": "pre_run_human_decision",
+        "posthoc_selection_forbidden": True,
+    }
+    matrix = generate_matrix(seeds=[44, 42, 43], resolved_seed_policy=policy)
+
+    assert matrix.seeds == (42, 43, 44)
+    assert matrix.counts == {
+        "training": 210,
+        "checkpoint_projection": 210,
+        "total": 420,
+    }
+    assert matrix.resolved_seed_policy == policy
+    assert {row.seed for row in matrix.training_rows} == {42, 43, 44}
+
+
+def test_ablation_classification_is_separate_from_core_matrix() -> None:
+    from pada3dacb.publication.experiment_matrix import build_ablation_plan
+
+    plan = build_ablation_plan(
+        seeds=[42, 43, 44],
+        primary=["no_proto", "no_pl", "no_concept", "no_anat"],
+        supplementary=["no_cons", "mean_pool"],
+        excluded=["no_domain_adaptation", "no_ctx_encoder", "full", "identity_ctx"],
+    )
+
+    assert plan.core_training_count == 210
+    assert plan.primary_training_count == 120
+    assert plan.supplementary_training_count == 60
+    assert plan.active_training_count == 180
+    assert plan.active_projection_count == 180
+    assert plan.excluded_cell_count == 120
+    assert plan.to_mapping()["section"] == "ablations"
+    assert plan.to_mapping()["training_invocation"] is False
+
+
+def test_checkpoint_projections_are_never_training_invocations() -> None:
+    policy = {"seeds": [42, 43, 44], "resolved": True, "source": "test"}
+    matrix = generate_matrix(seeds=[42, 43, 44], resolved_seed_policy=policy)
+
+    assert all(not row.training_invocation for row in matrix.projection_rows)
+    assert sum(row.training_invocation for row in matrix.rows) == 210
+
+
 def test_matrix_requires_explicit_seed_input() -> None:
     with pytest.raises(TypeError):
         generate_matrix()  # type: ignore[call-arg]

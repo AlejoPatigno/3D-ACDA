@@ -80,9 +80,17 @@ def get_baseline_spec(name: str) -> BaselineSpec:
 
 
 def build_baseline(name: str, config: Mapping[str, Any]) -> nn.Module:
-    """Construct an approved baseline after strict configuration validation."""
+    """Construct an approved historical or explicitly task-scoped baseline.
+
+    Historical calls retain the Phase 14 three-class contract.  A binary task is
+    routed to the separate task builder and cannot silently alter that registry.
+    """
     if not isinstance(config, Mapping):
         raise TypeError("baseline config must be a mapping")
+    if "task_id" in config or "task" in config:
+        from pada3dacb.binary import build_binary_baseline
+
+        return build_binary_baseline(name, config)
     spec = get_baseline_spec(name)
     allowed = set(spec.default_config)
     if spec.requires_roi_masks:
@@ -110,3 +118,10 @@ def build_baseline(name: str, config: Mapping[str, Any]) -> nn.Module:
         **parameter_metadata(model),
     }
     return model
+
+
+def build_task_baseline(name: str, config: Mapping[str, Any]) -> nn.Module:
+    """Build a baseline only from an explicit task-bound configuration."""
+    from pada3dacb.binary import build_binary_baseline
+
+    return build_binary_baseline(name, config)

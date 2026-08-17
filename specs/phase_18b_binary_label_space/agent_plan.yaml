@@ -1,0 +1,151 @@
+change_id: phase-18b-binary-label-space
+status: planning
+execution_mode: bounded_exception
+owners:
+  - opencode
+  - claude-code
+  - fallback-review-1
+  - codex
+  - fallback-review-2
+
+# Kimi and Gemini CLI are unavailable in this session. Fresh independent fallback
+# reviews are substituted and recorded, but remain non-authorizing until they
+# pass the complete acceptance checklist.
+fallback_substitution:
+  recorded: true
+  unavailable_reviewers: [kimi, gemini-cli]
+  substitutions:
+    - fallback_owner: fallback-review-1
+      substituted_for: kimi
+      independence_required: true
+      status: pending
+      authorizing: false
+      authorization_condition: "Pass the complete Phase 18B acceptance checklist; no pass is currently claimed."
+    - fallback_owner: fallback-review-2
+      substituted_for: gemini-cli
+      independence_required: true
+      status: pending
+      authorizing: false
+      authorization_condition: "Pass the complete Phase 18B acceptance checklist; no pass is currently claimed."
+
+action_graph:
+  - id: contract_package
+    owner: opencode
+    status: planned
+    depends_on: []
+    deliverables:
+      - requirements.md
+      - label_mapping.md
+      - cohort_semantics.md
+    completion_rule: "Planning text only; no implementation or execution claim."
+
+  - id: interface_and_migration_design
+    owner: claude-code
+    status: planned
+    depends_on:
+      - contract_package
+    deliverables:
+      - design.md
+      - migration_inventory.md
+      - tensor_contracts.md
+      - prediction_schema.md
+      - freeze_impact.md
+    completion_rule: "Specification and synthetic contract-test planning only; production implementation remains gated."
+
+  - id: independent_spec_review_fallback_1
+    owner: fallback-review-1
+    substituted_for: kimi
+    status: pending
+    depends_on:
+      - contract_package
+      - interface_and_migration_design
+      - acceptance_gate_definition
+    deliverables:
+      - independent fallback review report
+    completion_rule: "Non-authorizing until the complete checklist passes; no pass is currently claimed."
+
+  - id: independent_spec_review_fallback_2
+    owner: fallback-review-2
+    substituted_for: gemini-cli
+    status: pending
+    depends_on:
+      - contract_package
+      - interface_and_migration_design
+      - acceptance_gate_definition
+    deliverables:
+      - independent fallback review report
+    completion_rule: "Non-authorizing until the complete checklist passes; no pass is currently claimed."
+
+  - id: synthetic_contract_test_planning
+    owner: codex
+    status: blocked
+    depends_on:
+      - independent_spec_review_fallback_1
+      - independent_spec_review_fallback_2
+      - oasis_semantics_gate
+    deliverables:
+      - synthetic contract-test plan only
+    completion_rule: "Planning only; no production implementation may start until OASIS semantics are verified and both substituted independent reviews pass."
+
+  - id: acceptance_gate_definition
+    owner: opencode
+    status: planned
+    depends_on:
+      - contract_package
+      - interface_and_migration_design
+    deliverables:
+      - acceptance.md
+      - evaluation_protocol.md
+      - sensitivity_protocol.md
+    completion_rule: "Executable criteria are defined; no criterion is marked passed."
+
+  - id: oasis_semantics_gate
+    owner: claude-code
+    status: blocked
+    depends_on: []
+    deliverables:
+      - approved canonical manifest reference
+      - metadata-generation provenance
+      - approved OASIS mapping policy
+    completion_rule: "Blocked until maintainer approval; null config and legacy loader evidence cannot satisfy this gate."
+
+gates:
+  independent_specification_review:
+    status: pending
+    required_reviewers: [fallback-review-1, fallback-review-2]
+    original_reviewers_unavailable: [kimi, gemini-cli]
+    fallback_substitution: true
+    fallback_authorizing: false
+    pass_condition: "Each fresh fallback independently passes the same complete acceptance checklist."
+  oasis_semantics:
+    status: blocked
+    required_evidence:
+      - canonical manifest
+      - metadata-generation provenance
+      - identifier and source-field policy
+      - accepted-value domain
+      - missing and out-of-domain policy
+      - duplicate, conflicting, and longitudinal policy
+      - unambiguous mapping
+  implementation:
+    status: blocked
+    prerequisites:
+      - independent_specification_review
+      - oasis_semantics
+  real_execution:
+    status: forbidden
+  publication_analysis:
+    status: forbidden
+  phase_19_execution:
+    status: forbidden
+
+state:
+  freeze_approved: false
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_19_forbidden: true
+  split_disposition: REGENERATE_BINARY_SPLITS_REQUIRED
+  historical_three_class_artifacts: preserved
+  supersession_marker: SUPERSEDED_BY_PHASE18B_BINARY_LABEL_SPACE
+  receipt_review_id: review-1d63ad8511d6bbf5
+  receipt_touched: false

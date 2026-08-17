@@ -1,5 +1,7 @@
 """Authorization-independent Phase 18 publication-freeze primitives."""
 
+from pada3dacb.binary import BINARY_ABLATIONS, BINARY_BASELINES
+
 from .canonical_json import (
     CANONICALIZATION_PROFILE,
     canonical_json,
@@ -7,6 +9,10 @@ from .canonical_json import (
     canonical_sha256,
     identity_sha256,
     sha256_identity,
+)
+from .experiment_matrix import (
+    AblationPlan,
+    build_ablation_plan,
 )
 from .schemas import (
     BlockerCode,
@@ -23,6 +29,9 @@ from .schemas import (
 )
 
 __all__ = [
+    "AblationPlan",
+    "BINARY_ABLATIONS",
+    "BINARY_BASELINES",
     "BlockerCode",
     "BlockerRecord",
     "CANONICALIZATION_PROFILE",
@@ -33,6 +42,7 @@ __all__ = [
     "MatrixStatus",
     "ValueClass",
     "ValueClassification",
+    "build_ablation_plan",
     "canonical_json",
     "canonical_json_bytes",
     "canonical_sha256",

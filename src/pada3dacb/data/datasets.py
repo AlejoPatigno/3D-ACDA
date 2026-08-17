@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import Dataset
 
 from pada3dacb.artifacts.cache import load_model_ready_tensor
+from pada3dacb.binary import BinarySubjectRecord
 from pada3dacb.data.artifact_wiring import validate_subject_records
 from pada3dacb.data.records import SubjectRecord, requirement_profile
 from pada3dacb.exceptions import DatasetContractError
@@ -157,3 +158,85 @@ def build_supervised_datasets_for_fold(source_folds_manifest: str | Path, fold: 
     train = _records_for_manifest(selected[selected["partition"] == "source_train"], records)
     validation = _records_for_manifest(selected[selected["partition"] == "source_validation"], records)
     return SupervisedMRIDataset(train, profile=profile, **kwargs), SupervisedMRIDataset(validation, profile=profile, **kwargs)
+
+
+class _BinaryRecordDataset(Dataset):
+    """Dataset adapter for the task-scoped binary spine."""
+
+    def __init__(self, records: Iterable[BinarySubjectRecord], expected_spatial_shape: tuple[int, int, int] = (128, 128, 128), *, validate_on_initialization: bool = True) -> None:
+        self.records = list(records)
+        self.expected_spatial_shape = tuple(expected_spatial_shape)
+        if not self.records:
+            raise DatasetContractError("Binary dataset cannot be empty")
+        for record in self.records:
+            if not isinstance(record, BinarySubjectRecord):
+                raise DatasetContractError("Binary dataset accepts only BinarySubjectRecord values")
+            if record.binary_label not in (0, 1):
+                raise DatasetContractError("Binary dataset labels must be 0 or 1")
+            if validate_on_initialization and not record.derivative_path.is_file():
+                raise DatasetContractError(f"Binary derivative file does not exist: {record.derivative_path}")
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def _base(self, record: BinarySubjectRecord) -> dict[str, object]:
+        return {"x": load_model_ready_tensor(record.derivative_path, self.expected_spatial_shape), "subject_id": record.subject_hash, "subject_hash": record.subject_hash, "cohort": record.cohort}
+
+
+class BinaryLabeledSourceDataset(_BinaryRecordDataset):
+    """Labeled source dataset; provenance is available only on the source side."""
+
+    def __getitem__(self, index: int) -> dict[str, object]:
+        record = self.records[index]
+        return {**self._base(record), "y": torch.tensor(record.binary_label, dtype=torch.long), "binary_label_name": record.binary_label_name, "original_label_name": record.original_label_name, "mapping_contract": record.mapping_contract}
+
+
+class BinaryTargetAdaptationDataset(_BinaryRecordDataset):
+    """Unlabeled target adapter with the exact four-key firewall contract."""
+
+    def __getitem__(self, index: int) -> dict[str, object]:
+        return self._base(self.records[index])
+
+
+class BinaryLabeledTargetDataset(_BinaryRecordDataset):
+    """Read-only target evaluation adapter; never use for adaptation loaders."""
+
+    def __getitem__(self, index: int) -> dict[str, object]:
+        record = self.records[index]
+        return {**self._base(record), "y": torch.tensor(record.binary_label, dtype=torch.long), "binary_label_name": record.binary_label_name, "original_label_name": record.original_label_name, "mapping_contract": record.mapping_contract}
+
+
+def _binary_record_map(records: Iterable[BinarySubjectRecord]) -> dict[str, BinarySubjectRecord]:
+    return {f"{record.cohort}:{record.subject_hash}": record for record in records}
+
+
+def _binary_records_for_manifest(frame: pd.DataFrame, records: Iterable[BinarySubjectRecord]) -> list[BinarySubjectRecord]:
+    mapping = _binary_record_map(records)
+    selected: list[BinarySubjectRecord] = []
+    for _, row in frame.iterrows():
+        identity = f"{row['cohort']}:{row['subject_hash']}"
+        if identity not in mapping:
+            raise DatasetContractError(f"Binary split row does not resolve to a subject record: {identity}.")
+        selected.append(mapping[identity])
+    return selected
+
+
+def build_binary_source_datasets_for_fold(source_folds_manifest: str | Path, fold: int, records: Iterable[BinarySubjectRecord], **kwargs: object) -> tuple[BinaryLabeledSourceDataset, BinaryLabeledSourceDataset]:
+    frame = pd.read_csv(source_folds_manifest)
+    if {"class_label", "label_index"}.intersection(frame.columns):
+        raise DatasetContractError("Historical three-class split columns are not valid for binary datasets")
+    selected = frame[frame["fold"] == int(fold)]
+    train = _binary_records_for_manifest(selected[selected["partition"] == "source_train"], records)
+    validation = _binary_records_for_manifest(selected[selected["partition"] == "source_validation"], records)
+    return BinaryLabeledSourceDataset(train, **kwargs), BinaryLabeledSourceDataset(validation, **kwargs)
+
+
+def build_binary_target_datasets(target_split_manifest: str | Path, records: Iterable[BinarySubjectRecord], **kwargs: object) -> tuple[BinaryTargetAdaptationDataset, BinaryLabeledTargetDataset]:
+    frame = pd.read_csv(target_split_manifest)
+    if {"class_label", "label_index"}.intersection(frame.columns):
+        raise DatasetContractError("Historical three-class split columns are not valid for binary datasets")
+    adaptation = _binary_records_for_manifest(frame[frame["partition"] == "target_adaptation"], records)
+    evaluation = _binary_records_for_manifest(frame[frame["partition"] == "target_evaluation"], records)
+    if {record.subject_hash for record in adaptation} & {record.subject_hash for record in evaluation}:
+        raise DatasetContractError("Binary target adaptation and evaluation assignments overlap")
+    return BinaryTargetAdaptationDataset(adaptation, **kwargs), BinaryLabeledTargetDataset(evaluation, **kwargs)

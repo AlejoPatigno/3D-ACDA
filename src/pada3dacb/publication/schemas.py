@@ -314,8 +314,8 @@ def _validate_matrix_row(row: MatrixRow) -> None:
         raise ValueError("cohorts do not match the canonical direction")
     if row.fold not in range(5):
         raise ValueError("fold must be one of 0..4")
-    if row.seed != 42:
-        raise ValueError("seed must be the canonical Phase 18 seed 42")
+    if type(row.seed) is not int:
+        raise TypeError("seed must be an explicit integer")
     _require_bool(row.training_invocation, "training_invocation")
     _require_bool(row.completion_allowed, "completion_allowed")
     if row.completion_allowed:

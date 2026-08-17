@@ -133,6 +133,12 @@ def test_matrix_row_rejects_non_bool_authorization_flags(
         replace(_training_row(), **{field_name: value})
 
 
+def test_schema_matrix_row_accepts_a_resolved_non_default_seed() -> None:
+    row = replace(_training_row(), seed=43)
+
+    assert validate_matrix_row(row) == ()
+
+
 def test_matrix_row_requires_kind_specific_parent_and_invocation() -> None:
     training = MatrixRow(
         matrix_id="a" * 64,

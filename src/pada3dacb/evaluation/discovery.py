@@ -389,3 +389,95 @@ class BaselineCombinedAdapter:
             "baseline-combined-v1", self.schema_family, tuple(input_files),
             (record,), tuple(predictions), (), tuple(issues),
         )
+
+
+# Task-scoped binary discovery is additive; historical adapters above retain their
+# three-class schema families and configuration surface.
+@dataclass(frozen=True)
+class BinaryDiscoveryConfig:
+    runs_root: Path
+    task: str = "cn_vs_impaired"
+    expected_task_hash: str | None = None
+    pattern: str = "**/*.json"
+    expected_folds: tuple[int, ...] = ()
+    expected_seeds: tuple[int, ...] = ()
+    class_order: tuple[str, str] = ("CN", "Impaired")
+
+    def validate(self) -> None:
+        if self.task != "cn_vs_impaired":
+            raise ValueError("binary discovery requires task=cn_vs_impaired")
+        if self.class_order != ("CN", "Impaired"):
+            raise ValueError("binary discovery class order must be CN, Impaired")
+        if self.expected_task_hash is not None and not self.expected_task_hash:
+            raise ValueError("expected_task_hash cannot be empty")
+        for name, values in (("expected_folds", self.expected_folds), ("expected_seeds", self.expected_seeds)):
+            if len(values) != len(set(values)) or any(isinstance(value, bool) or value < 0 for value in values):
+                raise ValueError(f"{name} must contain unique non-negative integers")
+
+
+@dataclass(frozen=True)
+class BinaryCandidate:
+    path: Path
+    task: str
+    task_hash: str | None
+    fold: int | None
+    seed: int | None
+    rows: tuple[Mapping[str, Any], ...]
+
+
+def _read_binary_candidate(path: Path) -> Mapping[str, Any] | None:
+    try:
+        if path.suffix.lower() == ".csv":
+            with path.open(newline="", encoding="utf-8") as stream:
+                return {"rows": tuple(csv.DictReader(stream))}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError, csv.Error):
+        return None
+    if isinstance(payload, list):
+        return {"rows": tuple(payload)}
+    return payload if isinstance(payload, Mapping) else None
+
+
+def discover_binary_candidates(config: BinaryDiscoveryConfig) -> tuple[BinaryCandidate, ...]:
+    """Discover only files explicitly bound to the binary task and task hash."""
+    config.validate()
+    root = config.runs_root
+    if not root.is_dir():
+        return ()
+    candidates: list[BinaryCandidate] = []
+    for path in sorted(root.glob(config.pattern)):
+        if not path.is_file():
+            continue
+        payload = _read_binary_candidate(path)
+        if payload is None:
+            continue
+        task = payload.get("task", payload.get("task_id"))
+        order = payload.get("class_order")
+        if task != config.task or order not in (None, ["CN", "Impaired"], ("CN", "Impaired")):
+            continue
+        task_hash = payload.get("task_hash")
+        if config.expected_task_hash is not None and task_hash != config.expected_task_hash:
+            continue
+        raw_rows = payload.get("rows", payload.get("predictions", ()))
+        if not isinstance(raw_rows, (list, tuple)):
+            continue
+        rows = tuple(row for row in raw_rows if isinstance(row, Mapping))
+        if not rows:
+            continue
+        fold = payload.get("fold")
+        seed = payload.get("seed")
+        try:
+            fold = None if fold is None else int(fold)
+            seed = None if seed is None else int(seed)
+        except (TypeError, ValueError):
+            continue
+        if config.expected_folds and fold not in config.expected_folds:
+            continue
+        if config.expected_seeds and seed not in config.expected_seeds:
+            continue
+        candidates.append(BinaryCandidate(path, task, task_hash, fold, seed, rows))
+    return tuple(candidates)
+
+
+def discover_task_scoped_candidates(config: BinaryDiscoveryConfig) -> tuple[BinaryCandidate, ...]:
+    return discover_binary_candidates(config)

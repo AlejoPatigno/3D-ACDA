@@ -1,5 +1,9 @@
 # Verification Report: phase-16-concept-validation
 
+> **Historical snapshot — Not current lifecycle authority**
+>
+> The status and evidence below are preserved as a time-scoped Phase 16 record. For current lifecycle status, use `openspec/changes/phase-17-ablations/state.yaml` and `docs/IMPLEMENTATION_AUDIT.md`.
+
 **Status:** COMPLETED
 
 ## Executive summary
@@ -27,4 +31,4 @@ Phase 16 is verified and the native review receipt is approved. Native lineage `
 3. Full-suite validation of the final post-fix tree is recommended at delivery time as routine CI evidence; the prior full pytest timeout was superseded by the focused suite plus native receipt approval.
 4. Real evaluation stays closed (`authorized: false`); CFS/ACS/PCS/QIS remain blocked without authoritative equations and are out of scope for Phase 16 closure.
 
-Phase 17 has not started. No review lifecycle command, archive, commit, push, PR, release, or publication action was taken by verification beyond the approved lifecycle transitions.
+Phase 17 synthetic-only implementation and closure evidence are recorded separately; this verification did not execute Phase 17, real-cohort evaluation, publication, or Phase 18 lifecycle work.

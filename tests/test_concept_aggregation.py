@@ -63,12 +63,16 @@ def _record(
     )
 
 
+def _source_record(subject: str, *, seed: int, fold: int) -> ConceptSubjectRecord:
+    return replace(_record(subject, seed=seed, fold=fold), cohort="ADNI")
+
+
 def test_source_oof_keeps_one_record_per_subject_and_seed() -> None:
     records = [
-        _record("subject-a", seed=42, fold=0),
-        _record("subject-b", seed=42, fold=1),
-        _record("subject-a", seed=99, fold=1),
-        _record("subject-b", seed=99, fold=0),
+        _source_record("subject-a", seed=42, fold=0),
+        _source_record("subject-b", seed=42, fold=1),
+        _source_record("subject-a", seed=99, fold=1),
+        _source_record("subject-b", seed=99, fold=0),
     ]
 
     aggregated = aggregate_source_oof(
@@ -88,7 +92,7 @@ def test_source_oof_keeps_one_record_per_subject_and_seed() -> None:
 
 
 def test_source_oof_rejects_duplicate_subject_seed() -> None:
-    record = _record("subject-a", seed=42, fold=0)
+    record = _source_record("subject-a", seed=42, fold=0)
 
     with pytest.raises(ValueError, match="duplicate source OOF record"):
         aggregate_source_oof(
@@ -100,9 +104,9 @@ def test_source_oof_rejects_duplicate_subject_seed() -> None:
 
 def test_source_oof_rejects_missing_fold_for_seed() -> None:
     records = (
-        _record("subject-a", seed=42, fold=0),
-        _record("subject-b", seed=42, fold=1),
-        _record("subject-a", seed=99, fold=0),
+        _source_record("subject-a", seed=42, fold=0),
+        _source_record("subject-b", seed=42, fold=1),
+        _source_record("subject-a", seed=99, fold=0),
     )
 
     with pytest.raises(ValueError, match="seed 99 folds"):
@@ -203,7 +207,7 @@ def test_target_aggregation_rejects_mixed_transfer_directions() -> None:
 
 
 def test_source_oof_rejects_mixed_transfer_directions() -> None:
-    adni_to_oasis = _record("subject-a", seed=42, fold=0)
+    adni_to_oasis = _source_record("subject-a", seed=42, fold=0)
     oasis_to_adni = replace(
         _record("subject-b", seed=42, fold=0),
         direction=Direction.OASIS_TO_ADNI,
@@ -221,3 +225,21 @@ def test_source_oof_rejects_mixed_transfer_directions() -> None:
                 _digest("subject-b"),
             ),
         )
+
+
+def test_source_oof_rejects_target_cohort_record() -> None:
+    target_record = _record("subject-a", seed=42, fold=0)
+
+    with pytest.raises(ValueError, match="source OOF cohort"):
+        aggregate_source_oof(
+            (target_record,),
+            expected_folds=(0,),
+            expected_subject_hashes=(_digest("subject-a"),),
+        )
+
+
+def test_target_aggregation_rejects_source_cohort_record() -> None:
+    source_record = _source_record("subject-a", seed=42, fold=0)
+
+    with pytest.raises(ValueError, match="target evaluation cohort"):
+        aggregate_target_evaluation((source_record,), expected_folds=(0,))

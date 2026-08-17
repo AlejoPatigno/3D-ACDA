@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import torch
 from torch import Tensor
@@ -19,8 +19,12 @@ from pada3dacb.adaptation.prototype import (
 from pada3dacb.adaptation.pseudo_label import PseudoLabelLoss
 from pada3dacb.exceptions import LossContractError
 
+if TYPE_CHECKING:
+    from pada3dacb.ablations.resolver import ResolvedAblationConfig
+
 DEFAULT_LAMBDA_PROTO = 1.0
 DEFAULT_LAMBDA_PL = 0.1
+BINARY_CLASS_COUNT = 2
 Stage = Literal["warm", "full"]
 
 
@@ -64,6 +68,8 @@ class PrototypePseudoAdaptationOutput:
     classes_with_both_prototypes: list[int]
     prototype_distance_mean: float | None
     adaptation_active: bool
+    prototype_active: bool = False
+    pseudo_label_active: bool = False
     source_prototypes: Tensor | None = None
     target_prototypes: Tensor | None = None
     valid_source_prototypes: Tensor | None = None
@@ -91,6 +97,51 @@ class PrototypePseudoAdaptationLoss:
             class_count=self.config.num_classes,
         )
 
+    @classmethod
+    def from_resolved(cls, contract: ResolvedAblationConfig) -> PrototypePseudoAdaptationLoss:
+        """Build the canonical adaptation loss from one resolved Phase 17 contract."""
+        from pada3dacb.ablations.registry import get_ablation_spec
+        from pada3dacb.ablations.schemas import InterventionKind
+
+        if contract.candidate_id not in {"no_proto", "no_pl", "no_cons", "no_concept", "no_anat"}:
+            raise LossContractError("only the five approved loss-component ablations are supported")
+        spec = get_ablation_spec(contract.candidate_id)
+        intervention = contract.intervention
+        expected_parameters = {
+            "no_proto": "lambda_proto",
+            "no_pl": "lambda_pl",
+            "no_cons": "lambda_cons",
+            "no_concept": "lambda_cbm",
+            "no_anat": "lambda_anat",
+        }
+        if (
+            intervention.kind is not InterventionKind.LOSS_OVERRIDE
+            or intervention.new_value != 0.0
+            or len(spec.changed_components) != 1
+            or intervention.parameter != expected_parameters[contract.candidate_id]
+        ):
+            raise LossContractError("resolved ablation must contain exactly its approved zero loss override")
+        canonical = {
+            "lambda_proto": 1.0,
+            "lambda_pl": 0.1,
+            "tau_p": 0.95,
+            "proto_margin": 1.0,
+            "lambda_sep": 0.1,
+        }
+        for name, expected in canonical.items():
+            if getattr(contract.losses, name) != (0.0 if name == intervention.parameter else expected):
+                raise LossContractError("resolved ablation contains an unapproved coefficient override")
+        return cls(
+            PrototypePseudoAdaptationConfig(
+                lambda_proto=contract.losses.lambda_proto,
+                lambda_pl=contract.losses.lambda_pl,
+                tau_p=contract.losses.tau_p,
+                proto_margin=contract.losses.proto_margin,
+                lambda_sep=contract.losses.lambda_sep,
+                num_classes=DEFAULT_PROTOTYPE_CLASS_COUNT,
+            )
+        )
+
     def __call__(self, z_src: Tensor, y_src: Tensor, z_tgt: Tensor, logits_c_tgt: Tensor, *, stage: Stage) -> PrototypePseudoAdaptationOutput:
         return self.forward(z_src, y_src, z_tgt, logits_c_tgt, stage=stage)
 
@@ -99,37 +150,43 @@ class PrototypePseudoAdaptationLoss:
         if stage == "warm":
             return _inactive_output(z_src, z_tgt, logits_c_tgt)
 
-        prototype = self.prototype_loss(z_src, y_src, z_tgt, logits_c_tgt)
-        pseudo_label = self.pseudo_label_loss(logits_c_tgt)
-        prototype_weighted = prototype.total * prototype.total.new_tensor(self.config.lambda_proto)
-        pseudo_label_weighted = pseudo_label.loss * pseudo_label.loss.new_tensor(self.config.lambda_pl)
+        prototype_active = self.config.lambda_proto > 0.0
+        pseudo_label_active = self.config.lambda_pl > 0.0
+        reference = z_tgt if torch.is_tensor(z_tgt) else logits_c_tgt
+        zero = _zero_scalar_adaptation(reference)
+        prototype = self.prototype_loss(z_src, y_src, z_tgt, logits_c_tgt) if prototype_active else None
+        pseudo_label = self.pseudo_label_loss(logits_c_tgt) if pseudo_label_active else None
+        prototype_raw = prototype.total if prototype is not None else zero
+        pseudo_label_raw = pseudo_label.loss if pseudo_label is not None else zero
+        prototype_weighted = prototype_raw * prototype_raw.new_tensor(self.config.lambda_proto)
+        pseudo_label_weighted = pseudo_label_raw * pseudo_label_raw.new_tensor(self.config.lambda_pl)
         total = prototype_weighted + pseudo_label_weighted
         _validate_scalar_loss(total, "prototype + pseudo-label adaptation total")
 
-        accepted_count = pseudo_label.accepted_count
-        rejected_count = pseudo_label.rejected_count
+        accepted_count = pseudo_label.accepted_count if pseudo_label is not None else 0
+        rejected_count = pseudo_label.rejected_count if pseudo_label is not None else 0
         acceptance_rate = accepted_count / int(logits_c_tgt.shape[0])
         confidence_mean_accepted = None
-        if accepted_count > 0:
+        if pseudo_label is not None and accepted_count > 0:
             confidence_mean_accepted = float(pseudo_label.confidence[pseudo_label.accepted].mean().item())
 
-        classes_with_source = _classes_from_mask(prototype.valid_source)
-        classes_with_target = _classes_from_mask(prototype.valid_target)
-        classes_with_both = _classes_from_mask(prototype.valid_source & prototype.valid_target)
+        classes_with_source = _classes_from_mask(prototype.valid_source) if prototype is not None else []
+        classes_with_target = _classes_from_mask(prototype.valid_target) if prototype is not None else []
+        classes_with_both = _classes_from_mask(prototype.valid_source & prototype.valid_target) if prototype is not None else []
         distance_mean = _prototype_distance_mean(
             prototype.source_prototypes,
             prototype.valid_source,
             prototype.target_prototypes,
             prototype.valid_target,
-        )
+        ) if prototype is not None else None
 
         return PrototypePseudoAdaptationOutput(
             total=total,
-            prototype_raw=prototype.total,
+            prototype_raw=prototype_raw,
             prototype_weighted=prototype_weighted,
-            prototype_alignment=prototype.alignment,
-            prototype_separation=prototype.separation,
-            pseudo_label_raw=pseudo_label.loss,
+            prototype_alignment=prototype.alignment if prototype is not None else zero,
+            prototype_separation=prototype.separation if prototype is not None else zero,
+            pseudo_label_raw=pseudo_label_raw,
             pseudo_label_weighted=pseudo_label_weighted,
             accepted_count=accepted_count,
             rejected_count=rejected_count,
@@ -140,13 +197,21 @@ class PrototypePseudoAdaptationLoss:
             classes_with_both_prototypes=classes_with_both,
             prototype_distance_mean=distance_mean,
             adaptation_active=True,
-            source_prototypes=prototype.source_prototypes,
-            target_prototypes=prototype.target_prototypes,
-            valid_source_prototypes=prototype.valid_source,
-            valid_target_prototypes=prototype.valid_target,
-            target_pseudo_labels=prototype.target_pseudo_labels,
-            accepted_target=prototype.accepted_target,
-            pseudo_label_confidence=pseudo_label.confidence,
+            prototype_active=prototype_active,
+            pseudo_label_active=pseudo_label_active,
+            source_prototypes=prototype.source_prototypes if prototype is not None else None,
+            target_prototypes=prototype.target_prototypes if prototype is not None else None,
+            valid_source_prototypes=prototype.valid_source if prototype is not None else None,
+            valid_target_prototypes=prototype.valid_target if prototype is not None else None,
+            target_pseudo_labels=(
+                prototype.target_pseudo_labels if prototype is not None
+                else pseudo_label.pseudo_labels if pseudo_label is not None else None
+            ),
+            accepted_target=(
+                prototype.accepted_target if prototype is not None
+                else pseudo_label.accepted if pseudo_label is not None else None
+            ),
+            pseudo_label_confidence=pseudo_label.confidence if pseudo_label is not None else None,
         )
 
 
@@ -192,6 +257,12 @@ def _validate_nonnegative_scalar(value: float, name: str) -> float:
 def _validate_scalar_loss(loss: Tensor, name: str) -> None:
     if loss.ndim != 0 or not torch.isfinite(loss):
         raise LossContractError(f"{name} must be a finite scalar.")
+
+
+def _zero_scalar_adaptation(reference: Tensor) -> Tensor:
+    if not torch.is_tensor(reference) or not reference.is_floating_point():
+        raise LossContractError("adaptation requires a floating-point tensor reference.")
+    return reference.sum() * 0.0
 
 
 def _zero_like_adaptation(z_src: Tensor, z_tgt: Tensor, logits_c_tgt: Tensor) -> Tensor:

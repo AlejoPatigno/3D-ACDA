@@ -42,6 +42,7 @@ line-length = 100
 target-version = "py310"
 extend-exclude = [
   "notebooks/archive",
+  "*.ipynb",
   "atlas_utils.py",
   "build_precomputed_artifacts.py",
   "concept_targets.py",

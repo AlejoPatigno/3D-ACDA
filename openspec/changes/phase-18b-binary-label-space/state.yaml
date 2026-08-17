@@ -1,0 +1,290 @@
+change_id: phase-18b-binary-label-space
+status: PHASE18B_IMPLEMENTATION_COMPLETE_EXTERNAL_BLOCKED
+implementation_status: complete
+proposal_file: openspec/changes/phase-18b-binary-label-space/proposal.md
+spec_file: openspec/changes/phase-18b-binary-label-space/specs/label-space/spec.md
+design_file: openspec/changes/phase-18b-binary-label-space/design.md
+tasks_file: openspec/changes/phase-18b-binary-label-space/tasks.md
+
+bounded_exception:
+  documentation_allowed: true
+  specification_maintenance_allowed: true
+  synthetic_contract_test_planning_allowed: true
+  implementation_preparation_allowed: true
+  production_implementation_allowed: true
+  implementation_authorization: explicit_current_maintainer_instruction
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_19_forbidden: true
+  native_lifecycle_claims_allowed: false
+  receipt_edits_allowed: false
+
+freeze_approved: false
+real_execution_authorized: false
+publication_authorized: false
+phase_19_forbidden: true
+
+specification_gate:
+  status: mathematical_review_pass_scientific_review_blocked
+  original_reviewers_unavailable: [kimi, gemini-cli]
+  reviewers:
+    - id: fallback-review-1
+      substituted_for: kimi
+      status: completed_mathematical_pass
+      authorizing: false
+    - id: fallback-review-2
+      substituted_for: gemini-cli
+      status: blocked_scientific_provenance
+      authorizing: false
+  fallback_substitution: true
+  substitution_recorded: true
+  pass_condition: "Both fresh fallbacks independently pass the complete Phase 18B acceptance checklist."
+  requirement: "No independent scientific/provenance pass is claimed; implementation status does not close this gate."
+
+# Structural evidence is verified, but external scientific/native approval is absent.
+oasis_gate:
+  status: blocked_external_scientific_approval
+  reason: intended ADNI source identity is known, but Kaggle mount resolution, metadata verification, external model-ready artifacts/provenance, and cryptographically/native-authority-bound OASIS approval remain unresolved
+  config_evidence:
+    root: external_user_supplied_dataset
+    metadata_csv: oasis_cross-sectional (1).csv
+    provenance_notebook: preprocess-adni-oasis.ipynb
+    csv_sha256: b223c39f83d811356675e8711e9906b1cba95ea1a110f3117a61923a72d1d1f1
+    notebook_sha256: 588bc2a6c214fd99e2900dd45357ec2fa235cbe1670a1ab99c87c5bf2726e41b
+    visits: 436
+    canonical_persons: 416
+    longitudinal_duplicates: 20
+    canonical_person_counts:
+      CN: 316
+      Impaired: 100
+    target_adaptation_persons: 332
+    target_evaluation_persons: 84
+    person_intersection_count: 0
+    hmac_key_id_only: true
+    hmac_key_persisted: false
+  legacy_loader_evidence:
+    requires_id_or_subject_id_and_cdr: true
+    skips_missing_cdr: true
+    maps_cdr_zero_to_cn: true
+    maps_all_other_numeric_cdr_to_historical_ad: true
+  semantics_approved: false
+  evidence_verified: true
+  production_mapping_allowed: false
+  validate_only_mapping_allowed: true
+  real_splits_allowed: false
+  metadata_only_split_artifacts_allowed: true
+  no_oasis_mci_invention: true
+  ambiguous_unknown_missing_malformed_conflicting_policy: reject_or_exclude_pending_approval
+
+adni:
+  source_identity:
+    url: https://www.kaggle.com/datasets/sanjukaggling/adnidataset
+    kaggle_dataset_name: ADNI_dataset
+    resolved: true
+    mounted_filesystem_path: deferred_inside_kaggle
+    local_path_invented: false
+  metadata_candidate:
+    filename: ad_new_2_19_2026.csv
+    approved_canonical_manifest: false
+    schema_verified: false
+    hash_verified: false
+    verification_runtime: intended_kaggle_runtime
+  model_ready:
+    environment_variable: ADNI_MODEL_READY_ROOT
+    root: null
+    status: deferred_external_kaggle_generation
+    artifacts_present: false
+    fabricated_artifacts_allowed: false
+    per_person_hashes_present: false
+  mapping_contract:
+    CN: CN
+    MCI: Impaired
+    AD: Impaired
+  canonical_vocabulary_only: true
+  canonical_manifest_present: false
+  source_assignments_present: false
+  root: null
+  metadata_csv: null
+  counts_available: false
+  hashes_available: false
+  real_execution_blocked: true
+
+label_space:
+  task: binary
+  class_order: [CN, Impaired]
+  class_ids:
+    CN: 0
+    Impaired: 1
+  adni_mapping:
+    CN: CN
+    MCI: Impaired
+    AD: Impaired
+  canonical_adni_vocabulary_only: true
+  invalid_label_policy: reject
+  duplicate_subject_policy: exclude_pending_explicit_policy
+  conflicting_subject_diagnosis_policy: exclude_pending_explicit_policy
+  grouping_is_diagnostic_equivalence: false
+  provenance_required: true
+  ambiguous_or_unknown_policy: reject_or_exclude
+
+prediction_contract:
+  active_fields: [prob_cn, prob_impaired]
+  rejected_active_legacy_fields: [prob_mci, prob_ad]
+  float64_probability_sum_tolerance: 1.0e-6
+  float32_probability_sum_tolerance: 1.0e-5
+  argmax_tie_break: lower_class_index_CN
+  undefined_metric_policy: null_plus_reason_never_coerce
+
+target_label_firewall:
+  target_adaptation_label_free: true
+  target_evaluation_disjoint: true
+
+split:
+  disposition: REGENERATE_BINARY_SPLITS_REQUIRED
+  reuse_allowed_only_with_exact_binary_validity_proof: true
+  real_manifests_present: false
+  real_split_hashes_present: false
+  target_adaptation_persons: 332
+  target_evaluation_persons: 84
+  person_intersection_count: 0
+  binary_freeze_claimed: false
+
+model_contract:
+  task_classifier_logits: "(B,2) raw logits"
+  target_ids: [0, 1]
+  loss: "PyTorch-style CrossEntropyLoss; not BCEWithLogitsLoss, sigmoid, or one-logit BCE"
+  concept_outputs: [B, K]
+  cdan_dimension: "runtime z_dim * n_classes; (128,2) = 256; distinct configuration required"
+  cdan_gradient_to_z_and_p_required: true
+  prototype_pseudo_ids: [0, 1]
+  prototype_absent_class_cases_required: [0, 1]
+  empty_accepted_pseudo_set_loss: zero
+  coral_mmd: unchanged
+  old_three_class_checkpoints: fail_closed
+  partial_loading: prohibited
+
+identity_contract:
+  binary_bound_families:
+    - experiment
+    - split
+    - model_checkpoint
+    - training_metadata
+    - evaluation_result
+    - freeze
+  historical_three_class_collision: reject
+
+historical_phase_18:
+  three_class_artifacts_preserved: true
+  historical_files_modified: false
+  new_artifact_marker: SUPERSEDED_BY_PHASE18B_BINARY_LABEL_SPACE
+
+# This is a preserved review record, not a native Phase 18B lifecycle receipt.
+receipt:
+  review_id: review-1d63ad8511d6bbf5
+  touched: false
+
+native_lifecycle:
+  phase18b_receipt_present: false
+  previous_status_attempt: timed_out
+  mutation_outcome: not_started
+  receipt_fabricated: false
+
+implementation_evidence:
+  binary_task_scoped_implementation: true
+  data_spine_firewall_checkpoint: true
+  five_core_methods: true
+  aagn_and_fastersnn: true
+  six_effective_loss_ablations: true
+  prediction_evaluation_concept_routing: true
+  three_class_rejection: true
+  task_scoped_runtime: true
+  focused_tests: 83
+  full_tests: 1408
+  mathematical_review: PASS
+  scientific_provenance_review: BLOCKED
+
+claims:
+  implementation: true
+  production_implementation: true
+  tests: true
+  production_oasis_semantics: evidence_verified_but_not_approved
+  oasis_gate_pass: false
+  independent_review_pass: false
+  real_training: false
+  real_evaluation: false
+  publication_analysis: false
+  publication_results: false
+  real_class_counts: false
+  real_split_hashes: false
+  native_lifecycle_validation: false
+  receipt_mutation: false
+  binary_freeze: false
+  phase18b_closed: false
+
+action_graph:
+  - id: draft_contract
+    owner: opencode
+    status: complete
+    depends_on: []
+  - id: draft_design
+    owner: claude-code
+    status: complete
+    depends_on: [draft_contract]
+  - id: implementation_batches
+    owner: codex
+    status: complete
+    depends_on: [draft_contract, draft_design]
+    evidence: focused_tests_83_and_full_tests_1408
+  - id: mathematical_review
+    owner: independent-review
+    status: pass
+    authorizing: false
+    depends_on: [implementation_batches]
+  - id: scientific_provenance_review
+    owner: independent-review
+    status: blocked
+    authorizing: false
+    depends_on: [implementation_batches]
+    blockers:
+      - deferred_kaggle_mount_resolution_and_metadata_verification
+      - deferred_external_model_ready_artifacts_and_per_person_hashes
+      - missing_adni_canonical_manifest_and_verified_source_assignments
+      - missing_cryptographically_native_authority_bound_oasis_approval
+  - id: oasis_gate_resolution
+    owner: maintainer
+    status: blocked_external
+    depends_on: [scientific_provenance_review]
+  - id: binary_split_validation_or_regeneration
+    owner: maintainer
+    status: blocked_external
+    depends_on: [oasis_gate_resolution]
+  - id: native_lifecycle_closure
+    owner: native_lifecycle
+    status: not_started
+    depends_on: [scientific_provenance_review, binary_split_validation_or_regeneration]
+  - id: binary_freeze_authorization
+    owner: maintainer
+    status: blocked
+    depends_on: [native_lifecycle_closure]
+  - id: future_real_execution
+    owner: maintainer
+    status: forbidden_until_explicit_authorization
+    depends_on: [binary_freeze_authorization]
+
+authorization:
+  freeze_approved: false
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_19_forbidden: true
+
+closure:
+  phase18b_closed: false
+  implementation_complete: true
+  external_blockers_remaining: true
+  next_required_inputs:
+    - Kaggle-mounted ADNI_dataset path resolved in the intended runtime
+    - hash- and schema-verified ad_new_2_19_2026.csv bound as the approved canonical manifest
+    - externally generated ADNI model-ready artifacts with authoritative per-person hashes and provenance
+    - cryptographically/native-authority-bound OASIS approval
+    - binary cohort manifests/splits and native lifecycle closure result
+    - separate binary freeze approval

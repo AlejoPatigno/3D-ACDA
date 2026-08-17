@@ -700,3 +700,24 @@ def summarize_baseline_cv_results(
         for column in grouped.columns
     ]
     return per_fold, grouped
+
+
+def build_task_scoped_binary_baseline(name: str, config: dict[str, Any]) -> torch.nn.Module:
+    """Build one binary baseline without changing the historical experiment path."""
+    from pada3dacb.binary import build_binary_baseline
+
+    return build_binary_baseline(name, config)
+
+
+def validate_task_scoped_binary_baseline(name: str, config: dict[str, Any]) -> dict[str, Any]:
+    """Validate one binary baseline on synthetic CPU tensors only."""
+    from pada3dacb.binary import validate_binary_baseline
+
+    return validate_binary_baseline(name, config)
+
+
+def validate_task_scoped_binary_baselines(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Validate AAGN and FasterSNN under the explicit binary task contract."""
+    from pada3dacb.binary import BINARY_BASELINES
+
+    return {name: validate_task_scoped_binary_baseline(name, config) for name in BINARY_BASELINES}

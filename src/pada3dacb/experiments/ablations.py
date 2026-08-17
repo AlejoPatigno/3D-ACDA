@@ -13,7 +13,7 @@ import platform
 import stat
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +34,7 @@ from pada3dacb.ablations.registry import (
     list_ablations,
 )
 from pada3dacb.ablations.schemas import sha256_payload
+from pada3dacb.binary import binary_ablation_plan
 from pada3dacb.exceptions import ExperimentValidationError
 from pada3dacb.experiments.run_manifest import ablation_output_path, atomic_json, sha256_file
 from pada3dacb.losses import CorePADA3DACBLoss
@@ -965,7 +966,7 @@ def _synthetic_loaders(config: AblationExperimentConfig, seed: int) -> tuple[Dat
     source = [
         {
             "x": source_x[index],
-            "y": torch.tensor(index % 3, dtype=torch.long),
+            "y": torch.tensor(index % kwargs["num_classes"], dtype=torch.long),
             "c_target": torch.full((num_rois,), 0.5, dtype=torch.float32),
             "g_bar": torch.full((num_rois,), 0.25, dtype=torch.float32),
         }
@@ -993,6 +994,9 @@ def _validate_synthetic(
     seed_everything(seed)
     resolved = resolve_ablation_config(config.base_for_direction(direction), requested_name)
     kwargs = _model_kwargs(config)
+    task_id = config.payload.get("task_id", config.base.get("task_id"))
+    binary_task = isinstance(task_id, str) and task_id.strip().lower() == "cn_vs_impaired"
+    binary_plan = binary_ablation_plan(resolved.candidate_id) if binary_task else None
     if resolved.candidate_id == "mean_pool":
         model = build_mean_pool_model(**kwargs)
     else:
@@ -1019,7 +1023,7 @@ def _validate_synthetic(
         core = (
             base_core
             if resolved.candidate_id == "mean_pool"
-            else ComposedCoreLoss(base_core, resolved)
+            else ComposedCoreLoss(base_core, resolved, binary_plan=binary_plan)
         )
         core_output = core(
             source_output,
@@ -1035,12 +1039,18 @@ def _validate_synthetic(
                 tau_p=resolved.losses.tau_p,
                 proto_margin=resolved.losses.proto_margin,
                 lambda_sep=resolved.losses.lambda_sep,
-                num_classes=3,
+                num_classes=kwargs["num_classes"],
             )
         else:
             adaptation_method = ProposedPrototypePseudoAdaptationMethod(
                 resolved_ablation=resolved
             )
+        if binary_plan is not None:
+            adaptation_method.config = replace(
+                adaptation_method.config, num_classes=kwargs["num_classes"]
+            )
+            adaptation_method.loss = adaptation_method.loss.__class__(adaptation_method.config)
+            adaptation_method.binary_ablation_plan = binary_plan
         adaptation = adaptation_method.compute(
             source_output, target_output, "full", labels_src=source_batch["y"]
         )
@@ -1199,3 +1209,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def validate_task_scoped_binary_ablation(
+    candidate: str, config_path: str | Path = "configs/publication/phase18b_binary.yaml"
+) -> dict[str, Any]:
+    """Validate one approved binary ablation without entering the Phase 17 lifecycle."""
+    from pada3dacb.publication.binary_runtime import BinaryPublicationRuntime
+
+    return BinaryPublicationRuntime.from_path(config_path).validate_ablation(candidate)
+
+
+def validate_task_scoped_binary_ablations(
+    config_path: str | Path = "configs/publication/phase18b_binary.yaml",
+) -> dict[str, dict[str, Any]]:
+    """Validate all six approved binary ablations on synthetic CPU tensors only."""
+    from pada3dacb.publication.binary_runtime import BinaryPublicationRuntime
+
+    return BinaryPublicationRuntime.from_path(config_path).validate_all_ablations()

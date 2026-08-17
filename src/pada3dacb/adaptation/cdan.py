@@ -15,7 +15,8 @@ from pada3dacb.adaptation.outputs import AdaptationLossOutput
 from pada3dacb.exceptions import LossContractError
 from pada3dacb.models import PADA3DACBOutput
 
-CDAN_CLASS_COUNT = 3
+CDAN_CLASS_COUNT = 3  # historical default; binary callers pass the task-derived width
+BINARY_CDAN_CLASS_COUNT = 2
 
 
 def expected_conditional_dimension(embedding_dimension: int, class_count: int = CDAN_CLASS_COUNT) -> int:
@@ -27,12 +28,16 @@ def expected_conditional_dimension(embedding_dimension: int, class_count: int = 
     return embedding_dimension * class_count
 
 
-def conditional_outer_product(features: Tensor, class_probabilities: Tensor) -> Tensor:
-    """Build exact row-major flattened outer products without detaching inputs."""
+def conditional_outer_product(
+    features: Tensor, class_probabilities: Tensor, class_count: int | None = None
+) -> Tensor:
+    """Build row-major outer products using the runtime class count without detaching."""
     if features.ndim != 2 or class_probabilities.ndim != 2:
         raise LossContractError("CDAN features and probabilities must both be rank 2.")
-    if features.shape[0] != class_probabilities.shape[0] or class_probabilities.shape[1] != CDAN_CLASS_COUNT:
-        raise LossContractError("CDAN requires matched batches and exactly three class probabilities.")
+    if features.shape[0] != class_probabilities.shape[0] or class_probabilities.shape[1] <= 0:
+        raise LossContractError("CDAN requires matched batches and at least one class probability.")
+    if class_count is not None and class_probabilities.shape[1] != class_count:
+        raise LossContractError("CDAN probability width must match the runtime class count.")
     if features.device != class_probabilities.device:
         raise LossContractError("CDAN inputs must share a device.")
     if not features.is_floating_point() or not class_probabilities.is_floating_point():

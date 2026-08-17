@@ -52,6 +52,11 @@ _COMPUTATIONAL_COLUMNS = (
     "checkpoint_policy", "field", "value", "unit", "status", "reason",
     "source_file_sha256",
 )
+BINARY_SUBJECT_COLUMNS = (
+    "schema_version", "task_id", "direction", "checkpoint_policy", "method_id",
+    "subject_hash", "true_label", "prob_cn", "prob_impaired", "predicted_label", "status", "reason",
+)
+
 _SUBJECT_COLUMNS = (
     "schema_version", "protocol_version", "evaluation_identity", "analysis_mode",
     "direction", "checkpoint_policy", "method_id", "public_model_name", "subject_hash",
@@ -183,6 +188,30 @@ def evaluation_log_bytes(events: Sequence[Mapping[str, Any]]) -> bytes:
             raise ValueError("evaluation log event fields are invalid")
         lines.append(" | ".join(str(event[field]) for field in columns))
     return (("\n".join(lines) + "\n") if lines else "").encode("utf-8")
+
+
+def binary_subject_predictions_bytes(rows: Sequence[Mapping[str, Any]]) -> bytes:
+    """Serialize binary predictions without exposing historical class fields."""
+    projected = []
+    for row in rows:
+        if {"prob_mci", "prob_ad", "probability_MCI", "probability_AD"} & set(row):
+            raise ValueError("historical three-class probability fields are rejected")
+        projected.append({
+            "schema_version": "phase18b.prediction.v1",
+            "task_id": "cn_vs_impaired",
+            "direction": row.get("direction"),
+            "checkpoint_policy": row.get("checkpoint_policy", row.get("checkpoint_name")),
+            "method_id": row.get("method_id", row.get("method")),
+            "subject_hash": row.get("subject_hash"),
+            "true_label": row.get("true_label_index", row.get("true_label")),
+            "prob_cn": row.get("prob_cn"),
+            "prob_impaired": row.get("prob_impaired"),
+            "predicted_label": row.get("predicted_label_index", row.get("predicted_label")),
+            "status": row.get("status", "available"),
+            "reason": row.get("reason"),
+        })
+    _assert_private_safe(projected)
+    return csv_bytes(BINARY_SUBJECT_COLUMNS, projected)
 
 
 def subject_predictions_bytes(

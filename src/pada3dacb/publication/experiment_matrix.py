@@ -9,6 +9,27 @@ from typing import Any
 
 from .canonical_json import identity_sha256, is_sha256
 
+BINARY_TASK_ID = "cn_vs_impaired"
+BINARY_TASK_TYPE = "binary_classification"
+BINARY_CLASS_ORDER = ("CN", "Impaired")
+BINARY_CLASS_IDS = {"CN": 0, "Impaired": 1}
+BINARY_METHODS = ("source_only", "coral", "mmd", "cdan", "prototype_pseudo", "aagn", "faster_snn")
+BINARY_ABLATIONS = ("no_proto", "no_pl", "no_cons", "no_concept", "no_anat", "mean_pool")
+
+
+def binary_publication_matrix_contract() -> dict[str, Any]:
+    """Return the Phase 18B task contract without mutating historical matrix APIs."""
+    return {
+        "task_id": BINARY_TASK_ID,
+        "task_type": BINARY_TASK_TYPE,
+        "class_order": list(BINARY_CLASS_ORDER),
+        "class_ids": dict(BINARY_CLASS_IDS),
+        "methods": list(BINARY_METHODS),
+        "ablations": list(BINARY_ABLATIONS),
+        "checkpoint_selection": "source_validation_macro_f1_only",
+    }
+
+
 METHODS = (
     "source_only",
     "coral",
@@ -20,6 +41,19 @@ METHODS = (
 )
 DIRECTIONS = ("adni_to_oasis", "oasis_to_adni")
 FOLDS = (0, 1, 2, 3, 4)
+ABLATION_PRIMARY = ("no_proto", "no_pl", "no_concept", "no_anat")
+ABLATION_SUPPLEMENTARY = ("no_cons", "mean_pool")
+ABLATION_EXCLUDED = (
+    "no_domain_adaptation",
+    "no_ctx_encoder",
+    "full",
+    "identity_ctx",
+)
+_ABLATION_GROUPS = {
+    "primary": ABLATION_PRIMARY,
+    "supplementary": ABLATION_SUPPLEMENTARY,
+    "excluded": ABLATION_EXCLUDED,
+}
 PUBLIC_METHOD_NAMES = {
     "source_only": "PADA-3DACB Source-Only",
     "coral": "PADA-3DACB + CORAL",
@@ -161,6 +195,110 @@ class ExperimentMatrix:
             "rows": [row.to_mapping() for row in self.rows],
             "matrix_content_hash": matrix_content_hash(self),
         }
+
+
+@dataclass(frozen=True)
+class AblationPlan:
+    """Separate, non-training publication ablation classification payload."""
+
+    seeds: tuple[int, ...]
+    primary: tuple[str, ...]
+    supplementary: tuple[str, ...]
+    excluded: tuple[str, ...]
+    directions: tuple[str, ...] = DIRECTIONS
+    folds: tuple[int, ...] = FOLDS
+
+    @property
+    def core_training_count(self) -> int:
+        return len(METHODS) * len(self.directions) * len(self.folds) * len(self.seeds)
+
+    @property
+    def primary_training_count(self) -> int:
+        return len(self.primary) * len(self.directions) * len(self.folds) * len(self.seeds)
+
+    @property
+    def supplementary_training_count(self) -> int:
+        return len(self.supplementary) * len(self.directions) * len(self.folds) * len(self.seeds)
+
+    @property
+    def active_training_count(self) -> int:
+        return self.primary_training_count + self.supplementary_training_count
+
+    @property
+    def active_projection_count(self) -> int:
+        return self.active_training_count
+
+    @property
+    def excluded_cell_count(self) -> int:
+        return len(self.excluded) * len(self.directions) * len(self.folds) * len(self.seeds)
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "section": "ablations",
+            "planning_only": True,
+            "training_invocation": False,
+            "seeds": list(self.seeds),
+            "directions": list(self.directions),
+            "folds": list(self.folds),
+            "primary": list(self.primary),
+            "supplementary": list(self.supplementary),
+            "excluded": list(self.excluded),
+            "counts": {
+                "core_training": self.core_training_count,
+                "primary_training": self.primary_training_count,
+                "supplementary_training": self.supplementary_training_count,
+                "active_training": self.active_training_count,
+                "active_checkpoint_projection": self.active_projection_count,
+                "excluded_cells": self.excluded_cell_count,
+            },
+        }
+
+
+def build_ablation_plan(
+    *,
+    seeds: Sequence[int],
+    primary: Sequence[str] = ABLATION_PRIMARY,
+    supplementary: Sequence[str] = ABLATION_SUPPLEMENTARY,
+    excluded: Sequence[str] = ABLATION_EXCLUDED,
+    directions: Sequence[str] = DIRECTIONS,
+    folds: Sequence[int] = FOLDS,
+) -> AblationPlan:
+    """Validate a separate ablation classification without materializing runs."""
+
+    ordered_seeds = _validate_explicit_seeds(seeds)
+    canonical_directions = _validate_dimension(directions, DIRECTIONS, "direction")
+    canonical_folds = _validate_dimension(folds, FOLDS, "fold")
+    groups: dict[str, tuple[str, ...]] = {}
+    seen: set[str] = set()
+    for name, values in (
+        ("primary", primary),
+        ("supplementary", supplementary),
+        ("excluded", excluded),
+    ):
+        items = tuple(values)
+        if items != tuple(_ABLATION_GROUPS[name]):
+            raise MatrixValidationError(f"{name} ablation classification is not canonical")
+        if len(items) != len(set(items)) or seen.intersection(items):
+            raise MatrixValidationError("ablation classifications must be disjoint")
+        seen.update(items)
+        groups[name] = items
+    return AblationPlan(
+        seeds=ordered_seeds,
+        primary=groups["primary"],
+        supplementary=groups["supplementary"],
+        excluded=groups["excluded"],
+        directions=canonical_directions,
+        folds=canonical_folds,
+    )
+
+
+def _validate_explicit_seeds(seeds: Sequence[int]) -> tuple[int, ...]:
+    values = tuple(seeds)
+    if not values or any(type(seed) is not int for seed in values):
+        raise MatrixValidationError("seeds must be explicit integers")
+    if len(values) != len(set(values)):
+        raise MatrixValidationError("duplicate seed input")
+    return tuple(sorted(values))
 
 
 def generate_matrix(

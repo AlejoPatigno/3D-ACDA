@@ -311,6 +311,31 @@ def test_recovery_does_not_delete_arbitrary_namespace_directories(tmp_path, monk
     assert (arbitrary / "keep.txt").read_bytes() == b"keep"
 
 
+def test_controlled_entry_cleanup_retries_windows_permission_error(tmp_path, monkeypatch) -> None:
+    entry = tmp_path / ".results.stage.owner"
+    entry.mkdir()
+    (entry / ".pada3dacb-owner.json").write_text("{}", encoding="utf-8")
+    calls = 0
+    sleeps = []
+    real_rmtree = report_module.shutil.rmtree
+
+    def flaky_rmtree(path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise PermissionError("transient Windows sharing violation")
+        real_rmtree(path)
+
+    monkeypatch.setattr(report_module.shutil, "rmtree", flaky_rmtree)
+    monkeypatch.setattr(report_module.time, "sleep", sleeps.append)
+    monkeypatch.setattr(report_module.os, "name", "nt")
+
+    assert report_module._remove_controlled_entry(entry, tmp_path)
+    assert calls == 2
+    assert sleeps == [0.02]
+    assert not entry.exists()
+
+
 def test_concurrent_same_identity_reservations_are_distinct(tmp_path) -> None:
     plan, artifacts = _completed_bundle("same-identity")
 

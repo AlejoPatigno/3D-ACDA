@@ -24,7 +24,7 @@ The schema describes records; it does not assert that any record exists or that 
 | `FAILED` | Terminal cell failure recorded with evidence | future only |
 | `COMPLETED` | Later authorized run and independent verification fully passed | forbidden in this Phase 18 planning matrix |
 
-A row MUST NOT be deleted to hide a failure, and a missing/duplicate row invalidates the matrix.
+A row MUST NOT be deleted to hide a failure, and a missing/duplicate row invalidates the matrix. The selected pre-run seed policy is `[42,43,44]`, with source split random state `42`, target partition seed `42`, and posthoc selection forbidden. The schema accepts an explicit resolved seed policy rather than hard-coding seed `42`.
 
 ## Freeze record
 
@@ -60,7 +60,7 @@ MatrixRow:
   source_cohort: ADNI | OASIS
   target_cohort: ADNI | OASIS
   fold: 0 | 1 | 2 | 3 | 4
-  seed: 42
+  seed: 42 | 43 | 44
   checkpoint_policy: best_source_f1 for training | last for checkpoint_projection
   resolved_config_hash: sha256-or-unresolved
   split_assignment_hash: sha256-or-unresolved

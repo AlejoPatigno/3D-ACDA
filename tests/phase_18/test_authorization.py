@@ -163,7 +163,7 @@ def test_read_only_checker_reports_blockers_and_nonzero_closure() -> None:
     assert completed.returncode != 0
     assert "REAL RUN NOT AUTHORIZED" in completed.stdout
     assert "PASS — FAIL-CLOSED AUTHORIZATION VERIFIED" in completed.stdout
-    assert "lambda_proto" in completed.stdout
+    assert "BLOCKED_EXTERNAL_PROVENANCE" in completed.stdout
 
 
 def test_prepare_cli_prints_matrix_and_blockers_without_training() -> None:
@@ -187,7 +187,7 @@ def test_prepare_cli_prints_matrix_and_blockers_without_training() -> None:
     assert "source_only" in matrix.stdout
     assert "adni_to_oasis" in matrix.stdout
     assert blockers.returncode != 0
-    assert "lambda_proto" in blockers.stdout
+    assert "BLOCKED_EXTERNAL_PROVENANCE" in blockers.stdout
     assert "train" not in matrix.stdout.lower() or "training" in matrix.stdout.lower()
 
 
@@ -387,6 +387,71 @@ def test_approval_hashes_require_structured_external_attestations() -> None:
     assert "independent_review" in fields
     assert "statistical_review" in fields
     assert "human_authorization" in fields
+
+
+def test_publication_lambda_proto_requires_exact_float_type() -> None:
+    manifest = _manifest()
+    manifest["scientific_resolution"] = {"lambda_proto": True}
+
+    result = check_authorization(manifest)
+
+    assert any(
+        blocker.code == "scientific_value_mismatch"
+        and blocker.field == "scientific_resolution.lambda_proto"
+        for blocker in result.blockers
+    )
+
+
+def test_publication_lambda_proto_must_match_frozen_value() -> None:
+    manifest = _manifest()
+    manifest["scientific_resolution"] = {"lambda_proto": 999.0}
+
+    result = check_authorization(manifest)
+
+    assert any(
+        blocker.code == "scientific_value_mismatch"
+        and blocker.field == "scientific_resolution.lambda_proto"
+        for blocker in result.blockers
+    )
+
+
+def test_publication_seed_policy_requires_exact_integer_metadata() -> None:
+    manifest = _manifest()
+    manifest["seed_policy"] = [42.0, 43, 44]
+    manifest["resolved_seed_policy"] = {
+        "resolved": True,
+        "seeds": [42.0, 43, 44],
+        "source": "pre_run_human_decision",
+        "source_split_random_state": 42.0,
+        "target_partition_seed": 42,
+        "predeclared": True,
+        "posthoc_selection_forbidden": True,
+    }
+
+    result = check_authorization(manifest)
+
+    assert any(
+        blocker.code == "seed_policy_mismatch"
+        and blocker.field == "seed_policy"
+        for blocker in result.blockers
+    )
+
+
+def test_publication_seed_policy_rejects_arbitrary_resolved_seed_sets() -> None:
+    manifest = _manifest()
+    manifest["seed_policy"] = [7, 42]
+    manifest["resolved_seed_policy"] = {
+        "resolved": True,
+        "seeds": [7, 42],
+        "source": "external",
+    }
+
+    result = check_authorization(manifest)
+
+    assert any(
+        blocker.code == "seed_policy_mismatch" and blocker.field == "seed_policy"
+        for blocker in result.blockers
+    )
 
 
 def test_top_level_seed_policy_must_match_matrix_seed_set() -> None:

@@ -98,4 +98,4 @@ Real execution does not authorize publication metrics, manuscript tables, statis
 
 ## Current blockers
 
-`lambda_proto`, checked-in CORAL/MMD/CDAN parameters, publication ablation selection, canonicalization conformance evidence, real assignments/artifact hashes, content-level assignment disjointness, privacy/data access, hardware budget, command hash, independent approval, and human authorization are unresolved. The gate therefore remains `blocked`; no matrix or real-run authorization may be emitted while any one remains unresolved.
+Scientific values, including `lambda_proto=1.0` and the CORAL/MMD/CDAN ledger, are resolved as pre-run decisions. The gate remains `blocked` because canonicalization implementation identity, real assignments/artifact hashes, content-level assignment disjointness, privacy/data access, hardware budget, command hash, independent approval, native receipt, and human authorization are absent. The publication ablation classification is recorded separately and carries no execution or metric authorization.

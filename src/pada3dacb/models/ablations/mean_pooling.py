@@ -54,8 +54,11 @@ class MeanPoolPADA3DACB(nn.Module):
         validate_inputs: bool = True,
     ) -> None:
         super().__init__()
+        if num_classes not in {2, 3}:
+            raise ModelContractError("PADA-3DACB supports only binary or historical three-class heads.")
+        self.class_order = ("CN", "Impaired") if num_classes == 2 else ("CN", "MCI", "AD")
         if num_classes != len(self.class_order):
-            raise ModelContractError("PADA-3DACB has the fixed class order CN/MCI/AD.")
+            raise ModelContractError("mean-pool class order does not match classifier cardinality.")
         if min(num_rois, feature_dim, token_dim, base_channels, concept_hidden_dim) <= 0:
             raise ModelContractError("All model dimensions must be positive.")
         self.num_rois = num_rois

@@ -1,0 +1,36 @@
+# Phase 18B binary task identity. Metadata/contract validation only; no real run.
+phase: 18B
+task_id: cn_vs_impaired
+task_type: binary_classification
+class_order: [CN, Impaired]
+class_ids:
+  CN: 0
+  Impaired: 1
+class_to_index:
+  CN: 0
+  Impaired: 1
+n_classes: 2
+model:
+  name: PADA-3DACB
+  num_classes: 2
+mapping_contract: phase-18b-binary-v1
+split_disposition: REGENERATE_BINARY_SPLITS_REQUIRED
+methods:
+  - source_only
+  - coral
+  - mmd
+  - cdan
+  - prototype_pseudo
+mode: validate_only
+ablations: [no_proto, no_pl, no_cons, no_concept, no_anat, mean_pool]
+training:
+  real_run: false
+  predictive_evaluation: false
+  publication_metrics: false
+  device: cpu
+authorization:
+  freeze_approved: false
+  real_execution_authorized: false
+  publication_authorized: false
+  phase_19_forbidden: true
+historical_supersession_marker: SUPERSEDED_BY_PHASE18B_BINARY_LABEL_SPACE

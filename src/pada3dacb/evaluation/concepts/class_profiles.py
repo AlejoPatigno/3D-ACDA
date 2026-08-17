@@ -5,6 +5,8 @@ from __future__ import annotations
 import numpy as np
 
 from .schemas import (
+    BINARY_CONCEPT_CLASS_ORDER,
+    BINARY_CONCEPT_TASK_ID,
     ClassConditionalProfile,
     FoldEnsembleRecord,
     SeedEnsembleRecord,
@@ -137,6 +139,90 @@ def compute_class_profiles(
         )
         profiles.append(profile)
 
+    return profiles
+
+
+def _binary_source_label(record: object) -> str:
+    """Return the original label token for explicit binary routing metadata."""
+    name = getattr(record, "label_name", None)
+    if name in {"CN", "MCI", "AD", "Impaired"}:
+        return str(name)
+    label = getattr(record, "true_label", None)
+    if label == 0:
+        return "CN"
+    if label == 1:
+        return "Impaired"
+    if label == 2:
+        return "AD"
+    raise ValueError("binary concept records must use CN, Impaired, MCI, or AD labels")
+
+
+def binary_label_for_record(record: object) -> int:
+    """Map retained historical labels to the fixed task label space."""
+    return 0 if _binary_source_label(record) == "CN" else 1
+
+
+def compute_binary_source_label_support(records: list) -> dict[str, int]:
+    """Count source labels for provenance without exposing them as active axes."""
+    counts = {"CN": 0, "MCI": 0, "AD": 0, "Impaired": 0}
+    for record in records:
+        counts[_binary_source_label(record)] += 1
+    return {key: counts[key] for key in ("CN", "MCI", "AD") if counts[key] or key != "Impaired"}
+
+
+def compute_binary_class_profiles(
+    records: list,
+    *,
+    task_id: str = BINARY_CONCEPT_TASK_ID,
+    bootstrap_replicates: int = 10000,
+    bootstrap_seed: int = 12345,
+) -> list[ClassConditionalProfile]:
+    """Group retained vectors by the binary task without regenerating targets.
+
+    Historical MCI and AD labels are routed to the single ``Impaired`` support
+    bucket.  They are never returned as publication class axes.
+    """
+    if task_id != BINARY_CONCEPT_TASK_ID:
+        raise ValueError("binary concept profiles require task_id='cn_vs_impaired'")
+    if not records:
+        return [
+            ClassConditionalProfile(label, index, 0, (), (), (), (), (), ValueStatus.UNAVAILABLE, "zero_support")
+            for index, label in enumerate(BINARY_CONCEPT_CLASS_ORDER)
+        ]
+    profiles: list[ClassConditionalProfile] = []
+    binary_labels = [binary_label_for_record(record) for record in records]
+    for class_index, class_label in enumerate(BINARY_CONCEPT_CLASS_ORDER):
+        class_records = [record for record, label in zip(records, binary_labels, strict=True) if label == class_index]
+        if not class_records:
+            profiles.append(ClassConditionalProfile(
+                class_label, class_index, 0, (), (), (), (), (), ValueStatus.UNAVAILABLE, "zero_support"
+            ))
+            continue
+        vectors = [
+            np.asarray([record.predicted_concepts for record in class_records], dtype=np.float64),
+            np.asarray([record.concept_targets for record in class_records], dtype=np.float64),
+            np.asarray([record.anatomical_targets for record in class_records], dtype=np.float64),
+        ]
+        if any(vector.ndim != 2 or vector.shape[0] == 0 or vector.shape[1] == 0 or not np.isfinite(vector).all() for vector in vectors):
+            raise ValueError("binary class profile vectors must be finite non-empty matrices")
+        widths = {vector.shape[1] for vector in vectors}
+        if len(widths) != 1:
+            raise ValueError("binary class profile vectors must have the same ROI width")
+        low, high = _bootstrap_mean_ci(
+            vectors[0], replicates=bootstrap_replicates, seed=bootstrap_seed + class_index
+        )
+        profiles.append(ClassConditionalProfile(
+            class_label=class_label,
+            class_index=class_index,
+            support=len(class_records),
+            mean_predicted_concepts=tuple(float(value) for value in vectors[0].mean(axis=0)),
+            mean_concept_targets=tuple(float(value) for value in vectors[1].mean(axis=0)),
+            mean_anatomical_targets=tuple(float(value) for value in vectors[2].mean(axis=0)),
+            bootstrap_ci_low=tuple(float(value) for value in low),
+            bootstrap_ci_high=tuple(float(value) for value in high),
+            status=ValueStatus.AVAILABLE,
+            reason=None,
+        ))
     return profiles
 
 

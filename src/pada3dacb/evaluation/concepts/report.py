@@ -19,6 +19,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import numpy as np
+
+from .anatomy import compute_all_anatomy
+from .class_profiles import compute_binary_class_profiles, compute_binary_source_label_support
+from .fidelity import compute_all_fidelity
 from .figures import (
     plot_anatomy_consistency_roi_heatmap,
     plot_class_conditional_profiles,
@@ -26,7 +31,10 @@ from .figures import (
     plot_head_agreement_matrix,
     plot_roi_stability_heatmap,
 )
+from .provenance import validate_binary_concept_compatibility
 from .schemas import (
+    BINARY_CONCEPT_CLASS_ORDER,
+    BINARY_CONCEPT_TASK_ID,
     CheckpointPolicy,
     Direction,
     MethodId,
@@ -44,6 +52,118 @@ class ConceptEvaluationPlan:
     intended_relative_paths: tuple[str, ...]
 
 
+def evaluate_binary_concept_records(
+    records: Sequence[Any],
+    *,
+    task_id: str,
+    task_hash: str | None = None,
+    expected_task_hash: str | None = None,
+    artifact_hashes: Mapping[str, Any] | None = None,
+    expected_artifact_hashes: Mapping[str, Any] | None = None,
+    expected_k: int | None = None,
+    roi_order: Sequence[Any] | None = None,
+    expected_roi_order: Sequence[Any] | None = None,
+    roi_order_hash: str | None = None,
+    expected_roi_order_hash: str | None = None,
+    atlas_hash: str | None = None,
+    expected_atlas_hash: str | None = None,
+    mask_hash: str | None = None,
+    expected_mask_hash: str | None = None,
+    refit: bool = False,
+    regenerate: bool = False,
+    bootstrap_replicates: int = 10000,
+    bootstrap_seed: int = 12345,
+) -> dict[str, Any]:
+    """Evaluate retained concept predictions in the Phase 18B task scope.
+
+    The only task-specific operation is routing historical CN/MCI/AD records
+    into CN versus Impaired descriptive support. ``c_target`` and ``g_bar``
+    are read directly from each record and passed to the existing fidelity and
+    anatomy implementations; no target, normalizer, mask, atlas, or anatomical
+    derivative is recomputed.
+    """
+    if task_id != BINARY_CONCEPT_TASK_ID:
+        raise ValueError("binary concept evaluation requires task_id='cn_vs_impaired'")
+    if not records:
+        raise ValueError("binary concept evaluation requires at least one record")
+    first_k = getattr(records[0], "K", None)
+    if expected_k is None:
+        expected_k = first_k
+    if isinstance(expected_k, bool) or not isinstance(expected_k, int) or expected_k <= 0:
+        raise ValueError("binary concept evaluation requires a positive K")
+    for record in records:
+        if getattr(record, "K", expected_k) != expected_k:
+            raise ValueError("binary concept record K does not match the established artifact K")
+    validate_binary_concept_compatibility(
+        task_id=task_id,
+        artifact_hashes=artifact_hashes,
+        expected_artifact_hashes=expected_artifact_hashes,
+        k=expected_k,
+        expected_k=expected_k,
+        roi_order=roi_order,
+        expected_roi_order=expected_roi_order,
+        roi_order_hash=roi_order_hash,
+        expected_roi_order_hash=expected_roi_order_hash,
+        atlas_hash=atlas_hash,
+        expected_atlas_hash=expected_atlas_hash,
+        mask_hash=mask_hash,
+        expected_mask_hash=expected_mask_hash,
+        task_hash=task_hash,
+        expected_task_hash=expected_task_hash,
+        refit=refit,
+        regenerate=regenerate,
+    )
+    predicted = np.asarray([record.predicted_concepts for record in records], dtype=np.float64)
+    c_target = np.asarray([record.concept_targets for record in records], dtype=np.float64)
+    g_bar = np.asarray([record.anatomical_targets for record in records], dtype=np.float64)
+    if predicted.shape != (len(records), expected_k):
+        raise ValueError("predicted concept vectors do not match K")
+    # These calls are the historical calculations, not binary replacements.
+    fidelity = compute_all_fidelity(predicted, c_target)
+    anatomy = compute_all_anatomy(predicted, g_bar)
+    profiles = compute_binary_class_profiles(
+        list(records), bootstrap_replicates=bootstrap_replicates, bootstrap_seed=bootstrap_seed
+    )
+    return {
+        "task_id": BINARY_CONCEPT_TASK_ID,
+        "class_order": BINARY_CONCEPT_CLASS_ORDER,
+        "profiles": profiles,
+        "fidelity": fidelity,
+        "anatomy": anatomy,
+        "provenance": {
+            "task_hash": task_hash,
+            "source_label_support": compute_binary_source_label_support(list(records)),
+            "targets_reused": True,
+            "concept_target_recomputed": False,
+            "anatomical_target_recomputed": False,
+            "normalizer_refit": False,
+            "roi_masks_regenerated": False,
+            "active_class_axes": BINARY_CONCEPT_CLASS_ORDER,
+        },
+    }
+
+
+# Explicitly named alias for integrations that use the task as the entry point.
+evaluate_binary_concepts = evaluate_binary_concept_records
+
+
+def build_binary_concept_output_plan(
+    evaluation_identity: str,
+    analysis_mode: str,
+    methods: Sequence[MethodId],
+    directions: Sequence[Direction],
+    checkpoint_policies: Sequence[CheckpointPolicy],
+    included_methods: tuple[MethodId, ...],
+    include_artifact_index: bool = True,
+) -> ConceptEvaluationPlan:
+    """Build a binary-only output plan without changing historical plans."""
+    return build_concept_output_plan(
+        evaluation_identity, analysis_mode, methods, directions,
+        checkpoint_policies, included_methods, include_artifact_index,
+        task_id=BINARY_CONCEPT_TASK_ID,
+    )
+
+
 def build_concept_output_plan(
     evaluation_identity: str,
     analysis_mode: str,
@@ -52,6 +172,7 @@ def build_concept_output_plan(
     checkpoint_policies: Sequence[CheckpointPolicy],
     included_methods: tuple[MethodId, ...],
     include_artifact_index: bool = True,
+    task_id: str | None = None,
 ) -> ConceptEvaluationPlan:
     """Build exact output manifest for concept evaluation."""
     paths = [
@@ -119,6 +240,17 @@ def build_concept_output_plan(
                 f"{base}/tables/method_status.csv",
             ])
 
+    if task_id == BINARY_CONCEPT_TASK_ID:
+        legacy_axes = ("mci", "ad")
+        paths = [
+            path for path in paths
+            if not any(f"/class_profiles/{axis}_" in path for axis in legacy_axes)
+        ]
+        binary_profile_paths = []
+        for path in tuple(paths):
+            if "/class_profiles/cn_" in path:
+                binary_profile_paths.append(path.replace("/cn_", "/impaired_"))
+        paths.extend(binary_profile_paths)
     paths = sorted(paths)
     if include_artifact_index:
         paths.append("artifact_index.json")
@@ -162,6 +294,7 @@ def build_completion_manifest(
     created_utc: str,
     completed_utc: str,
     disposition: str = "completed",
+    task_id: str | None = None,
 ) -> bytes:
     """Build identity-bound completion manifest over every non-manifest artifact."""
     expected = set(plan.intended_relative_paths)
@@ -195,7 +328,11 @@ def build_completion_manifest(
         "methods": [m.value for m in plan.methods],
         "directions": [d.value for d in plan.directions],
         "checkpoint_policies": [p.logical_checkpoint for p in plan.checkpoint_policies],
-        "class_order": {"CN": 0, "MCI": 1, "AD": 2},
+        "class_order": (
+            {"CN": 0, "Impaired": 1}
+            if task_id == BINARY_CONCEPT_TASK_ID
+            else {"CN": 0, "MCI": 1, "AD": 2}
+        ),
         "bootstrap": {
             "replicates": bootstrap_replicates,
             "seed": bootstrap_seed,
@@ -608,8 +745,19 @@ def _owner_is_stale(
 def _remove_controlled_entry(entry: Path, parent: Path) -> bool:
     if entry.parent != parent or entry.is_symlink() or not entry.is_dir():
         return False
-    shutil.rmtree(entry)
-    return True
+    if os.name != "nt":
+        shutil.rmtree(entry)
+        return True
+    for attempt in range(10):
+        try:
+            shutil.rmtree(entry)
+        except PermissionError:
+            if attempt == 9:
+                raise
+            time.sleep(0.02)
+        else:
+            return True
+    return False
 
 
 def _recover_stale_backup(entry: Path, output_name: str) -> None:
@@ -902,6 +1050,14 @@ def verify_completed_output(
     return manifest
 
 
+def generate_binary_concept_report(*args: Any, **kwargs: Any) -> Path:
+    """Generate a binary-scoped report without touching historical paths."""
+    if kwargs.get("task_id", BINARY_CONCEPT_TASK_ID) != BINARY_CONCEPT_TASK_ID:
+        raise ValueError("binary concept report requires task_id='cn_vs_impaired'")
+    kwargs["task_id"] = BINARY_CONCEPT_TASK_ID
+    return generate_concept_report(*args, **kwargs)
+
+
 def generate_concept_report(
     output_root: str | Path,
     evaluation_identity: str,
@@ -926,6 +1082,7 @@ def generate_concept_report(
     overwrite: bool = False,
     writer: Any = None,
     replace: Any = os.replace,
+    task_id: str | None = None,
 ) -> Path:
     """
     Generate complete concept evaluation report.
@@ -934,7 +1091,8 @@ def generate_concept_report(
     """
     plan = build_concept_output_plan(
         evaluation_identity, analysis_mode, methods, directions,
-        checkpoint_policies, included_methods, include_artifact_index=True
+        checkpoint_policies, included_methods, include_artifact_index=True,
+        task_id=task_id,
     )
 
     required_metadata = {
@@ -983,7 +1141,7 @@ def generate_concept_report(
     artifacts["evaluation_manifest.json"] = build_completion_manifest(
         plan, ordinary_artifacts, identity_inputs, library_versions,
         bootstrap_replicates, bootstrap_seed, ci_policy, gate_states,
-        created_utc, completed_utc, disposition,
+        created_utc, completed_utc, disposition, task_id=task_id,
     )
     return commit_output(
         output_root, plan, artifacts, overwrite=overwrite,

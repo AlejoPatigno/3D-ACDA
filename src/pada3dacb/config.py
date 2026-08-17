@@ -11,11 +11,12 @@ from typing import Any
 
 import yaml
 
+from pada3dacb.binary import BINARY_CLASS_ORDER, BINARY_CLASS_TO_INDEX, BINARY_MAPPING_CONTRACT
 from pada3dacb.exceptions import ConfigurationError, UnsupportedExperimentError
 from pada3dacb.paths import is_forbidden_hardcoded_path, resolve_path
 
 PROPOSED_MODEL_NAME = "PADA-3DACB"
-ALLOWED_METHODS = {"source_only", "coral", "mmd", "cdan", "prototype_pseudo", "baseline"}
+ALLOWED_METHODS = {"source_only", "coral", "mmd", "cdan", "prototype_pseudo", "baseline", "ablation"}
 ALLOWED_COHORTS = {"ADNI", "OASIS"}
 
 
@@ -34,7 +35,7 @@ def _clean_dict(value: Any) -> Any:
         return _clean_dict(dataclasses.asdict(value))
     if isinstance(value, dict):
         return {str(k): _clean_dict(v) for k, v in value.items() if v is not None}
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [_clean_dict(v) for v in value]
     return value
 
@@ -173,6 +174,16 @@ class ProjectConfig:
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     adaptation: dict[str, Any] = field(default_factory=dict)
     baseline: dict[str, Any] = field(default_factory=dict)
+    task_id: str | None = None
+    task_type: str | None = None
+    class_order: tuple[str, ...] | None = None
+    class_ids: dict[str, int] | None = None
+    mapping_contract: str | None = None
+    split_disposition: str | None = None
+    methods: tuple[str, ...] = ()
+    ablations: tuple[str, ...] = ()
+    authorization: dict[str, Any] = field(default_factory=dict)
+    historical_supersession_marker: str | None = None
     config_path: Path | None = field(default=None, repr=False, compare=False)
 
     @classmethod
@@ -183,16 +194,38 @@ class ProjectConfig:
         base_dir: Path | None = None,
         config_path: Path | None = None,
     ) -> ProjectConfig:
+        task_value = data.get("task_id", data.get("task"))
+        task_id = None if task_value is None else str(task_value).strip().lower()
+        if task_id in {"cn_vs_impaired", "cn_vs_impaired_task"}:
+            task_id = "cn_vs_impaired"
+        task_type = data.get("task_type")
+        if task_id == "cn_vs_impaired" and task_type is None:
+            task_type = "binary_classification"
+        raw_model = _as_mapping(data.get("model"), "model")
+        if task_id == "cn_vs_impaired" and "num_classes" not in raw_model:
+            raw_model = {**raw_model, "num_classes": 2}
+        raw_order = data.get("class_order")
+        raw_ids = data.get("class_ids")
         return cls(
             experiment=ExperimentConfig.from_dict(_as_mapping(data.get("experiment"), "experiment")),
             paths=PathsConfig.from_dict(_as_mapping(data.get("paths"), "paths"), base_dir),
             data=DataConfig.from_dict(_as_mapping(data.get("data"), "data"), base_dir),
             atlas=AtlasConfig.from_dict(_as_mapping(data.get("atlas"), "atlas"), base_dir),
-            model=ModelConfig.from_dict(_as_mapping(data.get("model"), "model")),
+            model=ModelConfig.from_dict(raw_model),
             training=TrainingConfig.from_dict(_as_mapping(data.get("training"), "training")),
             monitoring=MonitoringConfig.from_dict(_as_mapping(data.get("monitoring"), "monitoring")),
             adaptation=_as_mapping(data.get("adaptation"), "adaptation"),
             baseline=_as_mapping(data.get("baseline"), "baseline"),
+            task_id=task_id,
+            task_type=None if task_type is None else str(task_type),
+            class_order=None if raw_order is None else tuple(str(item) for item in raw_order),
+            class_ids=None if raw_ids is None else {str(key): int(value) for key, value in raw_ids.items()},
+            mapping_contract=data.get("mapping_contract"),
+            split_disposition=data.get("split_disposition"),
+            methods=tuple(str(item) for item in data.get("methods", ())),
+            ablations=tuple(str(item) for item in data.get("ablations", ())),
+            authorization=dict(_as_mapping(data.get("authorization"), "authorization")),
+            historical_supersession_marker=data.get("historical_supersession_marker"),
             config_path=config_path,
         )
 
@@ -200,6 +233,25 @@ class ProjectConfig:
         method = self.experiment.method
         if method not in ALLOWED_METHODS:
             raise UnsupportedExperimentError(f"Unsupported experiment method: {method}")
+
+        if self.task_id == "cn_vs_impaired":
+            if self.task_type != "binary_classification":
+                raise ConfigurationError("CN_vs_Impaired requires task_type='binary_classification'.")
+            if self.class_order != BINARY_CLASS_ORDER or self.class_ids != BINARY_CLASS_TO_INDEX:
+                raise ConfigurationError("CN_vs_Impaired requires the fixed CN=0, Impaired=1 class order.")
+            if self.mapping_contract != BINARY_MAPPING_CONTRACT:
+                raise ConfigurationError("CN_vs_Impaired requires the Phase 18B mapping contract.")
+            if self.model.num_classes != len(BINARY_CLASS_ORDER):
+                raise ConfigurationError("CN_vs_Impaired model configuration must derive num_classes=2 from the task.")
+            if self.split_disposition != "REGENERATE_BINARY_SPLITS_REQUIRED":
+                raise ConfigurationError("Binary publication configuration must require binary split regeneration.")
+            if (
+                self.authorization.get("freeze_approved") is not False
+                or self.authorization.get("real_execution_authorized") is not False
+                or self.authorization.get("publication_authorized") is not False
+                or self.authorization.get("phase_19_forbidden") is not True
+            ):
+                raise ConfigurationError("Phase 18B authorization flags must remain fail-closed.")
 
         if self.experiment.source_domain not in ALLOWED_COHORTS:
             raise ConfigurationError(f"Unknown source cohort: {self.experiment.source_domain}")
@@ -252,6 +304,16 @@ class ProjectConfig:
                 "monitoring": self.monitoring,
                 "adaptation": self.adaptation,
                 "baseline": self.baseline,
+                "task_id": self.task_id,
+                "task_type": self.task_type,
+                "class_order": self.class_order,
+                "class_ids": self.class_ids,
+                "mapping_contract": self.mapping_contract,
+                "split_disposition": self.split_disposition,
+                "methods": self.methods,
+                "ablations": self.ablations,
+                "authorization": self.authorization,
+                "historical_supersession_marker": self.historical_supersession_marker,
             }
         )
         if include_none:

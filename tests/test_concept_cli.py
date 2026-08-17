@@ -184,7 +184,7 @@ def test_authorized_real_cli_without_manifest_or_callback_stays_closed(tmp_path:
     assert code == ExitCode.CONFIGURATION_ERROR
 
 
-def test_authorized_real_cli_passes_capability_to_orchestration_seam(tmp_path: Path, monkeypatch) -> None:
+def test_authorized_real_cli_stays_gate_blocked_without_callbacks(tmp_path: Path, monkeypatch) -> None:
     config = yaml.safe_load(Path("configs/evaluation/concepts.yaml").read_text(encoding="utf-8"))
     gate = config["real_evaluation_gate"]
     gate["authorized"] = True
@@ -196,25 +196,18 @@ def test_authorized_real_cli_passes_capability_to_orchestration_seam(tmp_path: P
     (tmp_path / "manifest.json").write_text("{}", encoding="utf-8")
     (tmp_path / "runs").mkdir()
     (tmp_path / "artifacts").mkdir()
-    issued = object()
-    seen = {}
-
-    monkeypatch.setattr(concept_cli, "_issue_cli_capability", lambda *args: issued)
 
     def fake_real_orchestration(**kwargs):
-        seen.update(kwargs)
-        raise concept_cli.ConfigurationError("real evaluation is closed")
+        pytest.fail("real callback invoked")
 
     monkeypatch.setattr(concept_cli, "run_real_evaluation", fake_real_orchestration, raising=False)
+    monkeypatch.setattr(concept_cli, "_synthetic_fixture_metrics", lambda *_: pytest.fail("synthetic fallback invoked"))
 
-    code = concept_cli.main([
+    assert concept_cli.main([
         "--config", str(config_path),
         "--runs-root", str(tmp_path / "runs"),
         "--artifact-root", str(tmp_path / "artifacts"),
         "--direction", "adni_to_oasis",
         "--method", "source_only",
         "--validate-only",
-    ])
-
-    assert code == ExitCode.CONFIGURATION_ERROR
-    assert seen["capability"] is issued
+    ]) == ExitCode.CONFIGURATION_ERROR

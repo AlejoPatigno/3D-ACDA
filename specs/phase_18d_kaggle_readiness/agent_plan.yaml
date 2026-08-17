@@ -1,0 +1,119 @@
+change: phase-18d-kaggle-readiness
+artifact_type: sdd-planning
+language: en
+source_of_truth:
+  current_authority: docs/PHASE18B_REPORT.md
+  preserved_status: PHASE18B_IMPLEMENTATION_COMPLETE_EXTERNAL_BLOCKED
+  durable_artifact_store: openspec
+  engram_status: degraded_mem_doctor_sync_payload_defect
+scope:
+  included:
+    - Kaggle-only input discovery by observed contents
+    - resumable materialization and hash-verified reuse
+    - privacy-preserving provenance and readiness evidence
+    - canonical ADNI mapping and one-person/one-initial-MRI policy
+    - approved Phase 4 preprocessing reuse
+    - OASIS verification and BLOCKED_COHORT_MISMATCH behavior
+    - concept/anatomy reuse validation without refit or regeneration
+    - source folds and fixed target adaptation/evaluation partitions
+    - repository-side read-only importer and synthetic focused tests
+  excluded:
+    - real model training
+    - real predictive evaluation
+    - publication analysis
+    - Phase 19
+    - repository-side model-ready generation
+    - raw identifiers or secrets
+authorization:
+  authorized: false
+  real_execution_authorized: false
+  freeze_approved: false
+  publication_authorized: false
+  phase_19_forbidden: true
+states:
+  initial: KAGGLE_NOTEBOOKS_READY_FOR_EXECUTION
+  produced: KAGGLE_READINESS_EVIDENCE_PRODUCED
+  imported: KAGGLE_READINESS_EVIDENCE_IMPORTED
+  forbidden_prefix: REAL_RUN_READY
+  imported_transition_requires: repository_import_validation
+  closure_requires_independent_review: true
+notebooks:
+  - id: N00
+    path: 00_discover_kaggle_inputs.ipynb
+    owner: kaggle-discovery
+    depends_on: [18D-01]
+    writes: [source_provenance.json, metadata_manifest.json, privacy_report.json]
+    forbidden: [training, predictive_evaluation, publication_analysis, phase_19]
+  - id: N01
+    path: 01_materialize_kaggle_readiness.ipynb
+    owner: kaggle-materialization
+    depends_on: [N00]
+    writes: [subject_artifacts.jsonl, cohort_manifest.json]
+    may_generate_model_ready_only_in_kaggle: true
+    forbidden: [training, predictive_evaluation, publication_analysis, phase_19]
+  - id: N02
+    path: 02_verify_kaggle_readiness.ipynb
+    owner: kaggle-verification
+    depends_on: [N01]
+    writes: [splits_manifest.json, concept_anatomy_reuse.json, readiness_evidence_produced.json]
+    state_output: KAGGLE_READINESS_EVIDENCE_PRODUCED
+    forbidden: [training, predictive_evaluation, publication_analysis, phase_19]
+file_ownership:
+  - owner: planning-owner
+    paths: [specs/phase_18d_kaggle_readiness, openspec/changes/phase-18d-kaggle-readiness]
+  - owner: kaggle-discovery
+    paths: [notebooks/00_discover_kaggle_inputs.ipynb]
+  - owner: kaggle-materialization
+    paths: [notebooks/01_materialize_kaggle_readiness.ipynb]
+  - owner: kaggle-verification
+    paths: [notebooks/02_verify_kaggle_readiness.ipynb]
+  - owner: repository-import
+    paths: [scripts/import_kaggle_readiness.py]
+  - owner: repository-tests
+    paths: [tests/phase_18d]
+  - owner: validation-owner
+    paths: [validation-output]
+  - owner: independent-reviewer
+    paths: [review-artifact]
+actions:
+  - id: 18D-01
+    owner: planning-owner
+    depends_on: []
+  - id: 18D-02
+    owner: kaggle-discovery
+    depends_on: [18D-01]
+  - id: 18D-03
+    owner: kaggle-materialization
+    depends_on: [18D-02]
+  - id: 18D-04
+    owner: kaggle-materialization
+    depends_on: [18D-02]
+  - id: 18D-05
+    owner: kaggle-verification
+    depends_on: [18D-03, 18D-04]
+  - id: 18D-06
+    owner: kaggle-verification
+    depends_on: [18D-03, 18D-05]
+  - id: 18D-07
+    owner: kaggle-verification
+    depends_on: [18D-03]
+  - id: 18D-08
+    owner: repository-import
+    depends_on: [18D-05, 18D-06, 18D-07]
+  - id: 18D-09
+    owner: repository-tests
+    depends_on: [18D-08]
+  - id: 18D-10
+    owner: validation-owner
+    depends_on: [18D-08, 18D-09]
+  - id: 18D-11
+    owner: independent-reviewer
+    depends_on: [18D-10]
+  - id: 18D-12
+    owner: transaction-controller
+    depends_on: [18D-11]
+validation_commands:
+  - python -m pytest -q tests/phase_18d -p no:cacheprovider --basetemp=C:/p18d-focused
+  - python scripts/import_kaggle_readiness.py --validate-only --evidence-root "%KAGGLE_READINESS_EVIDENCE_ROOT%"
+  - python -m ruff check scripts/import_kaggle_readiness.py tests/phase_18d
+  - git diff --check

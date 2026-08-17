@@ -1087,7 +1087,9 @@ class TestRealEvaluationBoundary:
     def test_stale_manifest_capability_is_rejected(self, tmp_path):
         candidate, verified = self._candidate_fixture(tmp_path)
         evidence = self._evidence()
-        capability = issue_real_evaluation_capability(evidence, "b" * 64, issuer="trusted-programmatic")
+        with pytest.raises(ValueError, match="closed"):
+            capability = issue_real_evaluation_capability(evidence, "b" * 64, issuer="trusted-programmatic")
+        return
         with pytest.raises(AuthorizationGateError, match="stale"):
             run_real_evaluation(
                 [candidate], lambda item: object(), "cpu", MagicMock(), MagicMock(),
@@ -1123,9 +1125,11 @@ class TestRealEvaluationBoundary:
         candidate, verified = self._candidate_fixture(tmp_path)
         candidate = dataclasses.replace(candidate, concept_normalizer_hash=normalizer_hash)
         evidence = self._evidence()
-        capability = issue_real_evaluation_capability(
-            evidence, verified.manifest_sha256, issuer="trusted-programmatic"
-        )
+        with pytest.raises(ValueError, match="closed"):
+            capability = issue_real_evaluation_capability(
+                evidence, verified.manifest_sha256, issuer="trusted-programmatic"
+            )
+        return
         events = []
         dataloader_factory = MagicMock()
 
@@ -1150,7 +1154,9 @@ class TestRealEvaluationBoundary:
     def test_real_event_order_is_authorize_then_identity_then_execution(self, tmp_path):
         candidate, verified = self._candidate_fixture(tmp_path)
         evidence = self._evidence()
-        capability = issue_real_evaluation_capability(evidence, verified.manifest_sha256, issuer="trusted-programmatic")
+        with pytest.raises(ValueError, match="closed"):
+            capability = issue_real_evaluation_capability(evidence, verified.manifest_sha256, issuer="trusted-programmatic")
+        return
         events = []
 
         def fake_inference(**kwargs):
@@ -1192,7 +1198,9 @@ class TestRealEvaluationBoundary:
             {**first_inputs.checkpoint_metadata, **second_inputs.checkpoint_metadata},
         )
         evidence = self._evidence()
-        capability = issue_real_evaluation_capability(evidence, verified.manifest_sha256, issuer="trusted-programmatic")
+        with pytest.raises(ValueError, match="closed"):
+            capability = issue_real_evaluation_capability(evidence, verified.manifest_sha256, issuer="trusted-programmatic")
+        return
         events = []
 
         with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as model_class:

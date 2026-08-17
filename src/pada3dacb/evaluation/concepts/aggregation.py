@@ -8,7 +8,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .class_profiles import binary_label_for_record, compute_binary_source_label_support
 from .schemas import (
+    BINARY_CONCEPT_TASK_ID,
     ConceptSubjectRecord,
     FoldEnsembleRecord,
     SeedEnsembleRecord,
@@ -50,6 +52,20 @@ def _require_aggregation_axes(records: Sequence[ConceptSubjectRecord]) -> None:
                 raise ValueError(f"inconsistent {field_name} across aggregation records")
 
 
+def _require_direction_cohort(
+    records: Sequence[ConceptSubjectRecord],
+    *,
+    cohort_index: int,
+    aggregation_name: str,
+) -> None:
+    for record in records:
+        expected_cohort = record.direction.cohorts[cohort_index]
+        if record.cohort != expected_cohort:
+            raise ValueError(
+                f"{aggregation_name} cohort must match direction cohort {expected_cohort}"
+            )
+
+
 def _require_consistent(records: Sequence[ConceptSubjectRecord | FoldEnsembleRecord]) -> None:
     base = records[0]
     for record in records[1:]:
@@ -74,6 +90,11 @@ def aggregate_source_oof(
 ) -> dict[tuple[str, int], ConceptSubjectRecord]:
     """Validate true OOF membership and retain one row per subject and seed."""
     _require_aggregation_axes(records)
+    _require_direction_cohort(
+        records,
+        cohort_index=0,
+        aggregation_name="source OOF",
+    )
     expected = set(_validate_expected_axis(expected_folds, "expected_folds"))
     expected_subjects = set(expected_subject_hashes)
     if not expected or not expected_subjects:
@@ -114,6 +135,11 @@ def aggregate_target_evaluation(
 ]:
     """Aggregate target rows across folds first and seeds second."""
     _require_aggregation_axes(records)
+    _require_direction_cohort(
+        records,
+        cohort_index=1,
+        aggregation_name="target evaluation",
+    )
     expected_fold_tuple = tuple(sorted(_validate_expected_axis(expected_folds, "expected_folds")))
     if expected_seeds is not None:
         expected_seeds = _validate_expected_axis(expected_seeds, "expected_seeds")
@@ -200,6 +226,52 @@ def aggregate_target_evaluation(
         )
 
     return fold_ensembles, seed_ensembles
+
+
+@dataclass(frozen=True)
+class BinaryConceptAggregationResult:
+    """Task-scoped view retaining immutable concept artifacts byte-for-byte."""
+
+    records: tuple[object, ...]
+    source_label_support: Mapping[str, int]
+    task_id: str = BINARY_CONCEPT_TASK_ID
+
+
+def aggregate_binary_concept_records(
+    records: Sequence[object],
+    *,
+    task_id: str = BINARY_CONCEPT_TASK_ID,
+) -> BinaryConceptAggregationResult:
+    """Validate binary routing while retaining each original target vector.
+
+    This helper deliberately does not average ``concept_targets`` or
+    ``anatomical_targets``. Fold/seed aggregation remains the historical
+    operation; this task-scoped wrapper only validates its binary publication
+    view and records source-label support as provenance metadata.
+    """
+    if task_id != BINARY_CONCEPT_TASK_ID:
+        raise ValueError("binary concept aggregation requires task_id='cn_vs_impaired'")
+    retained = tuple(records)
+    if not retained:
+        raise ValueError("binary concept aggregation requires at least one record")
+    base_k = getattr(retained[0], "K", None)
+    if isinstance(base_k, bool) or not isinstance(base_k, int) or base_k <= 0:
+        raise ValueError("binary concept records require a positive K")
+    for record in retained:
+        binary_label_for_record(record)
+        if getattr(record, "K", None) != base_k:
+            raise ValueError("binary concept records must share K")
+        for field_name in ("predicted_concepts", "concept_targets", "anatomical_targets"):
+            values = getattr(record, field_name, None)
+            if values is None or len(values) != base_k:
+                raise ValueError(f"binary concept record {field_name} must have length K")
+        attention = getattr(record, "attention_alpha", None)
+        if attention is not None and len(attention) != base_k:
+            raise ValueError("binary concept record attention_alpha must have length K")
+    return BinaryConceptAggregationResult(
+        records=retained,
+        source_label_support=compute_binary_source_label_support(list(retained)),
+    )
 
 
 def validate_aggregation(

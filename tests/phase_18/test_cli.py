@@ -44,7 +44,7 @@ def test_checker_is_nonzero_and_reports_fail_closed_closure() -> None:
     assert result.returncode != 0
     assert "REAL RUN NOT AUTHORIZED" in result.stdout
     assert "PASS — FAIL-CLOSED AUTHORIZATION VERIFIED" in result.stdout
-    assert "lambda_proto" in result.stdout
+    assert "BLOCKED_EXTERNAL_PROVENANCE" in result.stdout
     assert "native_receipt" in result.stdout
 
 
@@ -60,7 +60,7 @@ def test_prepare_cli_prints_matrix_and_blockers_without_opening_runtime_paths() 
     assert "BLOCKERS:" in matrix.stdout
     assert blockers.returncode != 0
     assert "BLOCKERS:" in blockers.stdout
-    assert "lambda_proto" in blockers.stdout
+    assert "BLOCKED_EXTERNAL_PROVENANCE" in blockers.stdout
     assert "REAL RUN AUTHORIZED" not in matrix.stdout
 
 
@@ -143,6 +143,15 @@ def test_cli_outputs_are_json_matrix_or_explicit_blocker_text_only() -> None:
     matrix_text, _, blocker_text = result.stdout.partition("BLOCKERS:")
     document = json.loads(matrix_text)
 
-    assert len(document["rows"]) == 140
+    assert len(document["rows"]) == 420
+    assert document["counts"] == {
+        "training": 210,
+        "checkpoint_projection": 210,
+        "total": 420,
+    }
+    assert document["seeds"] == [42, 43, 44]
+    assert document["resolved_seed_policy"]["seeds"] == [42, 43, 44]
+    assert document["ablations"]["section"] == "ablations"
+    assert document["ablations"]["training_invocation"] is False
     assert blocker_text.startswith("\n")
     assert "authorization" in blocker_text.lower()

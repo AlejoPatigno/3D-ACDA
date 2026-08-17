@@ -45,6 +45,60 @@ class ConceptNormalizerHash(str):
     """SHA-256 hash of concept normalizer JSON."""
 
 
+# Phase 18B is an additive task scope.  These constants intentionally live next
+# to the historical concept schemas so callers cannot infer class order from
+# observed records or from the legacy three-class configuration.
+BINARY_CONCEPT_TASK_ID = "cn_vs_impaired"
+BINARY_CONCEPT_CLASS_ORDER = ("CN", "Impaired")
+BINARY_CONCEPT_CLASS_TO_INDEX = {"CN": 0, "Impaired": 1}
+BINARY_CONCEPT_MAPPING_CONTRACT = "phase-18b-binary-v1"
+
+
+@dataclass(frozen=True)
+class BinaryConceptEvaluationConfig:
+    """Explicit task scope for binary concept evaluation over retained artifacts."""
+
+    task_id: str = BINARY_CONCEPT_TASK_ID
+    class_order: tuple[str, ...] = BINARY_CONCEPT_CLASS_ORDER
+    class_to_index: Mapping[str, int] = field(
+        default_factory=lambda: dict(BINARY_CONCEPT_CLASS_TO_INDEX)
+    )
+    mapping_contract: str = BINARY_CONCEPT_MAPPING_CONTRACT
+    task_hash: str | None = None
+    refit: bool = False
+    regenerate: bool = False
+
+    def __post_init__(self) -> None:
+        if self.task_id != BINARY_CONCEPT_TASK_ID:
+            raise ConfigurationError(
+                "binary concept evaluation requires task_id='cn_vs_impaired'"
+            )
+        if tuple(self.class_order) != BINARY_CONCEPT_CLASS_ORDER:
+            raise ConfigurationError("binary concept class order must be CN, Impaired")
+        if dict(self.class_to_index) != BINARY_CONCEPT_CLASS_TO_INDEX:
+            raise ConfigurationError("binary concept class IDs must be CN=0 and Impaired=1")
+        if self.mapping_contract != BINARY_CONCEPT_MAPPING_CONTRACT:
+            raise ConfigurationError("binary concept mapping contract is incompatible")
+        if self.refit:
+            raise ConfigurationError("binary concept evaluation does not permit refit")
+        if self.regenerate:
+            raise ConfigurationError("binary concept evaluation does not permit regeneration")
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> BinaryConceptEvaluationConfig:
+        if not isinstance(value, Mapping):
+            raise ConfigurationError("binary concept evaluation config must be a mapping")
+        return cls(
+            task_id=value.get("task_id", ""),
+            class_order=tuple(value.get("class_order", ())),
+            class_to_index=value.get("class_to_index", value.get("class_ids", {})),
+            mapping_contract=value.get("mapping_contract", ""),
+            task_hash=value.get("task_hash"),
+            refit=bool(value.get("refit", value.get("fit", False))),
+            regenerate=bool(value.get("regenerate", value.get("regeneration", False))),
+        )
+
+
 REAL_EVALUATION_CAPABILITY_SCHEMA_VERSION = "phase16-real-evaluation-capability-v1"
 _REAL_CAPABILITY_ISSUER_TOKEN = object()
 _REAL_CAPABILITY_EVIDENCE = (
@@ -83,34 +137,14 @@ def issue_real_evaluation_capability(
     *,
     issuer: str,
 ) -> RealEvaluationCapability:
-    """Issue a capability only for complete, canonical authorization evidence."""
-    if not isinstance(authorization_evidence, Mapping):
-        raise ValueError("authorization evidence must be a mapping")
-    if authorization_evidence.get("authorized") is not True:
-        raise ValueError("authorization evidence must explicitly authorize real evaluation")
-    for name in _REAL_CAPABILITY_EVIDENCE:
-        entry = authorization_evidence.get(name)
-        if (
-            not isinstance(entry, Mapping)
-            or entry.get("resolved") is not True
-            or not isinstance(entry.get("sha256"), str)
-        ):
-            raise ValueError(f"authorization evidence is incomplete: {name}")
-        validate_sha256(entry["sha256"], f"authorization evidence {name}.sha256")
-    validate_sha256(manifest_sha256, "manifest sha256")
-    if not isinstance(issuer, str) or not issuer.strip():
-        raise ValueError("capability issuer must be a non-empty label")
-    return RealEvaluationCapability(
-        REAL_EVALUATION_CAPABILITY_SCHEMA_VERSION,
-        manifest_sha256,
-        canonical_sha256(authorization_evidence),
-        issuer,
-        _REAL_CAPABILITY_ISSUER_TOKEN,
+    """Keep real capability issuance closed until an external issuer exists."""
+    raise ValueError(
+        "real evaluation capability issuance is closed: external authorization issuer is not configured"
     )
 
 
 def _is_issued_real_evaluation_capability(value: object) -> bool:
-    return isinstance(value, RealEvaluationCapability) and value._issuer_token is _REAL_CAPABILITY_ISSUER_TOKEN
+    return False
 
 
 PROVENANCE_MANIFEST_SCHEMA_VERSION = "phase16-concept-provenance-v1"
@@ -487,9 +521,16 @@ class ConceptSubjectRecord:
         ):
             if value < 0:
                 raise ValueError(f"{name} must be nonnegative")
-        label_names = {0: "CN", 1: "MCI", 2: "AD"}
+        if len(self.latent_probabilities) not in {2, 3} or len(self.concept_probabilities) != len(self.latent_probabilities):
+            raise ValueError("task probabilities must contain either two binary or three historical classes")
+        label_names = (
+            {0: "CN", 1: "Impaired"}
+            if len(self.latent_probabilities) == 2
+            else {0: "CN", 1: "MCI", 2: "AD"}
+        )
         if self.true_label not in label_names:
-            raise ValueError("true_label must be 0, 1, or 2")
+            message = "true_label must be 0, 1, or 2" if len(self.latent_probabilities) == 3 else "true_label is outside the declared task label space"
+            raise ValueError(message)
         if self.label_name != label_names[self.true_label]:
             raise ValueError("label_name does not match true_label")
         expected_source, expected_target = self.direction.cohorts
@@ -521,11 +562,6 @@ class ConceptSubjectRecord:
         for name, vec in roi_vectors:
             if len(vec) != self.K:
                 raise ValueError(f"{name} length {len(vec)} != K={self.K}")
-        if len(self.latent_probabilities) != 3:
-            raise ValueError("latent_probabilities must have 3 entries")
-        if len(self.concept_probabilities) != 3:
-            raise ValueError("concept_probabilities must have 3 entries")
-
         for name, values in [
             *roi_vectors,
             ("latent_probabilities", self.latent_probabilities),
@@ -552,8 +588,10 @@ class ConceptSubjectRecord:
                 raise ValueError(f"{name} must be in [0, 1]")
             if not np.isclose(probabilities.sum(), 1.0, rtol=0.0, atol=1e-6):
                 raise ValueError(f"{name} must sum to one")
-            if prediction not in {0, 1, 2}:
-                raise ValueError(f"{name.removesuffix('_probabilities')}_prediction must be 0, 1, or 2")
+            if prediction not in set(range(len(values))):
+                if len(values) == 3:
+                    raise ValueError(f"{name.removesuffix('_probabilities')}_prediction must be 0, 1, or 2")
+                raise ValueError(f"{name.removesuffix('_probabilities')}_prediction is outside the task label space")
             if prediction != int(np.argmax(probabilities)):
                 raise ValueError(
                     f"{name.removesuffix('_probabilities')}_prediction must equal probability argmax"
@@ -678,8 +716,8 @@ class ConceptEvaluationConfig:
             raise ConfigurationError(f"Missing required config field: {missing[0]}")
         if not isinstance(data["schema_version"], str) or not isinstance(data["protocol_version"], str):
             raise ConfigurationError("schema and protocol versions must be strings")
-        if data["class_order"] != {"CN": 0, "MCI": 1, "AD": 2}:
-            raise ConfigurationError("class_order must be exactly CN=0, MCI=1, AD=2")
+        if data["class_order"] not in ({"CN": 0, "MCI": 1, "AD": 2}, {"CN": 0, "Impaired": 1}):
+            raise ConfigurationError("class_order must be historical CN/MCI/AD or Phase 18B CN/Impaired")
 
         def sequence(name: str) -> tuple[Any, ...]:
             value = data[name]

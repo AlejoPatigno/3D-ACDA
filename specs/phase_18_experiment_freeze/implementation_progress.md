@@ -1222,42 +1222,36 @@ Exact remaining unchecked task lines, re-read before return:
 
 No real execution occurred; no approval or receipt was created. Next recommendation: `parent-lifecycle`.
 
-## Consolidated final implementation closure
+## Final scientific-freeze synchronization
 
-### Closure status
+### Status
 
-**`PHASE18_COMPLETE_BUT_BLOCKED_FOR_REAL_EXECUTION`**. WU1-WU5 plus bounded corrections are implementation-complete and focused-verified. This does not claim scientific freeze approval, real-run authorization, publication authorization, a native receipt, final repository-wide closure, or Phase 19 readiness.
+`PHASE18_SCIENTIFIC_FREEZE_COMPLETE_BUT_EXTERNAL_PROVENANCE_BLOCKED` is the authoritative final status for this metadata-only synchronization. Scientific decisions are resolved for pre-run planning; external provenance, resources, review, native lifecycle, and human authorization remain blocked.
 
-The authorization invariants remain exactly:
+### Synchronized records
 
-```yaml
-phase_18_authorized: true
-freeze_approved: false
-real_execution_authorized: false
-publication_authorized: false
-phase_19_forbidden: true
-```
+- Both publication configurations contain the API-generated 420-row matrix: 210 training rows and 210 linked checkpoint projections. Every projection has `training_invocation=false`.
+- Both configurations contain the exact seven-method parameter ledger with mapping-valued `parameters` and `evidence`, explicit value classes, and content-bound ledger identity.
+- The exact resolved policy is `[42,43,44]` with source split random state `42`, target partition seed `42`, predeclared selection, and posthoc selection forbidden; top-level and matrix-embedded policies match.
+- The scientific resolution hash, matrix content hash, seed policy hash, and canonical freeze hash were recomputed through repository APIs. No external hash was invented.
+- Nested freeze blockers contain only external provenance, resource, review, native lifecycle, and human authorization blockers; resolved scientific and ablation choices are not blockers.
 
-### Consolidated evidence
+### Boundaries
 
-- `python -m pytest -q tests/phase_18/` — exit 0, **139 passed**, 1 `PytestCacheWarning`, 6.91s.
-- Editable install — exit 0; import/version — exit 0; version `0.1.0`.
-- `python -m ruff check .` — exit 0.
-- Scoped Phase 18 `git diff --check` — exit 0.
-- Global `git diff --check` — exit 2 only for pre-existing `AGENTS.md:928` trailing whitespace; it was not changed.
-- `python -m pytest -q` — attempted with a 1200-second timeout and timed out around 27%; no full-suite pass is claimed.
-- `prepare_publication_run.py` print-matrix, print-blockers, feasibility-only, and validate-only modes fail closed and print blockers; no real data/training was run.
-- `check_real_run_authorization.py` exits 1 and prints `PASS — FAIL-CLOSED AUTHORIZATION VERIFIED`; authorization remains false.
-- Static publication package/CLIs have no trainer, optimizer, or MRI-loader imports.
+`scientific_freeze_complete=true`, `real_run_ready=false`, `freeze_approved=false`, `real_execution_authorized=false`, `publication_authorized=false`, `phase_19_forbidden=true`, and `authorized=false` remain explicit. No real data, training, evaluation, publication analysis, native lifecycle command, receipt, or Phase 19 work occurred.
 
-### Agents, fallback review, and lifecycle boundary
+### Validation evidence
 
-Codex implemented the work units. `review-risk` and `review-resilience` supplied implementation review. The Gemini-mapped fallback used `gentle-ai-explore`/`gentle-ai-verify`; Kimi was unavailable. `gentle-ai-verify` performed the fresh independent final audit, which retained partial acceptance because the full suite timed out and the closure artifacts were stale before this consolidation. Native lifecycle review/receipt commands were not run, and no receipt or approval was fabricated.
+- Full regression final candidate: `python -m pytest -q -p no:cacheprovider --basetemp=C:/Users/LOQ/AppData/Local/Temp/pada3dacb-full-suite-final` — exit 0, 1325 passed, 6 warnings, 1213.18s (0:20:13); cache plugin disabled for Windows cache interference.
+- Focused Phase 18 command for this synchronization: `python -m pytest -q tests/phase_18/` — current worker result recorded below after execution.
+- `python -m ruff check .`, `git diff --check`, repeated canonical hash check, and the fail-closed authorization checker are recorded below after execution.
 
-### Scientific and data closure boundary
+### Final synchronization validation evidence
 
-No target-guided values were selected. `lambda_proto` remains **BLOCKED** between `0.2` and `1.0`; CORAL/MMD/CDAN parameters and publication ablations remain unresolved. Seed planning is `[42]`; checkpoint policy is `best_source_f1` plus separate `last` projection. The plan is 70 training rows plus 70 projection rows. Canonical JSON, matrix/provenance identity, target firewall, synthetic feasibility, and implementation tests are complete, but real manifests, real provenance hashes, immutable artifacts, real resource observations, privacy/data authorization, and human/native approval are absent.
+- `python -m pytest -q tests/phase_18/ -p no:cacheprovider --basetemp=C:/Users/LOQ/AppData/Local/Temp/pada3dacb-phase18-final` — exit 0, **147 passed**, 22.76s.
+- `python -m ruff check .` — exit 0, all checks passed.
+- `git diff --check` — exit 0 after removing serializer-emitted trailing whitespace from the two owned YAML configurations.
+- Repeated canonical hash check — exit 0 for both configurations: matrix content hash `4856bff8fd631f10c6473194064365d8bb55bb72ce5e5b68e4ca3209f3bf82ea`; scientific resolution hash `3421e7d764986496a58eb5a83506ed2e68c8b478f8ae45dbaf5676120de27fb0`; method parameter ledger hash `dff9e3917728889737fe1582aaa6f9cecc21fb2d63ec11dfbed5654dffd7f979`; seed policy hash `9a7d5c7c8130c8b434709a1240398f5d5ee5d487760268a6b4f1aa48a82dbb71`; canonical freeze hash `153e6baeb16211dd4aae9d226dbf1be1a8930831b956ee2780af90a7f3b4adb6`.
+- `python scripts/check_real_run_authorization.py --config configs/publication/real_run_authorization.yaml` — exit 1 as required; printed `REAL RUN NOT AUTHORIZED` and `PASS — FAIL-CLOSED AUTHORIZATION VERIFIED`.
 
-### State and explicit non-execution
-
-OpenSpec is now `status: blocked_for_real_execution`, `current_phase: implementation_complete`, `execution_mode: implementation_only`, with `real_run_gate: blocked` and `publication_gate: blocked`. Full regression remains unverified due timeout. No real ADNI/OASIS data, runtime execution, publication analysis, native receipt, Phase 19 work, or real feasibility/resource measurement occurred. A compact project-scoped Engram completion record was saved; OpenSpec remains the file-based source of truth.
+No real data, training, evaluation, publication, native lifecycle, receipt, or Phase 19 action was run. The final full regression passed with the cache plugin disabled; no source/test failure remained.

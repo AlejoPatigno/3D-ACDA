@@ -407,7 +407,7 @@ def test_authorization_aggregates_unresolved_lambda_overlap_and_approval_blocker
     assert result.authorized is False
     assert result.data_access_opened is False
     assert {"unresolved_scientific_value", "missing_required_field", "missing_assignment"} <= codes
-    assert any("lambda_proto" in blocker.message for blocker in result.blockers)
+    assert any("scientific_resolution" in (blocker.field or "") for blocker in result.blockers)
     assert manifest["real_execution_authorized"] is False
     assert manifest["publication_authorized"] is False
     assert manifest["phase_19_forbidden"] is True

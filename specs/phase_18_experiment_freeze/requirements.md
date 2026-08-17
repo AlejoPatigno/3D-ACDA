@@ -10,10 +10,11 @@ No ADNI/OASIS data, runtime implementation, CLI implementation, configuration ch
 
 Every scientific or operational value in the freeze uses exactly one class:
 
-- `canonical_fixed`: explicitly repeated or protected by repository configuration/specification.
-- `manually_selected_pre_run`: must be chosen and recorded before a real run; it cannot be selected from target outcomes.
-- `engineering_only`: implementation, synthetic-fixture, or operational value that is not a publication claim.
-- `unresolved_blocking`: conflicting, missing, or unauthorized value that fails the real-run gate.
+- `RESOLVED_CANONICAL`: explicitly repeated or protected by repository configuration/specification.
+- `RESOLVED_PRE_RUN_HUMAN`: selected and recorded before a real run; it cannot be selected from target outcomes.
+- `ENGINEERING_ONLY`: implementation, synthetic-fixture, or operational value that is not a publication claim.
+- `BLOCKED_EXTERNAL_PROVENANCE`: missing real path/hash/identity evidence.
+- `BLOCKED_CONFLICT`: conflicting evidence retained without silent override.
 
 Repository evidence is authoritative in this order: active package/configuration contracts, the primary non-commented path in `notebooks/archive/training_original.ipynb`, approved Phase 15–17 specifications, then historical helper/prose evidence. No target metric may resolve a conflict.
 
@@ -42,7 +43,7 @@ The core inventory contains exactly these repository-approved IDs, in determinis
 6. `aagn` — `AAGN / ROI-aware gating`.
 7. `faster_snn` — `FasterSNN`.
 
-This list is `canonical_fixed` as an inventory boundary, not evidence that a real run has completed. Historical or forbidden names are not rows in the runnable matrix. The Phase 17 six-candidate ablation inventory remains evidence only; the publication ablation subset is `unresolved_blocking` until a human selects it explicitly.
+This list is `RESOLVED_CANONICAL` as an inventory boundary, not evidence that a real run has completed. Historical or forbidden names are not rows in the runnable matrix. The publication ablation classification is a separate `RESOLVED_PRE_RUN_HUMAN` planning decision: primary `[no_proto,no_pl,no_concept,no_anat]`, supplementary `[no_cons,mean_pool]`, excluded `[no_domain_adaptation,no_ctx_encoder,full,identity_ctx]`. It does not authorize execution or metrics.
 
 ### R18-004 — Objective and coefficient fidelity
 
@@ -58,7 +59,7 @@ warm_lambda_cbm=1.0, warm_lambda_anat=1.0,
 warm_lambda_cons=0.0
 ```
 
-These are `canonical_fixed` inherited primary-path values. `lambda_proto` is **not resolved**: the primary path/configuration records `1.0`, while the later ablation helper and manuscript discrepancy record `0.2`. The publication value is `unresolved_blocking`; neither value may be selected using target performance. The matrix compiler and real-run gate MUST reject authorization until an authoritative decision record binds one value and its hash.
+These are `RESOLVED_CANONICAL` inherited primary-path values. `lambda_proto=1.0` is `RESOLVED_PRE_RUN_HUMAN` for production, bound before any run. The later helper/manuscript `0.2` is retained as a `BLOCKED_CONFLICT` non-production discrepancy; it cannot be selected using target performance. The real-run gate still rejects authorization until external provenance, resources, and approval are complete.
 
 Warm-up MUST not compute or weight prototype/pseudo-label adaptation and MUST log those components as zero. Full-stage adaptation MUST use the existing source-label and target-concept-logit contracts without target diagnosis labels.
 
@@ -70,7 +71,7 @@ The sole best-checkpoint criterion is source-validation macro-F1. Training MUST 
 
 ### R18-006 — Complete matrix and seed policy
 
-The matrix MUST be the complete Cartesian product of the approved method inventory, both directions, folds `0..4`, and the pre-run seed policy. Repository evidence supports seed `[42]` across the experiment, baseline, evaluation, preprocessing, and artifact configurations (`canonical_fixed`). No additional seed may be invented. Matrix approval remains a `manually_selected_pre_run` authorization step, and any missing assignment manifest is `unresolved_blocking`.
+The matrix MUST be the complete Cartesian product of the approved method inventory, both directions, folds `0..4`, and the pre-run seed policy `[42,43,44]`. The seed set, source split random state `42`, and target partition seed `42` are `RESOLVED_PRE_RUN_HUMAN`, predeclared, and not posthoc-selectable. Missing real assignment manifests remain `BLOCKED_EXTERNAL_PROVENANCE`.
 
 The obsolete selective-fold availability shortcut MUST NOT be used. Every expected cell MUST be represented with an explicit state; no matrix row in this phase may be `COMPLETED`. The matrix MUST separate `row_kind: training` from `row_kind: checkpoint_projection`, link each projection with `parent_training_id`, and require exactly one training invocation per method/direction/fold/seed cell.
 
@@ -96,7 +97,7 @@ Future implementation MUST expose planning/validation modes that do not access r
 
 ### R18-012 — Manuscript alignment
 
-The alignment audit MUST classify each comparison as `MATCH`, `MANUSCRIPT_OUTDATED`, `REPOSITORY_OUTDATED`, or `UNRESOLVED`. Because no complete manuscript PDF is present, no discrepancy may be silently resolved and the manuscript MUST NOT be rewritten by this phase. Lambda, checkpoint tie-breaking, publication ablation subset, manuscript scores, and publication endpoints remain unresolved where authoritative evidence is absent.
+The alignment audit MUST classify each comparison as `MATCH`, `MANUSCRIPT_OUTDATED`, `REPOSITORY_OUTDATED`, or `UNRESOLVED`. Because no complete manuscript PDF is present, no discrepancy may be silently resolved and the manuscript MUST NOT be rewritten by this phase. Lambda production use, checkpoint criterion, and ablation classification are recorded as pre-run decisions; manuscript-only wording, scores, and endpoints remain `UNRESOLVED`.
 
 ## Non-goals
 

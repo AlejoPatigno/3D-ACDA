@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -42,6 +43,51 @@ class InferenceConfig:
     device: str
     batch_size: int
     num_workers: int
+
+
+def validate_binary_concept_inference_shapes(
+    concepts: object,
+    alpha: object,
+    latent_logits: object,
+    concept_logits: object,
+    *,
+    task_id: str,
+) -> dict[str, int]:
+    """Validate the binary head contract without changing concept outputs."""
+    if task_id != "cn_vs_impaired":
+        raise ValueError("binary concept inference requires task_id='cn_vs_impaired'")
+
+    def shape(value: object, name: str) -> tuple[int, ...]:
+        result = tuple(int(item) for item in getattr(value, "shape", ()))
+        if not result:
+            raise ValueError(f"{name} must expose a tensor-like shape")
+        return result
+
+    concepts_shape = shape(concepts, "concepts")
+    alpha_shape = shape(alpha, "alpha")
+    latent_shape = shape(latent_logits, "latent_logits")
+    concept_shape = shape(concept_logits, "concept_logits")
+    if len(concepts_shape) != 2 or len(alpha_shape) != 2:
+        raise ValueError("binary concepts and alpha must retain shape (B,K)")
+    if concepts_shape != alpha_shape:
+        raise ValueError("binary concepts and alpha must share shape (B,K)")
+    if len(latent_shape) != 2 or len(concept_shape) != 2:
+        raise ValueError("binary task logits must have shape (B,2)")
+    if latent_shape[0] != concepts_shape[0] or concept_shape[0] != concepts_shape[0]:
+        raise ValueError("binary logits batch dimension must match concepts")
+    if latent_shape[1] != 2 or concept_shape[1] != 2:
+        raise ValueError("binary task logits must have exactly two classes")
+    if concepts_shape[1] <= 0:
+        raise ValueError("binary concepts must have a positive K")
+    for name, value in (("concepts", concepts), ("alpha", alpha), ("latent_logits", latent_logits), ("concept_logits", concept_logits)):
+        try:
+            if not np.isfinite(np.asarray(value.detach().cpu() if hasattr(value, "detach") else value, dtype=np.float64)).all():
+                raise ValueError(f"binary {name} must be finite")
+        except (TypeError, ValueError) as error:
+            if isinstance(error, ValueError) and str(error).startswith("binary "):
+                raise
+            raise ValueError(f"binary {name} must be numeric") from error
+    return {"batch": concepts_shape[0], "K": concepts_shape[1], "logit_classes": 2}
 
 
 @dataclass(frozen=True)
@@ -161,8 +207,10 @@ def load_checkpoint(
         checkpoint_path = Path(checkpoint_path)
         if not checkpoint_path.is_file():
             raise OSError(f"checkpoint file is missing: {checkpoint_path}")
-        _ = FileIdentity(checkpoint_path, compute_sha256_file(checkpoint_path), checkpoint_path.stat().st_size)
+        identity = FileIdentity(checkpoint_path, compute_sha256_file(checkpoint_path), checkpoint_path.stat().st_size)
         payload = _safe_load_checkpoint_payload(checkpoint_path)
+        if compute_sha256_file(checkpoint_path) != identity.sha256:
+            raise ConfigurationError("checkpoint changed during load")
     except ConfigurationError:
         raise
     except Exception as error:
@@ -180,15 +228,20 @@ def load_concept_normalizer_from_checkpoint(
     If that file is absent, fall back to the checkpoint directory's
     ``concept_normalizer.json``.
     """
+    def load(path: Path) -> ConceptNormalizer:
+        normalizer = ConceptNormalizer.load(path)
+        normalizer.provenance["artifact_path"] = str(path.resolve())
+        return normalizer
+
     # The artifact root is authoritative when it contains the normalizer.
     normalizer_path = artifacts_root / "concept_normalizer.json"
     if normalizer_path.exists():
-        return ConceptNormalizer.load(normalizer_path)
+        return load(normalizer_path)
 
     # Fall back to the checkpoint directory when the artifact-root file is absent.
     normalizer_path = checkpoint_path.parent.parent / "concept_normalizer.json"
     if normalizer_path.exists():
-        return ConceptNormalizer.load(normalizer_path)
+        return load(normalizer_path)
 
     return None
 
@@ -256,6 +309,7 @@ def run_subject_inference(
     roi_order_hash: AtlasROIOrderHash,
     normalizer_hash: ConceptNormalizerHash,
     concept_config_hash: str,
+        task_id: str | None = None,
 ) -> list[SubjectConceptRecord]:
     """
     Run no-grad inference on subject batches to extract concept outputs.
@@ -356,6 +410,13 @@ def run_subject_inference(
 
         if any(t is None for t in [concepts, latent_logits, concept_logits, alpha]):
             raise RuntimeError("Model output missing required keys: concepts, latent_logits, concept_logits, alpha")
+        if task_id is not None:
+            try:
+                validate_binary_concept_inference_shapes(
+                    concepts, alpha, latent_logits, concept_logits, task_id=task_id
+                )
+            except ValueError as error:
+                raise RuntimeError(str(error)) from error
 
         B = concepts.shape[0]
         K = concepts.shape[1]
@@ -451,6 +512,37 @@ def _authorize_real_evaluation(
         raise AuthorizationGateError("real evaluation capability is stale for the manifest")
 
 
+def _verify_runtime_input_identity(
+    concept_normalizer: object,
+    atlas_mgr: object,
+    verified_inputs: VerifiedEvaluationInputs,
+) -> None:
+    identities = tuple(verified_inputs.normalizers.values())
+    provenance = getattr(concept_normalizer, "provenance", {})
+    normalizer_path = provenance.get("artifact_path") if isinstance(provenance, Mapping) else None
+    expected = identities[0] if identities and len({item.sha256 for item in identities}) == 1 else None
+    if (
+        not isinstance(concept_normalizer, ConceptNormalizer)
+        or expected is None
+        or not isinstance(normalizer_path, str)
+        or Path(normalizer_path).resolve() != expected.path.resolve()
+        or compute_sha256_file(expected.path) != expected.sha256
+        or tuple(concept_normalizer.roi_labels) != tuple(verified_inputs.roi_labels)
+        or _canonical_roi_order_hash(None, concept_normalizer) != verified_inputs.roi_order_hash
+    ):
+        raise ConfigurationError("runtime normalizer identity conflicts with verified inputs")
+    atlas_path = getattr(atlas_mgr, "atlas_path", None)
+    if (
+        not isinstance(atlas_path, str)
+        or Path(atlas_path).resolve() != verified_inputs.atlas.path.resolve()
+        or getattr(atlas_mgr, "atlas_hash", None) != verified_inputs.atlas.sha256
+        or compute_sha256_file(verified_inputs.atlas.path) != verified_inputs.atlas.sha256
+        or list(getattr(atlas_mgr, "label_values", ())) != list(verified_inputs.roi_labels)
+        or _canonical_roi_order_hash(atlas_mgr, None) != verified_inputs.roi_order_hash
+    ):
+        raise ConfigurationError("runtime atlas identity conflicts with verified inputs")
+
+
 def _verify_real_artifact_identities(
     candidates: Sequence[ConceptCandidate],
     verified_inputs: VerifiedEvaluationInputs,
@@ -480,15 +572,15 @@ def _verify_real_artifact_identities(
         event_hook("artifact_hash")
 
     checkpoint_payloads: dict[tuple, Mapping[str, Any]] = {}
-    for _candidate, key in zip(candidates, candidate_keys, strict=True):
+    for candidate, key in zip(candidates, candidate_keys, strict=True):
         identity = verified_inputs.checkpoints[key]
         if not identity.path.is_file() or compute_sha256_file(identity.path) != identity.sha256:
             raise ConfigurationError(f"verified checkpoint identity is stale for {key}")
-    if event_hook is not None:
-        event_hook("checkpoint_hash")
-    for candidate, key in zip(candidates, candidate_keys, strict=True):
-        identity = verified_inputs.checkpoints[key]
+        if event_hook is not None:
+            event_hook("checkpoint_hash")
         payload = _safe_load_checkpoint_payload(identity.path)
+        if compute_sha256_file(identity.path) != identity.sha256:
+            raise ConfigurationError(f"verified checkpoint identity changed during load for {key}")
         expected = {
             "experiment_hash": candidate.experiment_hash,
             "model_hash": candidate.model_hash,
@@ -503,8 +595,8 @@ def _verify_real_artifact_identities(
             if payload.get(name) != value:
                 raise ConfigurationError(f"checkpoint metadata {name} conflicts for {key}")
         checkpoint_payloads[key] = payload
-    if event_hook is not None:
-        event_hook("safe_load")
+        if event_hook is not None:
+            event_hook("safe_load")
     return checkpoint_payloads
 
 
@@ -523,7 +615,10 @@ def run_real_evaluation(
     publish_callback: Callable[[Any, dict[tuple, list[ConceptSubjectRecord]]], Any] | None,
     event_hook: Callable[[str], None] | None = None,
 ) -> Any:
-    """Authorize and execute real evaluation without inventing a data source."""
+    """Keep real evaluation closed until an external authorization issuer exists."""
+    raise AuthorizationGateError(
+        "real evaluation capability is closed: external authorization issuer is not configured"
+    )
     # Validate the capability before returning the intentional closed-seam error.
     _validate_capability_contract(capability, authorization_evidence)
     if not callable(dataloader_factory) or not callable(statistics_callback) or not callable(publish_callback):
@@ -531,6 +626,7 @@ def run_real_evaluation(
             "real evaluation is closed: no approved local data, statistics, and publication callbacks are configured"
         )
     _authorize_real_evaluation(capability, verified_inputs, authorization_evidence)
+    _verify_runtime_input_identity(concept_normalizer, atlas_mgr, verified_inputs)
     if event_hook is not None:
         event_hook("authorize")
     if not candidates:

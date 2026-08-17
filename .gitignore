@@ -28,3 +28,26 @@ results/*
 
 # Generated Graphify knowledge graph
 /graphify-out/
+
+# Test temp directories and outputs
+.pytest-basetemp-*/
+nul
+test.txt
+test_output.txt
+test_temp/
+tmp/
+run_tests_output.txt
+tmp_phase18_matrix_output.txt
+
+# Ad-hoc test/run scripts (not part of package)
+run_checks.py
+run_tests.bat
+run_tests.sh
+run_focused_tests.sh
+
+# Local data CSVs (not part of repo)
+*.csv
+
+# Backup files
+*.bak
+*.backup

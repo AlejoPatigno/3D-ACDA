@@ -508,7 +508,7 @@ def test_default_real_evaluation_is_blocked_before_output(tmp_path) -> None:
     assert not output.exists()
 
 
-def test_authorized_real_mode_never_falls_back_to_synthetic(tmp_path, monkeypatch) -> None:
+def test_authorized_real_mode_stays_gate_blocked_without_fallback(tmp_path, monkeypatch) -> None:
     config = _fixture_config(tmp_path)
     config_data = yaml.safe_load(config.read_text(encoding="utf-8"))
     config_data["analysis_mode"] = "real"
@@ -520,24 +520,18 @@ def test_authorized_real_mode_never_falls_back_to_synthetic(tmp_path, monkeypatc
     config.write_text(yaml.safe_dump(config_data), encoding="utf-8")
     (tmp_path / "manifest.json").write_text("{}", encoding="utf-8")
     args = _base_args(tmp_path, config)
-    issued = object()
-    called = {}
 
-    monkeypatch.setattr(concept_cli, "_issue_cli_capability", lambda *args: issued)
+    def closed_real_orchestration(**kwargs):
+        pytest.fail("real callback invoked")
+
+    monkeypatch.setattr(concept_cli, "run_real_evaluation", closed_real_orchestration)
     monkeypatch.setattr(
         concept_cli,
         "_synthetic_fixture_metrics",
-        lambda: (_ for _ in ()).throw(AssertionError("real mode used synthetic metrics")),
+        lambda *_: pytest.fail("synthetic fallback invoked"),
     )
 
-    def closed_real_orchestration(**kwargs):
-        called.update(kwargs)
-        raise concept_cli.ConfigurationError("real evaluation is closed")
-
-    monkeypatch.setattr(concept_cli, "run_real_evaluation", closed_real_orchestration)
-
     assert main([*args, "--validate-only"]) == ExitCode.CONFIGURATION_ERROR
-    assert called["capability"] is issued
 
 
 def test_real_gate_rejects_non_hex_evidence() -> None:

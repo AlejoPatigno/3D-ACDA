@@ -1,7 +1,7 @@
 change: phase-18-experiment-freeze
 phase: 18
 slug: experiment-freeze
-status: blocked_for_real_execution
+status: PHASE18_SCIENTIFIC_FREEZE_COMPLETE_BUT_EXTERNAL_PROVENANCE_BLOCKED
 current_phase: implementation_complete
 artifact_store: openspec
 execution_mode: implementation_only
@@ -11,6 +11,8 @@ source_of_truth:
   phase_18_specs: specs/phase_18_experiment_freeze/
   open_spec: openspec/changes/phase-18-experiment-freeze/
 phase_18_authorized: true
+scientific_freeze_complete: true
+real_run_ready: false
 freeze_approved: false
 real_execution_authorized: false
 publication_authorized: false
@@ -18,39 +20,44 @@ phase_19_forbidden: true
 real_run_gate: blocked
 publication_gate: blocked
 implementation_status: complete_focused_verified
-scientific_freeze_status: not_approved
+scientific_freeze_status: complete_external_provenance_blocked
+final_status: PHASE18_SCIENTIFIC_FREEZE_COMPLETE_BUT_EXTERNAL_PROVENANCE_BLOCKED
 independent_review:
   required: true
-  status: fallback_complete_kimi_unavailable
-  result: gentle-ai-verify_fresh_independent_verification
-  kimi: unavailable
+  status: blocked_external_review
+  result: external_independent_review_required
 native_lifecycle:
   status: pending_not_run
   receipt: pending
   approval: pending
   commands_run: false
 full_regression:
-  status: unverified_timeout
-  command: python -m pytest -q
-  observed: timed out around 27 percent with a 1200 second timeout
-  pass_claim: false
+  status: verified_pass
+  command: python -m pytest -q -p no:cacheprovider --basetemp=C:/Users/LOQ/AppData/Local/Temp/pada3dacb-full-suite-final
+  observed: exit 0, 1325 passed, 6 warnings, 1213.18s (0:20:13)
+  timing_scope: final source/test candidate; cache plugin disabled due Windows cache access-denied interference
+  warnings:
+    - four sklearn UndefinedMetricWarning entries in tests/test_baseline_trainer.py
+    - two std degrees-of-freedom UserWarnings in tests/test_preprocessing.py
+    - one PytestCacheWarning caused by Windows access denied writing .pytest_cache
+  pass_claim: true
+focused_regression:
+  status: verified_pass
+  command: python -m pytest -q tests/phase_18/ -p no:cacheprovider --basetemp=C:/Users/LOQ/AppData/Local/Temp/pada3dacb-phase18-final
+  observed: exit 0, 147 passed, 0 warnings, 22.76s
+  prior_observed: exit 0, 74 passed, 1 warning before latest metadata-only work
 blocked_reasons:
-  - lambda_proto_0.2_vs_1.0_unresolved
-  - checked_in_coral_mmd_cdan_parameters_unresolved
-  - publication_ablation_subset_not_human_selected
   - real_split_and_assignment_hashes_missing
-  - target_manifest_content_intersection_not_verified_for_real_data
+  - target_manifest_content_intersection_not_verified
   - immutable_atlas_roi_concept_jacobian_hashes_missing
-  - canonical_json_conformance_and_implementation_identity_not_native_approved
+  - canonicalization_and_implementation_identity_external_provenance_missing
   - real_data_privacy_and_path_authorization_missing
-  - hardware_and_resource_budget_unresolved
+  - hardware_and_resource_budget_externally_blocked
   - real_feasibility_observation_missing
-  - manuscript_equations_endpoints_and_checkpoint_tie_breaking_unresolved
+  - complete_manuscript_source_absent_for_later_alignment
   - native_lifecycle_receipt_and_approval_pending
-  - full_repository_regression_unverified_due_timeout
-  - kimi_independent_audit_unavailable
-  - publication_artifacts_and_real_manifests_not_present
-  - real_provenance_hashes_not_observed
+  - independent_review_external_evidence_missing
+  - human_real_run_authorization_pending
 boundaries:
   real_adni_oasis_training: forbidden
   real_adni_oasis_evaluation: forbidden
@@ -64,18 +71,17 @@ boundaries:
   publication_artifact_generation: not_run
   gentle_ai_metadata_mutation: forbidden
 notes:
-  - Specification approval applies only to the corrected Phase 18 planning package, not to scientific freeze, real execution, publication, or Phase 19.
-  - Implementation work units WU1-WU5 plus bounded corrections are complete and verified by the focused Phase 18 suite: 139 passed, 1 PytestCacheWarning.
-  - Final repository-wide validation is incomplete because the full suite timed out; no full-suite pass is claimed.
-  - Native lifecycle receipt/approval was not run or fabricated and remains pending.
-  - Synthetic feasibility is engineering-only; it does not establish real throughput, memory, storage, statistical validity, or publication readiness.
-  - Matrix planning remains 70 training rows plus 70 projection rows for seed policy [42]; no real rows are completed.
-  - Existing unrelated dirty paths, including AGENTS.md whitespace, remain outside this closure.
+  - Scientific decisions are resolved for pre-run planning and content-hash bound; this record does not authorize real execution.
+  - The core matrix is 210 training rows plus 210 linked non-training checkpoint projections for seeds [42, 43, 44].
+  - Ablation planning is separate: 120 primary, 60 supplementary, and 120 excluded cells under three seeds; no ablation row was executed.
+  - No real ADNI/OASIS data, target outcomes, publication analysis, real feasibility measurement, native lifecycle command, receipt, or Phase 19 work occurred.
+  - The current full regression evidence predates these metadata-only edits; focused Phase 18 validation is rerun by this worker.
+  - Existing unrelated dirty paths remain outside this closure.
 engram_closure:
   status: completion_record_saved
   topic_key: phase18/implementation-closure
   source_of_truth: openspec
-next_action: resolve_scientific_and_data_blockers_then_obtain_native_lifecycle_approval
+next_action: obtain_external_provenance_resources_independent_review_native_receipt_and_human_real_run_authorization
 next_recommended: resolve-blockers
 artifacts:
   proposal: proposal.md

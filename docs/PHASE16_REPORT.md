@@ -11,8 +11,8 @@ Phase 16 implements the approved transparent concept, anatomical, agreement, ROI
 | Full method/direction/checkpoint fixture matrix | Implemented |
 | Real ADNI/OASIS evaluation | Not run; CLI remains closed |
 | CFS/ACS/PCS/QIS | Blocked; equations unavailable |
-| Phase 17 | Not started |
-| Archive/commit/push/PR/release/publication | Blocked by native incident #1793 |
+| Phase 17 | Synthetic-only implementation and closure recorded separately |
+| Archive/commit/push/PR/release/publication | Historical Phase 16 delivery state recorded under native incident #1793; the approved receipt is historical provenance, not a current Phase 17 receipt |
 
 ## Implementation map
 
@@ -68,8 +68,8 @@ The focused evidence is reproducibility evidence for the evaluator's synthetic a
 
 ## Documentation audit
 
-The three WU-10 documents explicitly preserve: fixed class order `(CN, MCI, AD) = (0, 1, 2)`; immutable `c_target` and `g_bar`; posthoc-only target labels; unavailable metric reasons; no causal language; `authorized: false` real-run protection; synthetic-only validation; and confirmation that Phase 17 has not started. CFS, ACS, PCS, and QIS remain blocked pending authoritative equations.
+The three WU-10 documents explicitly preserve: fixed class order `(CN, MCI, AD) = (0, 1, 2)`; immutable `c_target` and `g_bar`; posthoc-only target labels; unavailable metric reasons; no causal language; `authorized: false` real-run protection; synthetic-only validation; and separation from the separately implemented synthetic-only Phase 17 closure. CFS, ACS, PCS, and QIS remain blocked pending authoritative equations.
 
 ## Delivery boundary
 
-This report does not archive or publish the phase. Native review/receipt incident #1793 remains a hard administrative blocker for archive, commit, push, PR, release, and publication. Resolving that incident must not change Phase 16 scientific behavior or silently begin Phase 17.
+This report does not archive or publish the phase. The Phase 16 snapshot recorded native review/receipt incident #1793 as a hard administrative delivery blocker; that approved Phase 16 receipt is historical provenance only, not a current Phase 17 receipt. Phase 17 is synthetic-only and closed. Phase 18 has not started. These lifecycle boundaries do not change Phase 16 scientific behavior or authorize real-data execution or publication.

@@ -13,9 +13,52 @@ from typing import Any
 import torch
 
 from pada3dacb import __version__
+from pada3dacb.binary import (
+    BINARY_CLASS_ORDER,
+    BINARY_MAPPING_CONTRACT,
+    BINARY_TASK,
+    SUPERSESSION_MARKER,
+)
 from pada3dacb.exceptions import ExperimentValidationError
 
 RUN_STATUSES = {"PENDING", "RUNNING", "INTERRUPTED", "COMPLETED", "FAILED"}
+
+
+def ablation_output_path(
+    output_root: str | Path,
+    ablation_id: str,
+    direction: str,
+    seed: int,
+    fold: int,
+) -> Path:
+    """Return the Phase 17 path without creating it or discovering data."""
+    return (
+        Path(output_root)
+        / "ablations"
+        / str(ablation_id)
+        / str(direction)
+        / f"seed_{int(seed)}"
+        / f"fold_{int(fold)}"
+    )
+
+
+def create_ablation_manifest(**values: Any) -> dict[str, Any]:
+    """Create a timestamp-free, synthetic-only ablation identity envelope."""
+    required = {
+        "method": "ablation",
+        "base_method": "prototype_pseudo",
+        "real_data_run": False,
+        "publication_metrics_present": False,
+    }
+    manifest = {**required, **values}
+    manifest.setdefault("schema_version", "phase17.ablation-manifest.v1")
+    manifest.setdefault("phase", 17)
+    manifest.setdefault("synthetic", True)
+    manifest.setdefault("target_label_firewall", {
+        "target_adaptation_batch_keys": ["x", "subject_id", "subject_hash", "cohort"],
+        "target_labels_in_adaptation": False,
+    })
+    return manifest
 
 
 def utc_now() -> str:
@@ -71,7 +114,29 @@ def runtime_environment() -> dict[str, Any]:
     }
 
 
+def _reject_public_subject_ids(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if str(key).casefold() in {"subject_id", "raw_subject_id", "raw_id"}:
+                raise ExperimentValidationError("public binary identities must not contain raw subject IDs")
+            _reject_public_subject_ids(nested)
+    elif isinstance(value, (list, tuple)):
+        for nested in value:
+            _reject_public_subject_ids(nested)
+
+
 def create_run_manifest(**values: Any) -> dict[str, Any]:
+    if str(values.get("task_id", "")).casefold() == "cn_vs_impaired":
+        _reject_public_subject_ids(values)
+        values = {
+            **values,
+            "task_id": "cn_vs_impaired",
+            "task": BINARY_TASK,
+            "class_order": list(BINARY_CLASS_ORDER),
+            "mapping_contract": BINARY_MAPPING_CONTRACT,
+            "supersession_marker": SUPERSESSION_MARKER,
+            "binary_task": True,
+        }
     manifest = {
         **values,
         **runtime_environment(),
@@ -80,7 +145,15 @@ def create_run_manifest(**values: Any) -> dict[str, Any]:
         "completion_time": None,
         "checkpoint_paths": {},
     }
+    if manifest.get("task_id") == "cn_vs_impaired":
+        identity_payload = {key: value for key, value in manifest.items() if key not in {"start_time", "completion_time", "status", "checkpoint_paths"}}
+        manifest["identity_hash"] = stable_hash(identity_payload)
     return manifest
+
+
+def create_binary_run_manifest(**values: Any) -> dict[str, Any]:
+    values["task_id"] = "cn_vs_impaired"
+    return create_run_manifest(**values)
 
 
 def update_run_manifest(path: str | Path, manifest: dict[str, Any], status: str, **updates: Any) -> None:

@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import subprocess
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +18,13 @@ import yaml
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from pada3dacb import __version__
+from pada3dacb.binary import (
+    BINARY_CLASS_ORDER,
+    SPLIT_DISPOSITION,
+    BinarySubjectRecord,
+    build_binary_target_partition,
+    generate_binary_source_folds,
+)
 from pada3dacb.data.records import CLASS_TO_INDEX, SUPPORTED_COHORTS, SubjectRecord
 from pada3dacb.exceptions import ConfigurationError, SplitValidationError
 from pada3dacb.paths import resolve_path
@@ -85,6 +92,104 @@ class SplitRunConfig:
             raise ConfigurationError("artifact_index and split_root are required.")
         for direction in self.directions:
             direction.validate()
+
+
+def _binary_split_hash(payload: Mapping[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def generate_binary_source_folds_for_records(
+    records: Iterable[BinarySubjectRecord], *, n_splits: int = 5, seed: int = 42
+) -> list[dict[str, Any]]:
+    """Generate deterministic task-scoped folds without changing historical splits."""
+    folds = generate_binary_source_folds(list(records), n_splits=n_splits, seed=seed)
+    for fold in folds:
+        fold["task"] = "CN_vs_Impaired"
+        fold["n_splits"] = n_splits
+        fold["seed"] = seed
+        fold["splitter"] = "StratifiedKFold"
+        fold["shuffle"] = True
+        fold["random_state"] = seed
+        fold["split_assignment_hash"] = _binary_split_hash({key: value for key, value in fold.items() if key != "split_identity"})
+        fold["split_identity"] = _binary_split_hash(fold)
+    return folds
+
+
+def generate_binary_target_partition_for_records(
+    records: Iterable[BinarySubjectRecord], *, seed: int = 42, adaptation_fraction: float = 0.8
+) -> dict[str, Any]:
+    """Generate a binary target partition with label-free adaptation membership."""
+    partition = build_binary_target_partition(list(records), seed=seed, adaptation_fraction=adaptation_fraction)
+    partition["seed"] = seed
+    partition["target_adaptation_fraction"] = adaptation_fraction
+    partition["splitter"] = "train_test_split"
+    partition["stratify"] = True
+    partition["random_state"] = seed
+    partition["split_assignment_hash"] = _binary_split_hash({key: value for key, value in partition.items() if key != "split_identity"})
+    partition["split_identity"] = _binary_split_hash(partition)
+    return partition
+
+
+def validate_binary_split_manifest(
+    source_folds: Sequence[Mapping[str, Any]],
+    target_partition: Mapping[str, Any],
+    *,
+    n_splits: int = 5,
+    seed: int = 42,
+    approved_person_universe: Iterable[str] | None = None,
+) -> None:
+    """Validate binary split identity and leakage contracts, never historical manifests."""
+    expected = {"task": "CN_vs_Impaired", "class_order": list(BINARY_CLASS_ORDER), "mapping_contract": "phase-18b-binary-v1", "disposition": SPLIT_DISPOSITION, "identity_level": "person", "person_disjoint": True}
+    if not isinstance(target_partition, Mapping) or any(target_partition.get(key) != value for key, value in expected.items()):
+        raise SplitValidationError("Binary split manifest has incompatible task, class order, mapping, or disposition")
+    if target_partition.get("seed") != seed or target_partition.get("target_adaptation_fraction") != 0.8 or target_partition.get("splitter") != "train_test_split" or target_partition.get("stratify") is not True or target_partition.get("random_state") != seed:
+        raise SplitValidationError("Binary target split must use stratified 80/20 train_test_split with seed 42")
+    target_adaptation = target_partition.get("target_adaptation", ())
+    target_evaluation = target_partition.get("target_evaluation", ())
+
+    def _unique_hashes(values: Any, label: str) -> set[str]:
+        if not isinstance(values, (list, tuple)):
+            raise SplitValidationError(f"Binary {label} must be an explicit list of person hashes")
+        if any(not isinstance(value, str) or not value for value in values):
+            raise SplitValidationError(f"Binary {label} contains an invalid person hash")
+        if len(values) != len(set(values)):
+            raise SplitValidationError(f"Binary {label} contains duplicate person hashes")
+        return set(values)
+
+    target_adaptation_set = _unique_hashes(target_adaptation, "target adaptation")
+    target_evaluation_set = _unique_hashes(target_evaluation, "target evaluation")
+    if target_adaptation_set & target_evaluation_set:
+        raise SplitValidationError("Binary target adaptation and evaluation person hashes overlap")
+    if approved_person_universe is not None:
+        approved = set(approved_person_universe)
+        if target_adaptation_set | target_evaluation_set != approved:
+            raise SplitValidationError("Binary target split does not match the approved person universe")
+    if len(source_folds) != n_splits:
+        raise SplitValidationError(f"Binary source split must contain exactly {n_splits} folds")
+    seen_validation: set[str] = set()
+    expected_source: set[str] | None = None
+    for index, fold in enumerate(source_folds):
+        if any(fold.get(key) != value for key, value in expected.items()) or fold.get("fold") != index:
+            raise SplitValidationError("Binary source fold has incompatible historical three-class task identity or class order")
+        if fold.get("n_splits") != n_splits or fold.get("seed") != seed or fold.get("splitter") != "StratifiedKFold" or fold.get("shuffle") is not True or fold.get("random_state") != seed:
+            raise SplitValidationError("Binary source folds must use StratifiedKFold(5, shuffle=True, random_state=42)")
+        train = _unique_hashes(fold.get("source_train", ()), "source train")
+        validation = _unique_hashes(fold.get("source_validation", ()), "source validation")
+        if not train or not validation or train & validation:
+            raise SplitValidationError("Binary source fold partitions are invalid")
+        if expected_source is None:
+            expected_source = train | validation
+        if train | validation != expected_source:
+            raise SplitValidationError("Binary source fold subject hashes are inconsistent")
+        if seen_validation & validation:
+            raise SplitValidationError("Binary source validation folds overlap")
+        seen_validation.update(validation)
+        if fold.get("split_identity") != _binary_split_hash({key: value for key, value in fold.items() if key != "split_identity"}):
+            raise SplitValidationError("Binary source split identity hash is invalid")
+    if expected_source != seen_validation:
+        raise SplitValidationError("Every binary source subject must validate exactly once")
+    if target_partition.get("split_identity") != _binary_split_hash({key: value for key, value in target_partition.items() if key != "split_identity"}):
+        raise SplitValidationError("Binary target split identity hash is invalid")
 
 
 @dataclass

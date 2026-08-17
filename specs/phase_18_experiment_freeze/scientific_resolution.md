@@ -1,89 +1,68 @@
-# Phase 18 — Scientific Resolution Ledger
+# Phase 18 Scientific Resolution Ledger
 
-## Current resolution
+## Final decision
 
-The protocol is **not scientifically freeze-ready**. Repository evidence is recorded below; unresolved values remain blockers. No entry below authorizes a real run.
+**Scientific protocol status: `PHASE18_SCIENTIFIC_FREEZE_COMPLETE_BUT_EXTERNAL_PROVENANCE_BLOCKED`.** Selected scientific fields are frozen for pre-run planning. No target outcome, real cohort, or publication result was inspected.
 
-## Classification legend
+## Classification contract
 
-`canonical_fixed` = protected/repeated repository value; `manually_selected_pre_run` = must be explicitly chosen before execution; `engineering_only` = operational or synthetic value; `unresolved_blocking` = conflicting, missing, or unauthorized.
+- `RESOLVED_CANONICAL`: protected by the active repository contract and selected implementation path.
+- `RESOLVED_PRE_RUN_HUMAN`: explicitly selected by the maintainer before execution.
+- `ENGINEERING_ONLY`: synthetic or operational evidence that is not a publication claim.
+- `BLOCKED_EXTERNAL_PROVENANCE`: required real path, hash, identity, review, resource, or authorization evidence is absent.
 
-## Fixed repository contracts
+Selected scientific fields are **not** generic unresolved values:
 
-| Field | Value | Class | Evidence |
-|---|---|---|---|
-| Cohorts | `ADNI`, `OASIS` only | canonical_fixed | `AGENTS.md`; Phase 15–17 contracts |
-| Directions | `ADNI -> OASIS`; `OASIS -> ADNI` | canonical_fixed | `AGENTS.md`; `configs/evaluation/predictive.yaml`; Phase 17 matrix |
-| Class order | `CN=0`, `MCI=1`, `AD=2` | canonical_fixed | `AGENTS.md`; model/evaluation configs |
-| Core methods | `source_only`, `coral`, `mmd`, `cdan`, `prototype_pseudo`, `aagn`, `faster_snn` | canonical_fixed | Phase 15 decisions/config; Phase 17 regression boundary |
-| Proposed public model | `PADA-3DACB` | canonical_fixed | `docs/PADA3DACB_MODEL.md`; `configs/model/pada3dacb.yaml` |
-| Contextual encoder | `false`; no contextual runtime switch | canonical_fixed | model config and architecture docs |
-| Input channels/classes/ROIs | `1` / `3` / `102` | canonical_fixed | `configs/model/pada3dacb.yaml` |
-| Primary warm/full epochs | `5` / `50` | canonical_fixed | primary notebook call; `prototype_pseudo.yaml`; Phase 17 contract |
-| Primary LR / weight decay | `1e-4` / `1e-4` | canonical_fixed | primary notebook call and proposed-method config |
-| Primary batch/workers | `16` / `2` | canonical_fixed | primary notebook call and proposed-method config |
-| Early stopping | `false` | canonical_fixed | `AGENTS.md`; training configs |
-| Best checkpoint | source-validation macro-F1 only | canonical_fixed | `AGENTS.md`; `docs/LOSSES_AND_TRAINING.md`; Phase 15 D-14-002 boundary |
-| Training after best save | required through fixed epochs | canonical_fixed | `AGENTS.md`; training docs |
-| Target monitoring label | `MONITORING ONLY — NOT A TRAINING LOSS` | canonical_fixed | training/evaluation configs |
-| Seed policy evidence | `[42]` | canonical_fixed evidence; approval still required | experiment, baseline, evaluation, preprocessing, precompute configs |
-| Primary evaluation policy | `best_source_f1` | canonical_fixed | `configs/evaluation/predictive.yaml`; Phase 15 protocol |
-| Sensitivity policy | `last`, separate and never pooled | canonical_fixed | Phase 15 decisions/config |
-| Bootstrap replicates | `10000` when/if the approved evaluation protocol is authorized | canonical_fixed | Phase 15 statistical protocol/config |
+- PADA coefficients, optimizer values, epochs, checkpoint policy, and seed policy are `RESOLVED_CANONICAL` or `RESOLVED_PRE_RUN_HUMAN`.
+- The seven-method parameter ledger is structured and content-hash bound.
+- Missing real evidence is classified `BLOCKED_EXTERNAL_PROVENANCE`.
 
-## Primary loss coefficients
+## Selected PADA-3DACB values
 
-The following values are inherited from the primary path and are not to be tuned in a run:
+| Field | Selected value | Class | Evidence |
+|---|---:|---|---|
+| `lambda_proto` | `1.0` | `RESOLVED_PRE_RUN_HUMAN` | Primary non-commented path/configuration; maintainer pre-run decision. |
+| Historical `lambda_proto` | `0.2` | `RESOLVED_PRE_RUN_HUMAN` (excluded discrepancy) | Historical helper/manuscript discrepancy; non-production and never target-selected. |
+| `lambda_z`, `lambda_c` | `1.0`, `1.0` | `RESOLVED_CANONICAL` | Primary objective path. |
+| `lambda_cons`, `lambda_cbm`, `lambda_anat`, `lambda_pl` | `0.1`, `0.5`, `0.2`, `0.1` | `RESOLVED_CANONICAL` | Primary objective/configuration path. |
+| `tau_p`, `proto_margin`, `lambda_sep` | `0.95`, `1.0`, `0.1` | `RESOLVED_CANONICAL` | Prototype configuration. |
+| Warm coefficients | `0.1`, `1.0`, `1.0`, `1.0`, `0.0` | `RESOLVED_CANONICAL` | Primary warm-stage equation. |
+| Epochs | warm `5`, full `50` | `RESOLVED_PRE_RUN_HUMAN` | Fixed pre-run decision; early stopping is forbidden. |
+| Optimizer | learning rate `1e-4`, weight decay `1e-4`, batch size `16` | `RESOLVED_PRE_RUN_HUMAN` | Maintainer pre-run decision. |
 
-| Value | Class | Provenance |
+Target labels cannot enter adaptation loss, gradients, checkpoint selection, or hyperparameter selection. The no-context PADA-3DACB backbone and approved equations remain unchanged.
+
+## Method parameter ledger
+
+The exact structured ledger in both publication configurations contains these seven methods. Every entry has a `parameters` mapping, a resolved `value_class`, and mapping-valued `evidence`: `source_only`, `coral`, `mmd`, `cdan`, `prototype_pseudo`, `aagn`, and `faster_snn`. Its content hash is recorded in the authorization configuration.
+
+| Method | Selected parameter identity | Class |
 |---|---|---|
-| `lambda_z=1.0`, `lambda_c=1.0` | canonical_fixed | `training_original.ipynb` primary coefficients; Phase 17 inventory |
-| `lambda_cons=0.1`, `lambda_cbm=0.5`, `lambda_anat=0.2` | canonical_fixed | same sources; `configs/experiments/ablations.yaml` |
-| `lambda_pl=0.1` | canonical_fixed | same sources; proposed-method config |
-| `tau_p=0.95`, `proto_margin=1.0`, `lambda_sep=0.1` | canonical_fixed | proposed-method config and Phase 17 inventory |
-| `label_smoothing=0.1` | canonical_fixed | primary loss config |
-| `warm_lambda_z=0.1`, `warm_lambda_c=1.0`, `warm_lambda_cbm=1.0`, `warm_lambda_anat=1.0`, `warm_lambda_cons=0.0` | canonical_fixed | active warm equation and Phase 17 inventory |
+| Source-Only | canonical source-only contract | `RESOLVED_CANONICAL` |
+| CORAL | `weight=1.0`, `representation=z` | `RESOLVED_PRE_RUN_HUMAN` |
+| MMD | biased Gaussian RBF mixture; bandwidths `[8,16,32]`; `z` | `RESOLVED_PRE_RUN_HUMAN` |
+| CDAN | constant GRL `1.0`; hidden dims `[1024,1024]`; dropout `.5`; LR/WD `1e-4` | `RESOLVED_PRE_RUN_HUMAN` |
+| Prototype pseudo-label | `lambda_proto=1.0` | `RESOLVED_PRE_RUN_HUMAN` |
+| AAGN | canonical AAGN contract | `RESOLVED_CANONICAL` |
+| Faster SNN | canonical Faster SNN contract | `RESOLVED_CANONICAL` |
 
-## Blocking coefficient decision
+## Seeds, checkpoint, and ablations
 
-| Candidate value | Evidence | Disposition |
-|---|---|---|
-| `lambda_proto=1.0` | Primary non-commented path, cell 14 lines 504–524; `prototype_pseudo.yaml`; Phase 17 inventory | canonical primary evidence, but not publication-resolved |
-| `lambda_proto=0.2` | Later ablation helper/class default, cell 18 lines 55–86 and cell 8 default; D-14-001 | historical helper/manuscript evidence, not equivalent |
-| Publication-facing choice | No authoritative maintainer resolution | **unresolved_blocking** |
+- Seeds are `[42, 43, 44]`, with source split random state `42`, target partition seed `42`, predeclared selection, and posthoc selection forbidden.
+- Primary checkpoint is `best_source_f1` using source-validation macro-F1 only; `last` is a non-training sensitivity projection; macro-AUC is evaluation-only.
+- Primary ablations are `no_proto`, `no_pl`, `no_concept`, and `no_anat`; supplementary ablations are `no_cons` and `mean_pool`; excluded historical cells are `no_domain_adaptation`, `no_ctx_encoder`, `full`, and `identity_ctx`. These are planning classifications, not executed rows or blockers.
 
-The resolver MUST reject publication-facing execution while this conflict is unresolved. Target metrics, target labels, folds, seeds, or manuscript performance MUST NOT choose the value. The matrix compiler and real-run gate MUST reject authorization until an authoritative decision record binds exactly one value and its hash.
+## Matrix identity
 
-## Checked-in adaptation parameter ledger
+The generated matrix is the complete Cartesian product of seven methods, two canonical directions, five folds, and three seeds: **210 training rows plus 210 linked checkpoint projections, 420 rows total**. Every checkpoint projection has `training_invocation=false` and schedules no training.
 
-The seven-method inventory is not runnable merely because method IDs exist. Every method-specific parameter required by its checked-in loader/configuration MUST be present, typed, and hash-bound before authorization. The following parameters are currently absent, null, or rejected by the available validators and therefore remain `unresolved_blocking`:
+## External blockers
 
-| Method | Required parameter set that must be checked in and validated | Current disposition |
-|---|---|---|
-| `coral` | CORAL adaptation weight | `unresolved_blocking` |
-| `mmd` | MMD adaptation weight; kernel type; every kernel bandwidth/scale used by the implementation | `unresolved_blocking` |
-| `cdan` | CDAN adaptation weight; GRL strength/schedule; discriminator architecture, hidden size, input contract, optimizer, and discriminator learning-rate settings | `unresolved_blocking` |
+The freeze remains closed because the following evidence is absent and is classified `BLOCKED_EXTERNAL_PROVENANCE` or an equivalent external gate class:
 
-A future resolved method configuration MUST enumerate these fields explicitly and include them in `resolved_config_hash`. The loader MUST reject a missing, null, malformed, or out-of-schema field. It MUST NOT invent defaults, inherit an unrelated method's value, or silently substitute a generic configuration. Until authoritative checked-in values and loader-validation evidence exist, the affected method rows and the real-run gate remain blocked.
+- ADNI/OASIS split manifests, source assignments, target-adaptation assignments, target-evaluation assignments, and target subject intersection verification.
+- Atlas, ROI order/masks, concept normalizer/targets, Jacobian artifacts, code/environment/command identity, and canonicalization/native conformance identity.
+- Approved hardware/resource observations, real feasibility, independent review, privacy/data-access evidence, native lifecycle receipt, and human real-run authorization.
+- A complete authoritative manuscript source for later alignment; its absence does not unsettle selected pre-run values.
 
-## Method and ablation disposition
-
-The seven core methods are the only matrix rows. Phase 17's exact candidates (`no_proto`, `no_pl`, `no_cons`, `no_concept`, `no_anat`, `mean_pool`) are `canonical_defined_not_executed` evidence for synthetic work, not automatically publication methods. Their publication inclusion is `unresolved_blocking` pending explicit human selection. Forbidden historical/contextual names and unproven source-only aliases are excluded from the runnable inventory and cannot be reintroduced by name.
-
-## Real-data values still requiring selection or evidence
-
-| Field | Class | Required evidence |
-|---|---|---|
-| Split manifests and subject assignments | unresolved_blocking | exact immutable manifests and hashes for every direction/fold/seed |
-| Target adaptation/evaluation partition | unresolved_blocking | hash-verified manifest contents, disjoint subject lists, role manifests, and hashes |
-| CORAL/MMD/CDAN checked-in parameters | unresolved_blocking | authoritative method configs plus loader validation; no invented defaults |
-| Atlas/ROI metadata and order | unresolved_blocking until identified | Phase 5 artifact identity, atlas/mask/order hashes |
-| Concept normalizer/targets/Jacobians | unresolved_blocking until identified | immutable artifact index and source hashes; no refit/regeneration |
-| Data paths/privacy authorization | unresolved_blocking | configured roots, access/privacy decision, no external discovery |
-| Hardware/device and budget | unresolved_blocking | observed feasibility record and approved conservative/nominal budget |
-| Publication ablation subset | unresolved_blocking | explicit maintainer selection before matrix identity is frozen |
-| Manuscript equations/endpoints | unresolved_blocking | authoritative source for any publication score or statistical endpoint |
-
-## Outcome
-
-Until the blockers above are resolved, the only valid Phase 18 state is planning/blocked. No performance, feasibility, publication, or scientific conclusion is inferred. A gate manifest with an unresolved lambda, missing method parameter, non-canonical direction identifier, failed content-level assignment intersection, or unavailable canonical-JSON conformance evidence MUST be rejected before authorization.
+No performance, publication metric, cohort runtime, or real provenance conclusion is inferred.

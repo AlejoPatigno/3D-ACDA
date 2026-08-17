@@ -639,23 +639,23 @@ Every phase report must include:
 
 ## 16. Current Authorized Phase
 
-At the time this file was created, the current authorized phase is:
+The current authorized phase is:
 
 ```text
 
-Phase 17 — Canonical PADA-3DACB Ablation Suite
+Phase 18 — Publication Experiment Freeze, Real-Run Authorization, and Computational Feasibility
 
 ```
 
-The phase specification must be stored under:
+The phase decision record is stored under:
 
 ```text
 
-specs/phase_17_ablations/
+specs/phase_18_experiment_freeze/decisions.md
 
 ```
 
-Phase 17 is authorized by explicit human approval after Phase 16 final audit, native receipt `review-79ee2a4308d2010c` (state: approved), and archive completed on 2026-08-08. The former native incident #1793 was resolved as an administrative delivery blocker by that approved Phase 16 receipt; delivery gates remain governed by the native review lifecycle (pre-commit/pre-push/pre-PR/release validation of the same content-bound receipt). Phase 17 implements the canonical PADA-3DACB ablation suite as defined in `specs/phase_17_ablations/`, strictly before any real ADNI/OASIS ablation run, publication results, or Phase 18 work. Phase 18 production work remains forbidden until Phase 17 is reviewed and explicitly approved.
+Phase 18 protocol-freeze and preflight/authorization work is authorized by explicit human approval. This authorization does **not** authorize real ADNI/OASIS training or evaluation, publication analysis or claims, or Phase 19; `real_execution_authorized=false`, `publication_authorized=false`, and Phase 19 remains forbidden. Do not invent unresolved scientific values: record them in the Phase 18 decisions file and stop the affected action. The approved native receipt `review-1d63ad8511d6bbf5` and all `.git/gentle-ai` lifecycle evidence remain untouched and governed by the native review lifecycle.
 
 ## graphify
 

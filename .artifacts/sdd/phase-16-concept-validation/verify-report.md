@@ -1,5 +1,9 @@
 # Verification Report: phase-16-concept-validation
 
+> **Historical snapshot — Not current lifecycle authority**
+>
+> The status and evidence below are preserved as a time-scoped Phase 16 record. For current lifecycle status, use `openspec/changes/phase-17-ablations/state.yaml` and `docs/IMPLEMENTATION_AUDIT.md`.
+
 **Status:** BLOCKED
 
 The two introduced CRITICAL findings RISK-001 and RISK-002 from native review lineage `review-047ae7d944d9e975` were remediated without changing scientific equations, authorization, or Phase 17 paths. Native review issue #1793 remains escalated; the prior full pytest run timed out; and both parent-owned lifecycle rows remain unchecked. No archive or completion recommendation is made.

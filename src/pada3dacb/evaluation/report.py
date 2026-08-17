@@ -854,3 +854,60 @@ def verify_reuse(
         if index != {"schema_version": SCHEMA_VERSION, "artifacts": index_hashes}:
             raise ReuseVerificationError("artifact index hash inventory mismatch")
     return ReportOutcome(ReportState.REUSED, plan, None)
+
+
+# Additive task-scoped binary report facade.  It does not alter Phase 15 report
+# plans, schemas, output paths, or historical class order.
+def build_binary_report(
+    rows: Sequence[Mapping[str, object]], *, task_hash: str | None = None,
+    metadata: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    from .binary import binary_evaluation_payload
+    payload = binary_evaluation_payload(rows, task_hash=task_hash)
+    payload["schema_version"] = "phase18b-binary-evaluation-v1"
+    payload["aggregation"] = dict(metadata or {})
+    payload["statistical_unit"] = "subject"
+    payload["bootstrap"] = dict((metadata or {}).get("bootstrap", {})) if isinstance((metadata or {}).get("bootstrap", {}), Mapping) else {}
+    payload["paired"] = dict((metadata or {}).get("paired", {})) if isinstance((metadata or {}).get("paired", {}), Mapping) else {}
+    payload["holm"] = dict((metadata or {}).get("holm", {})) if isinstance((metadata or {}).get("holm", {}), Mapping) else {}
+    return payload
+
+
+def serialize_binary_report(report: Mapping[str, object]) -> bytes:
+    validate_binary_report(report)
+    return (canonical_json(report) + "\n").encode("utf-8")
+
+
+def validate_binary_report(report: Mapping[str, object]) -> None:
+    from .binary import BINARY_REQUIRED_METRICS, BINARY_TASK_ID
+    if not isinstance(report, Mapping) or report.get("task") != BINARY_TASK_ID:
+        raise ValueError("binary report task must be cn_vs_impaired")
+    if report.get("class_order") != ["CN", "Impaired"]:
+        raise ValueError("binary report class order is incompatible")
+    if report.get("statistical_unit") != "subject":
+        raise ValueError("binary report statistical unit must be subject")
+    metrics = report.get("metrics")
+    if not isinstance(metrics, Mapping) or any(name not in metrics for name in BINARY_REQUIRED_METRICS):
+        raise ValueError("binary report metric set is incomplete")
+    if {"prob_mci", "prob_ad", "probability_MCI", "probability_AD"}.intersection(report):
+        raise ValueError("historical probability fields are not accepted")
+
+
+def write_binary_report(report: Mapping[str, object], path: str | Path) -> Path:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(serialize_binary_report(report))
+    return target
+
+
+def load_binary_report(path: str | Path) -> dict[str, object]:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("binary report is unreadable") from error
+    validate_binary_report(payload)
+    return payload
+
+
+read_binary_report = load_binary_report
+build_binary_evaluation_report = build_binary_report

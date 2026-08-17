@@ -15,7 +15,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import yaml  # noqa: E402
 
 from pada3dacb.publication.authorization import check_authorization, format_blockers  # noqa: E402
-from pada3dacb.publication.experiment_matrix import RowState, generate_matrix  # noqa: E402
+from pada3dacb.publication.experiment_matrix import (  # noqa: E402
+    RowState,
+    build_ablation_plan,
+    generate_matrix,
+)
 from pada3dacb.publication.freeze import (  # noqa: E402
     FreezeValidationError,
     build_freeze_payload,
@@ -52,10 +56,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_matrix:
         try:
             matrix = _planning_matrix(config)
+            ablations = _planning_ablations(config)
         except (KeyError, TypeError, ValueError) as exc:
             print(f"MATRIX BLOCKED: {exc}")
         else:
-            print(json.dumps({"matrix_id": matrix.matrix_id, "rows": list(matrix.to_rows())}, indent=2))
+            document = matrix.to_mapping()
+            document["counts"] = matrix.counts
+            document["ablations"] = ablations.to_mapping()
+            print(json.dumps(document, indent=2))
 
     result = check_authorization(config)
     if args.print_blockers or args.validate_only or args.feasibility_only or args.print_matrix:
@@ -109,7 +117,23 @@ def _planning_matrix(config: dict[str, Any]):
         directions=definition["directions"],
         folds=definition["folds"],
         seeds=definition["seeds"],
+        resolved_seed_policy=definition.get("resolved_seed_policy"),
         state=RowState.BLOCKED_CONFIGURATION,
+    )
+
+
+def _planning_ablations(config: dict[str, Any]):
+    definition = config.get("matrix")
+    ablations = config.get("ablations")
+    if not isinstance(definition, dict) or not isinstance(ablations, dict):
+        raise ValueError("matrix and ablation definitions are required")
+    return build_ablation_plan(
+        seeds=definition["seeds"],
+        primary=ablations["primary"],
+        supplementary=ablations["supplementary"],
+        excluded=ablations["excluded"],
+        directions=definition["directions"],
+        folds=definition["folds"],
     )
 
 

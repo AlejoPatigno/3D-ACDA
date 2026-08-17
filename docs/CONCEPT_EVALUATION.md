@@ -107,5 +107,6 @@ A full `python -m pytest -q --basetemp=artifacts/pytest-tmp-phase16-full` run ex
 - Target labels are posthoc-only and never enter adaptation, checkpoint selection, or method selection.
 - No result is a publication claim; causal importance, biomarkers, and disease mechanisms are not inferred.
 - CFS, ACS, PCS, and QIS remain `BLOCKED` because no authoritative equations were found. The code does not invent them.
-- Phase 17 behavior is not present or started.
-- Native receipt #1793 remains an administrative delivery blocker for review lifecycle, commit, push, PR, archive, release, and publication actions.
+- Phase 17 is synthetic-only and closed; no real-cohort execution or Phase 18 work is implied.
+- Phase 18 has not started.
+- The approved Phase 16 receipt is historical provenance only, not a current Phase 17 receipt. Native incident #1793 is historical administrative context, not a scientific result or a current Phase 17 receipt.

@@ -103,6 +103,30 @@ def migrate_legacy_lite_state_dict(
     return migrated, report
 
 
+def load_binary_checkpoint(model: nn.Module, checkpoint: Any) -> nn.Module:
+    """Load a complete Phase 18B checkpoint only after metadata validation."""
+    from pada3dacb.binary import load_binary_checkpoint as _load_binary_checkpoint
+    from pada3dacb.training.checkpointing import validate_binary_checkpoint_metadata
+
+    metadata = checkpoint
+    if isinstance(checkpoint, (str, Path)):
+        metadata = torch.load(checkpoint, weights_only=True, map_location="cpu")
+    if not isinstance(metadata, dict):
+        raise CheckpointMigrationError("binary checkpoint metadata is required; unsafe fallback is prohibited")
+    try:
+        validate_binary_checkpoint_metadata(metadata, model=model)
+    except Exception as error:
+        if isinstance(error, CheckpointMigrationError):
+            raise
+        raise CheckpointMigrationError(str(error)) from error
+    try:
+        return _load_binary_checkpoint(model, metadata)
+    except Exception as error:
+        if isinstance(error, CheckpointMigrationError):
+            raise
+        raise CheckpointMigrationError("binary checkpoint load failed; partial loading is prohibited") from error
+
+
 def load_migrated_legacy_checkpoint(
     model: nn.Module,
     checkpoint: Any,

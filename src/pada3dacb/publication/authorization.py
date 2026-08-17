@@ -8,12 +8,15 @@ from typing import Any
 
 from .canonical_json import identity_sha256, is_sha256
 from .experiment_matrix import ExperimentMatrix, MatrixValidationError, matrix_content_hash
+from .freeze import build_freeze_payload, collect_unresolved_blockers
 from .provenance import (
     ManifestValidation,
     _is_verifier_issued_manifest,
 )
-from .schemas import FreezePayload
+from .schemas import FreezePayload, freeze_payload_hash
 from .validation import ValidationBlocker, aggregate_validators, validate_matrix_input
+
+PUBLICATION_SEEDS = (42, 43, 44)
 
 HASH_FIELDS = (
     "freeze_hash",
@@ -214,12 +217,22 @@ def _check_freeze_hash(manifest: Mapping[str, Any], freeze_payload: Mapping[str,
         FreezePayload.from_mapping(payload)
     except (TypeError, ValueError) as exc:
         blockers.append(AuthorizationBlocker("missing_evidence", f"freeze payload schema is invalid: {exc}", "freeze_payload"))
-    if _contains_unresolved(payload):
-        blockers.append(AuthorizationBlocker("unresolved_scientific_value", "freeze payload contains unresolved blockers", "freeze_payload"))
+    unresolved_paths = collect_unresolved_blockers(payload)
+    if unresolved_paths:
+        blockers.extend(
+            AuthorizationBlocker("unresolved_scientific_value", path, "freeze_payload")
+            for path in unresolved_paths
+        )
     if not _valid_hash(manifest.get("freeze_hash")):
         blockers.append(AuthorizationBlocker("missing_evidence", "freeze_hash must bind the complete freeze payload", "freeze_hash"))
-    elif manifest.get("freeze_hash") != identity_sha256(payload):
-        blockers.append(AuthorizationBlocker("hash_mismatch", "freeze_hash does not match the freeze payload", "freeze_hash"))
+    else:
+        try:
+            expected_hash = freeze_payload_hash(build_freeze_payload(payload))
+        except (TypeError, ValueError) as exc:
+            blockers.append(AuthorizationBlocker("missing_evidence", f"freeze payload identity is invalid: {exc}", "freeze_payload"))
+        else:
+            if manifest.get("freeze_hash") != expected_hash:
+                blockers.append(AuthorizationBlocker("hash_mismatch", "freeze_hash does not match the freeze payload", "freeze_hash"))
     return blockers
 
 
@@ -293,6 +306,15 @@ def _check_science(manifest: Mapping[str, Any]) -> list[AuthorizationBlocker]:
         blockers.append(AuthorizationBlocker("unresolved_scientific_value", "scientific resolution contains unresolved values", "scientific_resolution"))
     if not isinstance(science, Mapping) or "lambda_proto" not in science:
         blockers.append(AuthorizationBlocker("unresolved_scientific_value", "lambda_proto resolution is missing", "scientific_resolution.lambda_proto"))
+    else:
+        lambda_record = science["lambda_proto"]
+        lambda_value = (
+            lambda_record.get("value")
+            if isinstance(lambda_record, Mapping)
+            else lambda_record
+        )
+        if type(lambda_value) is not float or lambda_value != 1.0:
+            blockers.append(AuthorizationBlocker("scientific_value_mismatch", "publication lambda_proto must be exactly float 1.0", "scientific_resolution.lambda_proto"))
     if manifest.get("method_parameter_ledger") is not None and _contains_unresolved(manifest["method_parameter_ledger"]):
         blockers.append(AuthorizationBlocker("unresolved_method_parameter", "method parameter ledger contains unresolved values", "method_parameter_ledger"))
     if _contains_unresolved(manifest.get("method_inventory")):
@@ -307,16 +329,50 @@ def _check_science(manifest: Mapping[str, Any]) -> list[AuthorizationBlocker]:
 def _check_seed_policy(manifest: Mapping[str, Any]) -> list[AuthorizationBlocker]:
     policy = manifest.get("resolved_seed_policy")
     seeds = manifest.get("seed_policy")
-    if policy is None:
-        if seeds != [42]:
-            return [AuthorizationBlocker("seed_policy_mismatch", "seed policy must be exactly [42]", "seed_policy")]
-        expected = identity_sha256({"seeds": [42]})
-    else:
-        if not isinstance(policy, Mapping) or policy.get("resolved") is not True or policy.get("seeds") != seeds:
-            return [AuthorizationBlocker("seed_policy_mismatch", "resolved seed policy is incomplete or inconsistent", "resolved_seed_policy")]
-        expected = identity_sha256(policy)
     blockers: list[AuthorizationBlocker] = []
-    if manifest.get("seed_policy_hash") != expected:
+    if not (
+        type(seeds) is list
+        and seeds == list(PUBLICATION_SEEDS)
+        and all(type(seed) is int for seed in seeds)
+    ):
+        blockers.append(
+            AuthorizationBlocker(
+                "seed_policy_mismatch",
+                "publication seed policy must be exactly integer seeds [42, 43, 44]",
+                "seed_policy",
+            )
+        )
+    required_policy = {
+        "resolved": True,
+        "seeds": list(PUBLICATION_SEEDS),
+        "source": "pre_run_human_decision",
+        "source_split_random_state": 42,
+        "target_partition_seed": 42,
+        "predeclared": True,
+        "posthoc_selection_forbidden": True,
+    }
+    policy_types_valid = (
+        isinstance(policy, Mapping)
+        and type(policy.get("resolved")) is bool
+        and type(policy.get("seeds")) is list
+        and all(type(seed) is int for seed in policy.get("seeds", ()))
+        and type(policy.get("source_split_random_state")) is int
+        and type(policy.get("target_partition_seed")) is int
+        and type(policy.get("predeclared")) is bool
+        and type(policy.get("posthoc_selection_forbidden")) is bool
+    )
+    if not policy_types_valid or dict(policy) != required_policy:
+        blockers.append(
+            AuthorizationBlocker(
+                "seed_policy_mismatch",
+                "resolved publication seed policy is incomplete or inconsistent",
+                "resolved_seed_policy",
+            )
+        )
+        expected = None
+    else:
+        expected = identity_sha256(policy)
+    if expected is not None and manifest.get("seed_policy_hash") != expected:
         blockers.append(AuthorizationBlocker("hash_mismatch", "seed_policy_hash does not match the resolved seed policy", "seed_policy_hash"))
     matrix = manifest.get("matrix")
     raw_matrix_seeds = matrix.seeds if isinstance(matrix, ExperimentMatrix) else matrix.get("seeds") if isinstance(matrix, Mapping) else None
@@ -327,6 +383,23 @@ def _check_seed_policy(manifest: Mapping[str, Any]) -> list[AuthorizationBlocker
     )
     if matrix_seeds is not None and matrix_seeds != seeds:
         blockers.append(AuthorizationBlocker("seed_policy_mismatch", "top-level seed policy does not match matrix seeds", "matrix.seeds"))
+    matrix_policy = (
+        matrix.resolved_seed_policy
+        if isinstance(matrix, ExperimentMatrix)
+        else matrix.get("resolved_seed_policy")
+        if isinstance(matrix, Mapping)
+        else None
+    )
+    if matrix_policy is not None and (
+        not isinstance(matrix_policy, Mapping) or dict(matrix_policy) != required_policy
+    ):
+        blockers.append(
+            AuthorizationBlocker(
+                "seed_policy_mismatch",
+                "matrix resolved seed policy does not match the frozen publication policy",
+                "matrix.resolved_seed_policy",
+            )
+        )
     return blockers
 
 
