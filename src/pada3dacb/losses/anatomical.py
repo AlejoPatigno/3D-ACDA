@@ -29,5 +29,9 @@ class AnatomicalConsistencyLoss(nn.Module):
             raise LossContractError(f"Expected K={self.num_rois}, got K={concepts.shape[1]}.")
         if self.roi_weights.device != concepts.device:
             raise LossContractError("roi_weights and loss inputs must be on the same device.")
+        weight_sum = self.roi_weights.sum().to(dtype=concepts.dtype)
+        if weight_sum <= 0:
+            raise LossContractError("roi_weights must have a positive sum.")
         residuals = (concepts - g_bar).square()
-        return (residuals * self.roi_weights.to(dtype=concepts.dtype).unsqueeze(0)).mean()
+        weighted = residuals * self.roi_weights.to(dtype=concepts.dtype).unsqueeze(0)
+        return weighted.sum() / (concepts.shape[0] * weight_sum)

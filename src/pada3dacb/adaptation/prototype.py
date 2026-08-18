@@ -129,15 +129,16 @@ def build_source_prototypes(
     if y_src.device != z_src.device:
         raise LossContractError("source labels and source embeddings must share a device.")
 
+    z_src_norm = F.normalize(z_src, p=2, dim=1)
     prototypes = []
     valid = []
     for class_index in range(class_count):
         mask = y_src == class_index
         valid.append(mask.any())
         if bool(mask.any()):
-            prototypes.append(z_src[mask].mean(dim=0))
+            prototypes.append(z_src_norm[mask].mean(dim=0))
         else:
-            prototypes.append(z_src.new_zeros(z_src.shape[1]))
+            prototypes.append(z_src_norm.new_zeros(z_src_norm.shape[1]))
     return torch.stack(prototypes, dim=0), torch.stack(valid).to(device=z_src.device)
 
 
@@ -161,15 +162,16 @@ def build_target_prototypes(
     confidence, pseudo_labels = probabilities.max(dim=-1)
     accepted = confidence >= tau_p
 
+    z_tgt_norm = F.normalize(z_tgt, p=2, dim=1)
     prototypes = []
     valid = []
     for class_index in range(class_count):
         mask = accepted & (pseudo_labels == class_index)
         valid.append(mask.any())
         if bool(mask.any()):
-            prototypes.append(z_tgt[mask].mean(dim=0))
+            prototypes.append(z_tgt_norm[mask].mean(dim=0))
         else:
-            prototypes.append(z_tgt.new_zeros(z_tgt.shape[1]))
+            prototypes.append(z_tgt_norm.new_zeros(z_tgt_norm.shape[1]))
     return torch.stack(prototypes, dim=0), torch.stack(valid).to(device=z_tgt.device), pseudo_labels, accepted
 
 
@@ -197,13 +199,14 @@ def prototype_alignment_loss(
     target_prototypes: Tensor,
     valid_target: Tensor,
 ) -> Tensor:
-    """Mean squared Euclidean distance over mutually valid prototype classes."""
+    """Mean squared Euclidean distance over mutually valid prototype classes, normalized to [0, 1]."""
     _validate_prototype_inputs(source_prototypes, valid_source, target_prototypes, valid_target)
     mutually_valid = valid_source & valid_target
     if not bool(mutually_valid.any()):
         return _zero_scalar_like(source_prototypes) + _zero_scalar_like(target_prototypes)
     distances = (source_prototypes[mutually_valid] - target_prototypes[mutually_valid]).square().sum(dim=1)
-    loss = distances.mean()
+    num_valid = mutually_valid.sum().to(dtype=source_prototypes.dtype)
+    loss = distances.sum() / (4.0 * num_valid)
     if loss.ndim != 0 or not torch.isfinite(loss):
         raise LossContractError("Prototype alignment loss must be a finite scalar.")
     return loss
@@ -215,16 +218,18 @@ def prototype_separation_loss(
     *,
     proto_margin: float = DEFAULT_PROTO_MARGIN,
 ) -> Tensor:
-    """Mean margin penalty over unordered valid source prototype pairs."""
+    """Normalized margin penalty over unordered valid source prototype pairs, in [0, 1]."""
     proto_margin = _validate_nonnegative_scalar(proto_margin, "proto_margin")
     _validate_prototype_inputs(source_prototypes, valid_source)
+    if proto_margin == 0:
+        return _zero_scalar_like(source_prototypes)
     valid_prototypes = source_prototypes[valid_source]
     if valid_prototypes.shape[0] < 2:
         return _zero_scalar_like(source_prototypes)
     pair_i, pair_j = torch.triu_indices(valid_prototypes.shape[0], valid_prototypes.shape[0], offset=1, device=source_prototypes.device)
     distances = (valid_prototypes[pair_i] - valid_prototypes[pair_j]).norm(p=2, dim=1)
-    penalties = torch.relu(source_prototypes.new_tensor(proto_margin) - distances).square()
-    loss = penalties.mean()
+    margin = source_prototypes.new_tensor(proto_margin)
+    loss = (torch.relu(margin - distances) / margin).square().mean()
     if loss.ndim != 0 or not torch.isfinite(loss):
         raise LossContractError("Prototype separation loss must be a finite scalar.")
     return loss
