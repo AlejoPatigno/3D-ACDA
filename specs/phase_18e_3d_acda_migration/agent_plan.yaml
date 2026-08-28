@@ -1,0 +1,396 @@
+change_id: phase-18e-3d-acda-migration
+phase: B
+status: planning_only
+language: en
+artifact_store: file_package
+execution_mode: bounded_documentation_only
+live_commit: aafe817365cb4068f167b398c776aff4c3b1f021
+single_writer: true
+
+provenance_anchors:
+  untracked_frozen_notebook_sha256:
+    value: null
+    status: required_before_activation
+    meaning: content_hash_of_untracked_frozen_notebook
+    evidence_artifact: separate_notebook_sha256_record
+  user_verified_source_commit_sha:
+    value: aafe817365cb4068f167b398c776aff4c3b1f021
+    status: user_verified_source_tree_anchor
+    evidence_artifact: source_commit_verification_record
+  distinction: notebook_content_hash_and_source_commit_sha_are_independent_anchors
+
+authoritative_dependencies:
+  frozen_notebook:
+    authority: frozen_untracked_notebook_and_docs/EXPERIMENT_FREEZE_PRE_3D_ACDA.md
+    required_for: [b0-boundary-inventory, b3-mmd-comparator-and-ablation-contract, regression, phase_c_start, phase_c_review, phase_d_activation]
+    evidence_artifact: notebook_sha256_and_frozen_family_record
+    fail_closed_result: BLOCKED
+  phase_18:
+    authority: Phase_18_authorization_binary_target_isolation_and_fail_closed_contract
+    required_for: [b2-binary-provenance-and-reporting, binary_and_provenance, phase_c_start, phase_c_review, phase_d_activation]
+    evidence_artifact: phase_18_authorization_and_boundary_record
+    fail_closed_result: BLOCKED
+  phase_18b:
+    authority: Phase_18B_OASIS_provenance_and_semantics_contract
+    required_for: [b2-binary-provenance-and-reporting, binary_and_provenance, phase_d_activation]
+    evidence_artifact: phase_18b_oasis_provenance_semantics_approval_and_canonical_manifest
+    pass_required_before: phase_d_activation
+    fail_closed_result: BLOCKED
+  phase_17:
+    authority: Phase_17_ablation_disposition_and_protected_behavior_contract
+    required_for: [b3-mmd-comparator-and-ablation-contract, regression, phase_c_review, phase_d_activation]
+    evidence_artifact: phase_17_disposition_and_regression_record
+    fail_closed_result: BLOCKED
+
+live_frozen_family:
+  seeds: [42, 43, 44]
+  seed_status:
+    "42": frozen_live_family_member
+    "43": running_by_user_attestation
+    "44": running_by_user_attestation
+  attestation_scope: protected_boundaries_and_activation_prerequisites
+  completion_claim_authorized: false
+  evidence_artifact: live_seed_status_attestation_record
+  missing_or_unverified_result: BLOCKED
+runtime_changes_authorized: false
+real_execution_authorized: false
+publication_authorized: false
+hpo_authorized: false
+rename_executed: false
+
+protected_boundaries:
+  - existing_mmd_source_and_behavior
+  - frozen_live_notebook
+  - package_identity_pada3dacb
+  - repository_identity_and_historic_paths
+  - historical_specs_and_documents
+  - outputs_runs_results_artifacts
+  - tests_configs_and_source
+  - git_metadata_and_existing_openspec_changes
+  - no_target_labels_in_adaptation
+  - source_validation_macro_f1_only_checkpoint_selection
+  - fixed_epochs_and_continued_training
+
+file_ownership:
+  phase_b_package:
+    owner: phase-b-documentation-owner
+    paths:
+      - specs/phase_18e_3d_acda_migration/requirements.md
+      - specs/phase_18e_3d_acda_migration/design.md
+      - specs/phase_18e_3d_acda_migration/tasks.md
+      - specs/phase_18e_3d_acda_migration/acceptance.md
+      - specs/phase_18e_3d_acda_migration/agent_plan.yaml
+      - specs/phase_18e_3d_acda_migration/decisions.md
+    responsibility: >-
+      Produce and maintain the prospective Phase B scientific specification only.
+      Do not edit any path outside this new directory.
+
+scientific_identity:
+  public_name: 3D-ACDA
+  expanded_name: Three-Dimensional Anatomically Constrained Domain Adaptation
+  canonical_internal_id: mmd
+  mmd_novelty_claim: false
+  contribution:
+    - 3D encoder
+    - 102-ROI representation and tokenization
+    - independent ROI refinement
+    - learned attention
+    - concept bottleneck with MRI-derived supervision
+    - Jacobian anatomy consistency
+    - dual latent and concept paths
+    - cross-cohort evaluation
+
+taxonomy:
+  display_aliases:
+    mmd: 3D-ACDA
+    source_only: 3D-ACDA Source-Only
+    coral: 3D-ACDA + CORAL
+    cdan: 3D-ACDA + CDAN
+    prototype_pseudo: 3D-ACDA + Prototype/Pseudo
+  explicit_comparators:
+    - coral
+    - cdan
+    - prototype_pseudo
+  independent_baselines:
+    - aagn
+    - faster_snn
+  primary_ablation_ids:
+    - no_mmd
+    - no_cons
+    - no_concept
+    - no_anat
+    - mean_pool
+  legacy_or_supplementary:
+    - no_proto
+    - no_pl
+  alias_resolution: read_and_report_time_only
+  output_path_mutation: forbidden
+  internal_id_mutation: forbidden
+
+frozen_mmd_contract:
+  estimator: biased_squared_mixture_rbf_mmd
+  diagonal_terms: included
+  bandwidth_aggregation: arithmetic_average
+  pairwise_dtype: float32
+  embedding_normalization: forbidden
+  median_heuristic: forbidden
+  final_clamp: forbidden
+  live_lambda_mmd: 1
+  live_bandwidths: [1, 2, 4, 8, 16]
+  source_change_authorized: false
+
+known_discrepancies:
+  items:
+    - package_versus_notebook_binary_protocol
+    - historical_mmd_and_default_configurations
+    - sampler_behavior
+    - strict_tdd_configuration_mismatch
+  resolution: retain_without_silent_resolution
+
+future_sequence:
+  A:
+    name: freeze_and_identity_boundary
+    status: prerequisite_or_historical_boundary
+  B:
+    name: scientific_specification_package
+    status: active_documentation_only
+  C:
+    name: reporting_only_migration_implementation
+    status: conditionally_authorized_to_start
+    scope: pure_read_report_display_name_resolver_and_projection_only
+    start_boundary:
+      - explicit_user_phase_c_reporting_only_authorization_already_received
+      - frozen_source_commit_or_tag_and_notebook_boundary_verified
+      - notebook_sha256_recorded_separately_from_source_commit
+      - live_notebook_training_import_reachability_check_passed
+      - exclusive_non_interference_proof_recorded
+    completion_claim_authorized: false
+    implementation_or_review_complete: false
+  D:
+    name: controlled_live_execution_and_result_freeze
+    status: blocked
+    blocked_until:
+      - phase_c_review_and_regression_verified
+      - live_runs_finished
+      - results_and_manifests_frozen
+      - required_tests_and_regressions_passed
+      - phase_18b_oasis_provenance_semantics_blocker_passed
+      - live_seed_status_attestation_verified
+      - separate_explicit_phase_d_execution_authorization_recorded
+  E:
+    name: reporting_and_scientific_comparison
+    status: blocked_until_frozen_results
+  F:
+    name: compatibility_rename_execution
+    status: separate_plan_only
+    executed_in_phase_b: false
+
+actions:
+  - id: b0-boundary-inventory
+    owner: phase-b-documentation-owner
+    depends_on: []
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/decisions.md
+    responsibility: >-
+      Record live provenance, protected paths, no-change boundary, and known
+      discrepancies without rewriting historical evidence.
+
+  - id: b1-scientific-identity-and-taxonomy
+    owner: phase-b-documentation-owner
+    depends_on: [b0-boundary-inventory]
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/requirements.md
+      - specs/phase_18e_3d_acda_migration/design.md
+    responsibility: >-
+      Define 3D-ACDA identity, contribution boundary, display aliases, internal
+      IDs, comparator roles, independent baselines, and legacy dispositions.
+
+  - id: b2-binary-provenance-and-reporting
+    owner: phase-b-documentation-owner
+    depends_on: [b0-boundary-inventory, b1-scientific-identity-and-taxonomy, phase_18_authority, phase_18b_authority]
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/requirements.md
+      - specs/phase_18e_3d_acda_migration/acceptance.md
+    responsibility: >-
+      Define prospective binary mappings, both directions, target partition
+      isolation, target-label exclusion, and subject-level reporting.
+
+  - id: b3-mmd-comparator-and-ablation-contract
+    owner: phase-b-documentation-owner
+    depends_on: [b0-boundary-inventory, b1-scientific-identity-and-taxonomy, frozen_notebook, phase_17_authority]
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/requirements.md
+      - specs/phase_18e_3d_acda_migration/design.md
+    responsibility: >-
+      Preserve exact MMD behavior, define primary prospective ablations, retain
+      comparator regressions, and make no_mmd non-equivalence explicit.
+
+  - id: b4-identity-hash-and-resume-contract
+    owner: phase-b-documentation-owner
+    depends_on: [b1-scientific-identity-and-taxonomy, b3-mmd-comparator-and-ablation-contract]
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/design.md
+      - specs/phase_18e_3d_acda_migration/acceptance.md
+    responsibility: >-
+      Define read/report-time alias resolution, canonical configuration hashes,
+      checkpoint identity, resume rules, and non-mutation guarantees.
+
+  - id: b5-acceptance-and-gate-consolidation
+    owner: phase-b-documentation-owner
+    depends_on: [b1-scientific-identity-and-taxonomy, b2-binary-provenance-and-reporting, b3-mmd-comparator-and-ablation-contract, b4-identity-hash-and-resume-contract]
+    status: complete_for_package_draft
+    owns:
+      - specs/phase_18e_3d_acda_migration/tasks.md
+      - specs/phase_18e_3d_acda_migration/acceptance.md
+      - specs/phase_18e_3d_acda_migration/agent_plan.yaml
+    responsibility: >-
+      Define ownership, dependencies, A-F sequencing, review gates, and explicit
+      Phase C/D blockers.
+
+  - id: b6-independent-package-review
+    owner: independent-specification-reviewer
+    depends_on: [b5-acceptance-and-gate-consolidation]
+    status: pending
+    owns: []
+    responsibility: >-
+      Check completeness, internal consistency, no invented values, discrepancy
+      retention, regression coverage, and documentation-only scope.
+
+  - id: c-reporting-only-migration-implementation
+    owner: future-implementation-owner
+    depends_on: [explicit_user_phase_c_reporting_only_authorization, frozen_boundary_verified, training_import_reachability_check, exclusive_non_interference_proof]
+    status: conditionally_authorized_to_start
+    owns: []
+    responsibility: >-
+      Implement only a pure read/report-time display-name resolver and projection
+      layer. Preserve canonical IDs, hashes, run directories, output paths,
+      checkpoint/resume identity, and stored historical outputs. Do not modify
+      training, model, loss, adaptation, configuration, manifests, or historical files.
+      Implementation, tests, and review are not complete by this plan.
+
+  - id: d-controlled-live-execution-and-freeze
+    owner: future-execution-owner
+    depends_on: [c-reporting-only-migration-implementation, phase_c_review, required_regressions_passed, live_runs_finished, results_and_manifests_frozen, phase_18b_oasis_provenance_semantics_blocker_passed, live_seed_status_attestation_verified, separate_explicit_phase_d_execution_authorization_recorded]
+    status: blocked
+    owns: []
+    responsibility: >-
+      Future approved cross-cohort execution, target isolation, subject-level
+      aggregation, and immutable result freeze only. The Phase 18B OASIS
+      provenance/semantics blocker and separate explicit execution authorization
+      must pass before data access; any missing or failed prerequisite is BLOCKED.
+
+  - id: e-reporting
+    owner: future-reporting-owner
+    depends_on: [d-controlled-live-execution-and-freeze]
+    status: blocked
+    owns: []
+    responsibility: >-
+      Future report-time alias resolution and evidence-bounded comparisons only.
+
+  - id: f-rename-plan-execution
+    owner: future-compatibility-owner
+    depends_on: [e-reporting, separate_rename_approval]
+    status: not_started_plan_only
+    owns: []
+    responsibility: >-
+      Future compatibility rename only; no rename is executed by Phase B.
+
+required_phase_c_review_and_phase_d_activation_evidence:
+  - exact_mmd_behavior
+  - target_label_isolation_and_disjoint_target_partitions
+  - legacy_comparator_regressions_coral_cdan_prototype_pseudo
+  - independent_baseline_regressions_aagn_faster_snn
+  - no_mmd_non_equivalence_to_source_only
+  - read_report_alias_resolution_without_path_or_id_mutation
+  - canonical_configuration_hash_coverage
+  - checkpoint_and_resume_coverage
+  - fixed_epochs_and_source_validation_macro_f1_selection
+  - subject_level_aggregation
+
+review_gates:
+  phase_b_content:
+    owner: phase-b-documentation-owner
+    status: pending
+    prerequisites: [six_package_files, documentation_only_boundary]
+    evidence_artifact: phase_b_package_manifest_and_content_review
+    pass_condition: all_six_files_exist_and_are_documentation_only
+    fail_closed_result: BLOCKED
+  scientific_identity:
+    owner: scientific-specification-owner
+    status: pending
+    prerequisites: [phase_b_content]
+    evidence_artifact: scientific_identity_and_taxonomy_review
+    pass_condition: public_name_and_architecture_boundary_are_correct_and_mmd_is_not_novelty
+    fail_closed_result: BLOCKED
+  compatibility:
+    owner: compatibility-and-provenance-owner
+    status: pending
+    prerequisites: [scientific_identity]
+    evidence_artifact: alias_id_path_compatibility_record
+    pass_condition: ids_paths_package_and_historical_records_are_unchanged
+    fail_closed_result: BLOCKED
+  binary_and_provenance:
+    owner: evaluation-and-provenance-owner
+    status: pending
+    prerequisites: [phase_18_authority, phase_18b_authority, frozen_notebook]
+    evidence_artifact: binary_mapping_partition_and_provenance_record
+    pass_condition: mappings_directions_isolation_and_subject_aggregation_are_specified
+    fail_closed_result: BLOCKED
+  phase_18b_oasis_provenance_semantics:
+    owner: phase-18b-authority-and-future-execution-owner
+    status: blocked
+    prerequisites: [phase_18b_metadata_provenance_inputs, canonical_oasis_manifest]
+    evidence_artifact: phase_18b_oasis_provenance_semantics_approval
+    pass_condition: approved_oasis_provenance_and_semantics_blocker_is_passed
+    fail_closed_result: BLOCKED
+  regression:
+    owner: future-implementation-owner
+    status: blocked_until_future_implementation
+    prerequisites: [phase_17_authority, frozen_notebook, required_regression_contracts]
+    evidence_artifact: pre_activation_regression_evidence_bundle
+    pass_condition: all_required_phase_c_review_and_phase_d_activation_evidence_pass
+    fail_closed_result: BLOCKED
+  phase_c_start:
+    owner: future-implementation-owner
+    status: conditionally_authorized_to_start
+    prerequisites: [explicit_user_phase_c_reporting_only_authorization, frozen_source_commit_or_tag_and_notebook_boundary_verified, live_notebook_training_import_reachability_check, exclusive_non_interference_proof]
+    evidence_artifact: phase_c_reporting_only_start_boundary_record
+    pass_condition: reporting_only_scope_and_non_interference_boundary_verified
+    fail_closed_result: BLOCKED
+  phase_c_review:
+    owner: future-implementation-owner
+    status: not_started
+    prerequisites: [phase_c_start, reporting_only_implementation]
+    evidence_artifact: phase_c_implementation_review_and_regression_bundle
+    pass_condition: implementation_is_reporting_only_and_required_regressions_pass
+    fail_closed_result: BLOCKED
+  phase_d_activation:
+    owner: future-execution-owner
+    status: blocked
+    prerequisites: [phase_c_review, required_regressions_passed, live_runs_finished, results_and_manifests_frozen, phase_18b_oasis_provenance_semantics, live_seed_status_attestation, separate_explicit_phase_d_execution_authorization]
+    evidence_artifact: phase_d_execution_authorization_phase_18b_evidence_seed_status_regression_and_preflight_manifest
+    pass_condition: phase_c_review_plus_finished_live_family_frozen_results_required_regressions_phase_18b_blocker_and_explicit_execution_authorization
+    fail_closed_result: BLOCKED
+  rename:
+    owner: future-compatibility-owner
+    status: plan_only
+    prerequisites: [phase_e_result_freeze, separate_compatibility_approval]
+    evidence_artifact: compatibility_approval_and_migration_review
+    pass_condition: separate_compatibility_approval
+    fail_closed_result: BLOCKED
+
+non_goals:
+  - runtime_implementation
+  - configuration_changes
+  - tests_or_test_execution
+  - real_training_or_evaluation
+  - publication_analysis_or_claims
+  - hyperparameter_optimization
+  - notebook_or_output_mutation
+  - historical_record_rewrite
+  - package_or_repository_rename

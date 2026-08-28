@@ -33,8 +33,11 @@ from pada3dacb.evaluation.concepts.inference import (
 )
 from pada3dacb.evaluation.concepts.provenance import load_provenance_manifest
 from pada3dacb.evaluation.concepts.report import (
+    CooperativeReaderPolicy,
+    PublicationBlocked,
     build_synthetic_fixture_bundle,
     commit_output,
+    read_cooperative_publication,
     verify_completed_output,
 )
 from pada3dacb.evaluation.concepts.schemas import (
@@ -99,6 +102,7 @@ class CliSelection(NamedTuple):
     top_k: tuple[int, ...]
     device: str
     overwrite: bool
+    absent_window_timeout_seconds: float | None
 
 
 Executable = Callable[[CliSelection], int | ExitCode]
@@ -108,6 +112,20 @@ def _positive_integer(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
         raise argparse.ArgumentTypeError("value must be a positive integer")
+    return parsed
+
+
+def _non_negative_finite_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(
+            "absent-window timeout must be a finite, non-negative number"
+        ) from error
+    if not np.isfinite(parsed) or parsed < 0:
+        raise argparse.ArgumentTypeError(
+            "absent-window timeout must be a finite, non-negative number"
+        )
     return parsed
 
 
@@ -151,6 +169,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-k", action="append", type=_positive_integer)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--absent-window-timeout-seconds",
+        type=_non_negative_finite_float,
+        metavar="SECONDS",
+    )
 
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--dry-run", action="store_true")
@@ -194,6 +217,8 @@ def parse_cli(argv: Sequence[str] | None = None) -> CliSelection:
             parser.error("--bootstrap-seed is required for evaluation")
     if args.overwrite and mode is not RunMode.EVALUATE:
         parser.error("--overwrite conflicts with inspection and reuse modes")
+    if args.absent_window_timeout_seconds is not None and mode is not RunMode.EVALUATE:
+        parser.error("--absent-window-timeout-seconds is valid only for evaluation")
     if args.bootstrap_seed is not None and mode not in {RunMode.EVALUATE, RunMode.REUSE}:
         parser.error("--bootstrap-seed is valid only for evaluation or reuse")
 
@@ -233,7 +258,28 @@ def parse_cli(argv: Sequence[str] | None = None) -> CliSelection:
         top_k=top_k,
         device=args.device,
         overwrite=args.overwrite,
+        absent_window_timeout_seconds=args.absent_window_timeout_seconds,
     )
+
+
+def _validate_publication_policy(selection: CliSelection) -> None:
+    value = selection.absent_window_timeout_seconds
+    if value is None and not selection.overwrite:
+        return
+    if (
+        value is None
+        or isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not np.isfinite(value)
+        or value < 0
+    ):
+        if value is None and selection.overwrite:
+            raise ConfigurationError(
+                "--absent-window-timeout-seconds is required with --overwrite"
+            )
+        raise ConfigurationError(
+            "--absent-window-timeout-seconds must be finite and non-negative"
+        )
 
 
 def _load_configuration(selection: CliSelection) -> Mapping[str, Any]:
@@ -603,6 +649,7 @@ def _verify_reuse_selection_match(
 
 
 def _execute(selection: CliSelection) -> ExitCode:
+    _validate_publication_policy(selection)
     config = _load_configuration(selection)
     configured_reuse = config.get("completed_reuse", {})
     root_values = (
@@ -618,10 +665,9 @@ def _execute(selection: CliSelection) -> ExitCode:
         if len(approved_reuse_roots) != 1:
             raise ReuseVerificationError("reuse output root is absent or ambiguous")
         reuse_output = next(iter(approved_reuse_roots))
-    if selection.run_mode is RunMode.REUSE and (reuse_output is None or not reuse_output.is_dir()):
-        raise ReuseVerificationError("completed reuse output is unavailable")
     if selection.run_mode is RunMode.REUSE:
-        assert reuse_output is not None
+        if reuse_output is None:
+            raise ReuseVerificationError("completed reuse output is unavailable")
         if reuse_output.resolve() not in approved_reuse_roots:
             raise ReuseVerificationError("completed reuse output is not approved")
         fixture_manifest = None
@@ -633,9 +679,19 @@ def _execute(selection: CliSelection) -> ExitCode:
                     "current synthetic fixture manifest verification failed"
                 ) from error
         try:
-            output_manifest = verify_completed_output(reuse_output)
-        except (OSError, ValueError) as error:
+            cooperative = read_cooperative_publication(
+                reuse_output,
+                policy=CooperativeReaderPolicy(
+                    max_attempts=1,
+                    delay_seconds=0.0,
+                ),
+                reader=verify_completed_output,
+            )
+        except (OSError, ValueError, PublicationBlocked) as error:
             raise ReuseVerificationError("completed reuse verification failed") from error
+        if cooperative.status != "available":
+            raise ReuseVerificationError("completed reuse output is unavailable")
+        output_manifest = cooperative.value
         configured_top_k = config.get("top_k", ())
         if isinstance(configured_top_k, (str, bytes)) or not isinstance(configured_top_k, Sequence):
             raise ReuseVerificationError("configured top_k is not a valid sequence")
@@ -789,6 +845,7 @@ def _execute(selection: CliSelection) -> ExitCode:
                 plan,
                 artifacts,
                 overwrite=selection.overwrite,
+                absent_window_timeout_seconds=selection.absent_window_timeout_seconds,
             )
         except (OSError, RuntimeError, ValueError) as error:
             raise OutputCommitError("synthetic output commit failed") from error

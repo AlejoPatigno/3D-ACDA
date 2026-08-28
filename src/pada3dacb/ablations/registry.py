@@ -114,7 +114,7 @@ def _blocked(
 _SPECS = (
     _loss_spec(
         "no_proto",
-        "PADA-3DACB without prototype loss",
+        "3DACDA without prototype loss",
         "What is the effect of removing only the prototype adaptation term?",
         "lambda_proto",
         1.0,
@@ -124,7 +124,7 @@ _SPECS = (
     ),
     _loss_spec(
         "no_pl",
-        "PADA-3DACB without pseudo-label loss",
+        "3DACDA without pseudo-label loss",
         "What is the effect of removing only the pseudo-label adaptation term?",
         "lambda_pl",
         0.1,
@@ -134,7 +134,7 @@ _SPECS = (
     ),
     _loss_spec(
         "no_cons",
-        "PADA-3DACB without consistency loss",
+        "3DACDA without consistency loss",
         "What is the effect of removing only the latent/concept consistency term?",
         "lambda_cons",
         0.1,
@@ -144,7 +144,7 @@ _SPECS = (
     ),
     _loss_spec(
         "no_concept",
-        "PADA-3DACB without concept supervision",
+        "3DACDA without concept supervision",
         "What is the effect of removing only concept-bottleneck supervision?",
         "lambda_cbm",
         0.5,
@@ -154,7 +154,7 @@ _SPECS = (
     ),
     _loss_spec(
         "no_anat",
-        "PADA-3DACB without anatomical consistency",
+        "3DACDA without anatomical consistency",
         "What is the effect of removing only anatomical consistency?",
         "lambda_anat",
         0.2,
@@ -164,7 +164,7 @@ _SPECS = (
     ),
     AblationSpec(
         id="mean_pool",
-        display_name="PADA-3DACB with uniform mean pooling",
+        display_name="3DACDA with uniform mean pooling",
         scientific_question="Does exact uniform ROI pooling change behavior while preserving every other component?",
         provenance=NotebookProvenance("notebooks/archive/training_original.ipynb", 19, "45-50"),
         classification=CandidateClassification.CANONICAL_DEFINED_NOT_EXECUTED,
@@ -184,6 +184,25 @@ _SPECS = (
             "AttentionAggregator",
             "MeanPoolAggregator",
         ),
+        disposition=Disposition.RUNNABLE_AFTER_APPROVAL,
+    ),
+    AblationSpec(
+        id="no_da",
+        display_name="3DACDA without domain adaptation",
+        scientific_question="What is the effect of disabling only the protected MMD adaptation weight?",
+        provenance=NotebookProvenance("notebooks/archive/training_original.ipynb", 19, "MMD-primary baseline"),
+        classification=CandidateClassification.CANONICAL_DEFINED_NOT_EXECUTED,
+        base_method="PADA-3DACB",
+        changed_components=("lambda_MMD",),
+        preserved_components=_PRESERVED_LOSS,
+        equivalent_method=None,
+        requires_target_adaptation=True,
+        model_variant=_BASE_MODEL,
+        expected_loss_terms=ExpectedLossTerms.canonical(),
+        approval=_approval("no_da"),
+        blocked_reasons=(),
+        aliases=(),
+        intervention=Intervention(InterventionKind.LOSS_OVERRIDE, "lambda_MMD", 1.0, 0.0),
         disposition=Disposition.RUNNABLE_AFTER_APPROVAL,
     ),
     _blocked(

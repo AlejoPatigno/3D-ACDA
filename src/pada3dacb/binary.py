@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from pada3dacb.ablations.registry import alias_target, get_ablation_spec
 from pada3dacb.exceptions import CheckpointMigrationError
 
 BINARY_CLASS_ORDER = ("CN", "Impaired")
@@ -53,6 +54,10 @@ BINARY_IDENTITY_FAMILIES = (
 )
 BINARY_BASELINES = ("aagn", "faster_snn")
 BINARY_ABLATIONS = ("no_proto", "no_pl", "no_cons", "no_concept", "no_anat", "mean_pool")
+MMD_BINARY_ABLATIONS = ("no_mmd", "no_cons", "no_concept", "no_anat", "mean_pool")
+BINARY_MMD_ABLATIONS = MMD_BINARY_ABLATIONS
+_PROTOTYPE_PSEUDO_BASE_METHOD = "prototype_pseudo"
+_MMD_BASE_METHOD = "mmd"
 BINARY_CANONICAL_LOSS_COMPONENTS = {
     "L_cls_z": 1.0,
     "L_cls_c": 2.0,
@@ -100,24 +105,118 @@ _BINARY_ABLATION_PLANS = {
 }
 
 
-def binary_ablation_plan(candidate: str | BinaryAblationPlan) -> BinaryAblationPlan:
-    """Resolve exactly one approved binary intervention plan, fail closed otherwise."""
+@dataclass(frozen=True)
+class MMDBinaryAblationPlan:
+    """MMD-scoped binary intervention contract.
+
+    This namespace is intentionally separate from the historical prototype-pseudo
+    plans: MMD ``no_concept`` disables concept supervision only and keeps concept
+    classification active. Every plan retains the shared target adaptation forward.
+    """
+
+    candidate_id: str
+    disabled_loss_components: tuple[str, ...] = ()
+    model_variant: str = "canonical"
+    base_method: str = _MMD_BASE_METHOD
+    requires_target_adaptation: bool = True
+    requires_target_forward: bool = True
+    concept_classification_enabled: bool = True
+
+    def __post_init__(self) -> None:
+        expected_components = {
+            "no_mmd": ("L_mmd",),
+            "no_cons": ("L_cons",),
+            "no_concept": ("L_concept",),
+            "no_anat": ("L_anat",),
+            "mean_pool": (),
+        }
+        if self.candidate_id not in expected_components:
+            raise BinaryLabelError("unsupported or blocked MMD binary ablation")
+        if self.disabled_loss_components != expected_components[self.candidate_id]:
+            raise BinaryLabelError("MMD binary ablation intervention does not match its candidate")
+        if self.base_method != _MMD_BASE_METHOD:
+            raise BinaryLabelError("MMD binary ablation plans require base_method='mmd'")
+        if not self.requires_target_adaptation or not self.requires_target_forward:
+            raise BinaryLabelError("MMD binary ablations require target adaptation and target forward")
+        if not self.concept_classification_enabled:
+            raise BinaryLabelError("MMD no_concept must retain concept classification")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "candidate_id": self.candidate_id,
+            "base_method": self.base_method,
+            "disabled_loss_components": list(self.disabled_loss_components),
+            "model_variant": self.model_variant,
+            "requires_target_adaptation": self.requires_target_adaptation,
+            "requires_target_forward": self.requires_target_forward,
+            "concept_classification_enabled": self.concept_classification_enabled,
+        }
+
+
+_MMD_BINARY_ABLATION_PLANS = {
+    "no_mmd": MMDBinaryAblationPlan("no_mmd", ("L_mmd",)),
+    "no_cons": MMDBinaryAblationPlan("no_cons", ("L_cons",)),
+    "no_concept": MMDBinaryAblationPlan("no_concept", ("L_concept",)),
+    "no_anat": MMDBinaryAblationPlan("no_anat", ("L_anat",)),
+    "mean_pool": MMDBinaryAblationPlan("mean_pool", (), "mean_pool"),
+}
+MMD_BINARY_ABLATION_PLANS = _MMD_BINARY_ABLATION_PLANS
+
+
+def mmd_binary_ablation_plan(
+    candidate: str | MMDBinaryAblationPlan,
+) -> MMDBinaryAblationPlan:
+    """Resolve exactly one binary candidate in the explicit MMD namespace."""
+    if isinstance(candidate, MMDBinaryAblationPlan):
+        return candidate
+    candidate_id = str(candidate).strip()
+    if alias_target(candidate_id) is not None:
+        raise BinaryLabelError(
+            f"alias_not_approved: MMD binary alias {candidate_id!r} is not executable; "
+            "use the exact canonical registry ID"
+        )
+    try:
+        return _MMD_BINARY_ABLATION_PLANS[candidate_id]
+    except KeyError as error:
+        raise BinaryLabelError(
+            f"unsupported or blocked MMD binary ablation: {candidate!r}; "
+            "use the exact MMD candidates with base_method='mmd', not prototype_pseudo"
+        ) from error
+
+
+def binary_ablation_plan(
+    candidate: str | BinaryAblationPlan | MMDBinaryAblationPlan,
+    base_method: str = _PROTOTYPE_PSEUDO_BASE_METHOD,
+) -> BinaryAblationPlan | MMDBinaryAblationPlan:
+    """Resolve a binary plan within its explicit base-method namespace."""
+    if base_method == _MMD_BASE_METHOD:
+        return mmd_binary_ablation_plan(candidate)  # type: ignore[arg-type]
+    if base_method != _PROTOTYPE_PSEUDO_BASE_METHOD:
+        raise BinaryLabelError(f"unsupported binary ablation base_method: {base_method!r}")
+    if isinstance(candidate, MMDBinaryAblationPlan):
+        raise BinaryLabelError("MMD binary ablations require base_method='mmd'")
     if isinstance(candidate, BinaryAblationPlan):
         candidate = candidate.candidate_id
     candidate_id = str(candidate).strip()
     try:
         return _BINARY_ABLATION_PLANS[candidate_id]
     except KeyError as error:
+        if candidate_id in MMD_BINARY_ABLATIONS:
+            raise BinaryLabelError(
+                f"MMD binary ablation {candidate_id!r} requires base_method='mmd'"
+            ) from error
         raise BinaryLabelError(f"unsupported or blocked binary ablation: {candidate!r}") from error
 
 
 def apply_binary_ablation_loss_plan(
-    candidate: str | BinaryAblationPlan, components: Mapping[str, Any]
+    candidate: str | BinaryAblationPlan | MMDBinaryAblationPlan,
+    components: Mapping[str, Any],
+    base_method: str = _PROTOTYPE_PSEUDO_BASE_METHOD,
 ) -> dict[str, Any]:
     """Apply a binary loss mask to synthetic components without changing unrelated values."""
     if not isinstance(components, Mapping):
         raise BinaryLabelError("synthetic loss components must be a mapping")
-    plan = binary_ablation_plan(candidate)
+    plan = binary_ablation_plan(candidate, base_method=base_method)
     effective = dict(components)
     for component in plan.disabled_loss_components:
         if component not in effective:
@@ -1136,14 +1235,22 @@ def binary_model_architecture_identity(model: Any) -> str:
     return f"{type(model).__module__}.{type(model).__qualname__}"
 
 
-def build_binary_ablation(candidate: str, config: Mapping[str, Any]) -> Any:
-    """Build one of the six approved ablations with a task-bound binary head."""
-    from pada3dacb.ablations.registry import get_ablation_spec
+def build_binary_ablation(
+    candidate: str,
+    config: Mapping[str, Any],
+    *,
+    base_method: str = _PROTOTYPE_PSEUDO_BASE_METHOD,
+) -> Any:
+    """Build one task-bound binary ablation in its explicit method namespace.
+
+    The default remains the historical prototype-pseudo namespace. MMD candidates
+    opt in explicitly so their registry semantics cannot alter legacy behavior.
+    """
     from pada3dacb.models.ablations.mean_pooling import build_mean_pool_model
     from pada3dacb.models.pada3dacb import build_pada3dacb
 
     candidate_id = str(candidate).strip()
-    plan = binary_ablation_plan(candidate_id)
+    plan = binary_ablation_plan(candidate_id, base_method=base_method)
     values = dict(config)
     binary_task_class_count(values)
     model_values = dict(values.get("model", values)) if isinstance(values.get("model", values), Mapping) else {}
@@ -1171,11 +1278,19 @@ def build_binary_ablation(candidate: str, config: Mapping[str, Any]) -> Any:
         "class_ids": dict(BINARY_CLASS_TO_INDEX),
         **model_values,
     })
-    spec = get_ablation_spec(candidate_id)
-    intervention = spec.intervention.to_dict() if spec.intervention is not None else None
+    if base_method == _MMD_BASE_METHOD:
+        intervention = plan.to_dict()
+    else:
+        spec = get_ablation_spec(candidate_id)
+        intervention = spec.intervention.to_dict() if spec.intervention is not None else None
     identity = build_binary_identity(
         "experiment",
-        {"method": "ablation", "candidate_id": candidate_id, "intervention": intervention},
+        {
+            "method": "ablation",
+            "base_method": base_method,
+            "candidate_id": candidate_id,
+            "intervention": intervention,
+        },
     )
     model.binary_metadata = {
         "task_id": "cn_vs_impaired",
@@ -1183,6 +1298,7 @@ def build_binary_ablation(candidate: str, config: Mapping[str, Any]) -> Any:
         "class_order": list(BINARY_CLASS_ORDER),
         "class_to_index": dict(BINARY_CLASS_TO_INDEX),
         "n_classes": 2,
+        "base_method": base_method,
         "candidate_id": candidate_id,
         "intervention": intervention,
         "ablation_plan": plan.to_dict(),

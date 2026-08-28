@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import base64
 import csv
+import ctypes
 import hashlib
 import io
 import json
 import os
 import re
 import shutil
+import stat
 import tempfile
 import time
 import uuid
@@ -50,6 +53,2051 @@ class ConceptEvaluationPlan:
     directions: tuple[Direction, ...]
     checkpoint_policies: tuple[CheckpointPolicy, ...]
     intended_relative_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PublicationPathBudget:
+    verified_path_units: int
+    verified_component_units: int
+
+    def __post_init__(self) -> None:
+        if min(self.verified_path_units, self.verified_component_units) <= 0:
+            raise ValueError("verified path budgets must be positive")
+
+
+_PUBLICATION_PROBE_OPERATIONS = (
+    "create", "journal", "validate", "rename", "rollback", "read",
+)
+
+
+@dataclass(frozen=True)
+class PublicationProbeResult:
+    """Measured target-volume capability for one publication grammar."""
+
+    budget: PublicationPathBudget
+    operations: tuple[str, ...]
+    path_units: Mapping[str, int]
+    component_units: Mapping[str, int]
+
+    def __post_init__(self) -> None:
+        if self.operations != _PUBLICATION_PROBE_OPERATIONS:
+            raise ValueError("publication probe operations are incomplete or reordered")
+        if set(self.path_units) != set(self.operations):
+            raise ValueError("publication probe path measurements are incomplete")
+        if set(self.component_units) != set(self.operations):
+            raise ValueError("publication probe component measurements are incomplete")
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value <= 0
+            for value in (*self.path_units.values(), *self.component_units.values())
+        ):
+            raise ValueError("publication probe measurements must be positive integers")
+
+
+@dataclass(frozen=True)
+class PublicationNames:
+    final_path: Path
+    sibling_path: Path
+    journal_path: Path
+    backup_path: Path
+    identity_token: str
+    attempt_token: str
+    collision_token: str | None
+    canonical_identity_sha256: str
+
+
+@dataclass(frozen=True)
+class PreparedPublication:
+    names: PublicationNames
+    journal_path: Path
+    capability: bytes
+    canonical_relative_path: str | None = None
+    owner_token: str | None = None
+    expected_manifest_hash: str | None = None
+    state: str = "prepared"
+
+    @property
+    def final_path(self) -> Path:
+        return self.names.final_path
+
+    @property
+    def sibling_path(self) -> Path:
+        return self.names.sibling_path
+
+
+_PUBLICATION_SCHEMA_VERSION = "1.0"
+_PUBLICATION_PROTOCOL_VERSION = "1.0"
+_PUBLICATION_ROLE = "concept-output"
+_CAPABILITY_BYTES = 32
+
+
+@dataclass(frozen=True)
+class CooperativeReaderPolicy:
+    """Explicit finite retry policy for a cooperating canonical-path reader."""
+
+    max_attempts: int
+    delay_seconds: float
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.max_attempts, bool)
+            or not isinstance(self.max_attempts, int)
+            or self.max_attempts <= 0
+        ):
+            raise ValueError("reader max_attempts must be a positive integer")
+        if (
+            isinstance(self.delay_seconds, bool)
+            or not isinstance(self.delay_seconds, (int, float))
+            or not np.isfinite(self.delay_seconds)
+            or self.delay_seconds < 0
+        ):
+            raise ValueError("reader delay_seconds must be finite and non-negative")
+
+
+@dataclass(frozen=True)
+class CooperativeReadResult:
+    """Typed result that distinguishes an available value from temporary absence."""
+
+    status: str
+    final_path: Path
+    attempts: int
+    value: Any = None
+    reason: str | None = None
+
+
+@contextmanager
+def _posix_publication_lock(path: Path, *, exclusive: bool):
+    try:
+        import fcntl
+    except ImportError as error:  # pragma: no cover - platform-specific branch
+        raise RuntimeError("POSIX advisory locking is unavailable") from error
+
+    flags = os.O_RDWR | os.O_CREAT
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as error:
+        raise RuntimeError(f"publication lock file cannot be opened: {error}") from error
+    try:
+        operation = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        try:
+            fcntl.flock(descriptor, operation)
+        except OSError as error:
+            raise RuntimeError(f"POSIX publication locking failed: {error}") from error
+        yield
+    finally:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)
+
+
+@contextmanager
+def _windows_publication_lock(path: Path, *, exclusive: bool):
+    """Use Win32 byte-range locking; thread locks are not a fallback."""
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    handle_type = wintypes.HANDLE
+    invalid_handle = handle_type(-1).value
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p,
+        wintypes.DWORD, wintypes.DWORD, handle_type,
+    ]
+    kernel32.CreateFileW.restype = handle_type
+    kernel32.CloseHandle.argtypes = [handle_type]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.LockFileEx.argtypes = [
+        handle_type, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
+        wintypes.DWORD, ctypes.c_void_p,
+    ]
+    kernel32.LockFileEx.restype = wintypes.BOOL
+    kernel32.UnlockFileEx.argtypes = [
+        handle_type, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
+        ctypes.c_void_p,
+    ]
+    kernel32.UnlockFileEx.restype = wintypes.BOOL
+
+    class _Overlapped(ctypes.Structure):
+        _fields_ = [
+            ("Internal", ctypes.c_void_p),
+            ("InternalHigh", ctypes.c_void_p),
+            ("Offset", wintypes.DWORD),
+            ("OffsetHigh", wintypes.DWORD),
+            ("hEvent", handle_type),
+        ]
+
+    desired_access = 0x80000000 | 0x40000000  # GENERIC_READ | GENERIC_WRITE
+    share_mode = 0x00000001 | 0x00000002 | 0x00000004  # read/write/delete
+    handle = kernel32.CreateFileW(
+        str(path), desired_access, share_mode, None, 4, 0x00000080, None
+    )
+    if handle == invalid_handle:
+        error = ctypes.get_last_error()
+        raise RuntimeError(f"Win32 publication lock file cannot be opened: {error}")
+
+    overlapped = _Overlapped()
+    flags = 0x00000002 if exclusive else 0  # LOCKFILE_EXCLUSIVE_LOCK
+    try:
+        if not kernel32.LockFileEx(handle, flags, 0, 1, 0, ctypes.byref(overlapped)):
+            error = ctypes.get_last_error()
+            raise RuntimeError(f"Win32 publication locking failed: {error}")
+        try:
+            yield
+        finally:
+            if not kernel32.UnlockFileEx(handle, 0, 1, 0, ctypes.byref(overlapped)):
+                error = ctypes.get_last_error()
+                raise RuntimeError(f"Win32 publication unlock failed: {error}")
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+@contextmanager
+def _publication_file_lock(parent: Path, output_name: str, *, exclusive: bool):
+    parent = Path(parent).absolute()
+    if not output_name or Path(output_name).name != output_name:
+        raise ValueError("publication lock output name must be a single path component")
+    path = parent / f".{output_name}.publisher.lock"
+    if path.is_symlink() or _is_reparse_point(path):
+        raise RuntimeError("publication lock path is a reparse point")
+    if os.name == "nt":
+        with _windows_publication_lock(path, exclusive=exclusive):
+            yield
+    else:
+        with _posix_publication_lock(path, exclusive=exclusive):
+            yield
+
+
+@contextmanager
+def _publisher_lock(parent: Path, output_name: str):
+    """Acquire a cross-process exclusive publisher lock, failing closed."""
+    final = Path(parent).absolute() / output_name
+    backup = final.parent / f".{output_name}.backup.unknown"
+    owner = {"pid": os.getpid(), "token": uuid.uuid4().hex}
+    lock = _publication_file_lock(parent, output_name, exclusive=True)
+    try:
+        lock.__enter__()
+    except Exception as error:
+        raise PublicationBlocked(
+            f"publisher lock capability unavailable: {error}",
+            reason="publisher_lock_unavailable",
+            final_path=final,
+            candidate_path=final,
+            backup_path=backup,
+        ) from error
+    try:
+        yield owner
+    finally:
+        lock.__exit__(None, None, None)
+
+
+@contextmanager
+def _reader_lock(parent: Path, output_name: str):
+    """Acquire the same-parent shared lock used by cooperating readers."""
+    final = Path(parent).absolute() / output_name
+    backup = final.parent / f".{output_name}.backup.unknown"
+    lock = _publication_file_lock(parent, output_name, exclusive=False)
+    try:
+        lock.__enter__()
+    except Exception as error:
+        raise PublicationBlocked(
+            f"reader lock capability unavailable: {error}",
+            reason="reader_lock_unavailable",
+            final_path=final,
+            candidate_path=final,
+            backup_path=backup,
+        ) from error
+    try:
+        yield
+    finally:
+        lock.__exit__(None, None, None)
+
+
+def read_cooperative_publication(
+    final_path: str | Path,
+    *,
+    policy: CooperativeReaderPolicy,
+    reader: Any = Path.read_bytes,
+    sleep: Any = time.sleep,
+) -> CooperativeReadResult:
+    """Read only the canonical final path under the shared publication lock.
+
+    Absence is retried only under the caller-supplied finite policy. It is never
+    converted into an empty value, and sibling/backup entries are not examined.
+    """
+    if not isinstance(policy, CooperativeReaderPolicy):
+        raise ValueError("reader policy is required and must be explicit")
+    final = Path(final_path).absolute()
+    for attempt in range(1, policy.max_attempts + 1):
+        absent = False
+        with _reader_lock(final.parent, final.name):
+            if final.is_symlink():
+                return CooperativeReadResult(
+                    "unavailable", final, attempt, reason="canonical_final_ambiguous"
+                )
+            if not final.exists():
+                absent = True
+            else:
+                try:
+                    value = reader(final)
+                except FileNotFoundError:
+                    absent = True
+                else:
+                    return CooperativeReadResult("available", final, attempt, value=value)
+        if not absent:
+            raise AssertionError("reader attempt ended without a result")
+        if attempt < policy.max_attempts:
+            sleep(policy.delay_seconds)
+    return CooperativeReadResult(
+        "unavailable", final, policy.max_attempts, reason="canonical_final_absent"
+    )
+
+
+def _is_reparse_point(path: Path) -> bool:
+    """Fail closed for Windows reparse points, including junctions."""
+    junction_check = getattr(path, "is_junction", None)
+    if callable(junction_check):
+        try:
+            if junction_check():
+                return True
+        except FileNotFoundError:
+            pass
+        except OSError:
+            return True
+    if os.name != "nt":
+        return False
+    try:
+        metadata = os.lstat(path)
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    attributes = getattr(metadata, "st_file_attributes", None)
+    if isinstance(attributes, bool) or not isinstance(attributes, int):
+        return True
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(attributes & reparse_flag)
+
+
+def _candidate_file_identifiers(path: Path) -> dict[str, int]:
+    """Bind the validated candidate to an independent filesystem identity."""
+    try:
+        metadata = os.lstat(path)
+    except OSError as error:
+        raise ValueError("candidate file identity is unreadable") from error
+    device = getattr(metadata, "st_dev", None)
+    inode = getattr(metadata, "st_ino", None)
+    if (
+        isinstance(device, bool) or not isinstance(device, int)
+        or isinstance(inode, bool) or not isinstance(inode, int)
+        or device < 0 or inode < 0
+    ):
+        raise ValueError("candidate file identity is incomplete")
+    return {"device": device, "inode": inode}
+
+
+def _durable_parent_directory(parent: Path) -> None:
+    """Durably persist a directory entry, surfacing every failure."""
+    if os.name == "nt":
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle_type = wintypes.HANDLE
+        invalid_handle = handle_type(-1).value
+        kernel32.CreateFileW.argtypes = [
+            wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p,
+            wintypes.DWORD, wintypes.DWORD, handle_type,
+        ]
+        kernel32.CreateFileW.restype = handle_type
+        kernel32.FlushFileBuffers.argtypes = [handle_type]
+        kernel32.FlushFileBuffers.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [handle_type]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        handle = kernel32.CreateFileW(
+            str(parent), 0xC0000000, 0x00000001 | 0x00000002 | 0x00000004,
+            None, 3, 0x02000000, None,
+        )
+        if handle == invalid_handle:
+            error = ctypes.get_last_error()
+            raise OSError(error, f"parent-directory durability open failed: {parent}")
+        try:
+            if not kernel32.FlushFileBuffers(handle):
+                error = ctypes.get_last_error()
+                raise OSError(error, f"parent-directory durability flush failed: {parent}")
+        finally:
+            kernel32.CloseHandle(handle)
+        return
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    try:
+        descriptor = os.open(parent, flags)
+    except OSError as error:
+        raise OSError(f"parent-directory durability is unavailable: {error}") from error
+    try:
+        os.fsync(descriptor)
+    except OSError as error:
+        raise OSError(f"parent-directory durability failed: {error}") from error
+    finally:
+        os.close(descriptor)
+
+
+def _durable_file(path: Path) -> None:
+    """Durably persist one authenticated file or directory."""
+    if path.is_symlink():
+        raise OSError("cannot durably sync a symbolic link")
+    if os.name == "nt" and path.is_dir():
+        _durable_parent_directory(path)
+        return
+    flags = os.O_RDONLY if path.is_dir() else os.O_RDWR
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if path.is_dir() and hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise OSError(f"durability open failed for {path}: {error}") from error
+    try:
+        os.fsync(descriptor)
+    except OSError as error:
+        raise OSError(f"durability fsync failed for {path}: {error}") from error
+    finally:
+        os.close(descriptor)
+
+
+def _durable_tree(root: Path) -> None:
+    """Sync an authenticated tree bottom-up and then its containing directory."""
+    if root.is_symlink() or not root.is_dir():
+        raise OSError("durability tree root is not an owned directory")
+    for path in sorted(root.rglob("*"), key=lambda item: (item.is_dir(), str(item)), reverse=False):
+        if path.is_symlink() or not path.exists():
+            raise OSError(f"durability tree contains an ambiguous entry: {path}")
+        _durable_file(path)
+    _durable_file(root)
+    _durable_parent_directory(root.parent)
+
+
+def _windows_query_owner_only_acl(path: Path) -> str:
+    """Return the protected owner-rights DACL as SDDL using Win32 only."""
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    security_descriptor = ctypes.c_void_p()
+    get_named_security_info = advapi32.GetNamedSecurityInfoW
+    get_named_security_info.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_named_security_info.restype = wintypes.DWORD
+    error = get_named_security_info(
+        str(path), 1, 0x00000004, None, None, None, None,
+        ctypes.byref(security_descriptor),
+    )
+    if error:
+        raise OSError(int(error), "GetNamedSecurityInfoW failed")
+    try:
+        convert = advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW
+        convert.argtypes = [
+            ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
+            ctypes.POINTER(wintypes.LPWSTR), ctypes.POINTER(wintypes.DWORD),
+        ]
+        convert.restype = wintypes.BOOL
+        text = wintypes.LPWSTR()
+        length = wintypes.DWORD()
+        if not convert(security_descriptor, 1, 0x00000004, ctypes.byref(text), ctypes.byref(length)):
+            raise OSError(ctypes.get_last_error(), "ConvertSecurityDescriptorToStringSecurityDescriptorW failed")
+        try:
+            return text.value or ""
+        finally:
+            kernel32.LocalFree(text)
+    finally:
+        kernel32.LocalFree(security_descriptor)
+
+
+def _windows_owner_sid(path: Path) -> str:
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    owner = ctypes.c_void_p()
+    descriptor = ctypes.c_void_p()
+    get_named_security_info = advapi32.GetNamedSecurityInfoW
+    get_named_security_info.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_named_security_info.restype = wintypes.DWORD
+    error = get_named_security_info(
+        str(path), 1, 0x00000001, ctypes.byref(owner), None, None, None,
+        ctypes.byref(descriptor),
+    )
+    if error:
+        raise OSError(int(error), "GetNamedSecurityInfoW owner query failed")
+    try:
+        convert = advapi32.ConvertSidToStringSidW
+        convert.argtypes = [ctypes.c_void_p, ctypes.POINTER(wintypes.LPWSTR)]
+        convert.restype = wintypes.BOOL
+        text = wintypes.LPWSTR()
+        if not convert(owner, ctypes.byref(text)):
+            raise OSError(ctypes.get_last_error(), "ConvertSidToStringSidW failed")
+        try:
+            return text.value or ""
+        finally:
+            kernel32.LocalFree(text)
+    finally:
+        kernel32.LocalFree(descriptor)
+
+
+def _windows_set_owner_only_acl(path: Path) -> None:
+    """Set a protected DACL granting full control only to the current owner."""
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    owner_sid = _windows_owner_sid(path)
+    if not re.fullmatch(r"S-[0-9]+(?:-[0-9]+)+", owner_sid):
+        raise OSError("owner SID is invalid")
+    descriptor = ctypes.c_void_p()
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    convert.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    convert.restype = wintypes.BOOL
+    if not convert(f"D:P(A;;FA;;;{owner_sid})", 1, ctypes.byref(descriptor), None):
+        raise OSError(ctypes.get_last_error(), "owner-only ACL construction failed")
+    try:
+        dacl = ctypes.c_void_p()
+        present = wintypes.BOOL()
+        defaulted = wintypes.BOOL()
+        get_dacl = advapi32.GetSecurityDescriptorDacl
+        get_dacl.argtypes = [
+            ctypes.c_void_p, ctypes.POINTER(wintypes.BOOL),
+            ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.BOOL),
+        ]
+        get_dacl.restype = wintypes.BOOL
+        if not get_dacl(descriptor, ctypes.byref(present), ctypes.byref(dacl), ctypes.byref(defaulted)):
+            raise OSError(ctypes.get_last_error(), "GetSecurityDescriptorDacl failed")
+        set_named_security_info = advapi32.SetNamedSecurityInfoW
+        set_named_security_info.argtypes = [
+            wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD,
+            ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ]
+        set_named_security_info.restype = wintypes.DWORD
+        error = set_named_security_info(
+            str(path), 1, 0x80000004, None, None, dacl, None
+        )
+        if error:
+            raise OSError(int(error), "SetNamedSecurityInfoW failed")
+    finally:
+        kernel32.LocalFree(descriptor)
+
+
+def _verify_owner_only_acl(path: Path) -> None:
+    if os.name == "nt":
+        acl = _windows_query_owner_only_acl(path)
+        normalized = re.sub(r"\\s+", "", acl)
+        if not re.fullmatch(r"D:P(?:AI)?\(A;;FA;;;S-[0-9]+(?:-[0-9]+)+\)", normalized):
+            raise OSError("owner-only ACL verification failed")
+        return
+    expected_mode = 0o700 if path.is_dir() else 0o600
+    if stat.S_IMODE(os.stat(path, follow_symlinks=False).st_mode) != expected_mode:
+        raise OSError("owner-only mode verification failed")
+
+
+def _ensure_owner_only_acl(path: Path) -> None:
+    """Apply and verify the platform's owner-only protection seam."""
+    if os.name == "nt":
+        _windows_set_owner_only_acl(path)
+    else:
+        os.chmod(path, 0o700 if path.is_dir() else 0o600)
+    _verify_owner_only_acl(path)
+
+
+def _verify_candidate_tree_acl(root: Path) -> None:
+    if root.is_symlink() or not root.is_dir():
+        raise OSError("candidate tree root is not an owned directory")
+    for path in (root, *root.rglob("*")):
+        if path.is_symlink() or not path.exists():
+            raise OSError(f"candidate tree ACL target is ambiguous: {path}")
+        _verify_owner_only_acl(path)
+
+
+def _windows_create_owner_only_file(path: Path) -> int:
+    """Create an empty owner-only file before any journal bytes are available."""
+    from ctypes import wintypes
+
+    class _SecurityAttributes(ctypes.Structure):
+        _fields_ = [
+            ("nLength", wintypes.DWORD),
+            ("lpSecurityDescriptor", ctypes.c_void_p),
+            ("bInheritHandle", wintypes.BOOL),
+        ]
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    # The existing parent is the owner authority for the new same-parent journal.
+    owner_sid = _windows_owner_sid(path.parent)
+    descriptor = ctypes.c_void_p()
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    convert.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    convert.restype = wintypes.BOOL
+    if not convert(
+        f"D:P(A;;FA;;;{owner_sid})", 1, ctypes.byref(descriptor), None
+    ):
+        raise OSError(
+            ctypes.get_last_error(),
+            "owner-only ACL construction failed before journal creation",
+        )
+    attributes = _SecurityAttributes(
+        ctypes.sizeof(_SecurityAttributes), descriptor, 0
+    )
+    handle_type = wintypes.HANDLE
+    invalid_handle = handle_type(-1).value
+    create = kernel32.CreateFileW
+    create.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        ctypes.POINTER(_SecurityAttributes), wintypes.DWORD, wintypes.DWORD,
+        handle_type,
+    ]
+    create.restype = handle_type
+    handle = create(
+        str(path), 0x40000000, 0x00000001 | 0x00000002 | 0x00000004,
+        ctypes.byref(attributes), 1, 0x00000080, None,
+    )
+    kernel32.LocalFree(descriptor)
+    if handle == invalid_handle:
+        raise OSError(ctypes.get_last_error(), "owner-only journal creation failed")
+    try:
+        # Reassert the create-time descriptor and query it before any journal bytes.
+        _ensure_owner_only_acl(path)
+        import msvcrt
+        flags = os.O_RDWR | getattr(os, "O_BINARY", 0)
+        descriptor_fd = msvcrt.open_osfhandle(handle, flags)
+        handle = invalid_handle
+        return descriptor_fd
+    finally:
+        if handle != invalid_handle:
+            kernel32.CloseHandle(handle)
+
+
+class PublicationBlocked(OSError):
+    """Structured fail-closed result for an ambiguous publication boundary."""
+
+    status = "BLOCKED"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: str,
+        final_path: Path,
+        candidate_path: Path,
+        backup_path: Path,
+        rollback_succeeded: bool | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.reason = reason
+        self.final_path = final_path
+        self.candidate_path = candidate_path
+        self.backup_path = backup_path
+        self.rollback_succeeded = rollback_succeeded
+
+
+def _publication_value(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, Mapping):
+        return {str(key): _publication_value(item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_publication_value(item) for item in value]
+    return getattr(value, "value", str(value))
+
+
+def serialize_canonical_publication_identity(
+    plan: ConceptEvaluationPlan, canonical_relative_path: str
+) -> bytes:
+    if not _safe_relative_path(canonical_relative_path):
+        raise ValueError("canonical relative path is unsafe")
+    payload = {
+        "schema_version": _PUBLICATION_SCHEMA_VERSION,
+        "protocol_version": _PUBLICATION_PROTOCOL_VERSION,
+        "evaluation_identity": plan.evaluation_identity,
+        "analysis_mode": plan.analysis_mode,
+        "canonical_relative_path": canonical_relative_path,
+        "methods": [_publication_value(item) for item in plan.methods],
+        "directions": [_publication_value(item) for item in plan.directions],
+        "checkpoint_policies": [
+            getattr(item, "logical_checkpoint", _publication_value(item))
+            for item in plan.checkpoint_policies
+        ],
+        "intended_relative_paths": list(plan.intended_relative_paths),
+    }
+    return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def _utf16_units(value: str) -> int:
+    return len(value.encode("utf-16-le")) // 2
+
+
+def _base36(value: int) -> str:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError("base36 values must be non-negative integers")
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+    if value == 0:
+        return "0"
+    digits = []
+    while value:
+        value, remainder = divmod(value, 36)
+        digits.append(alphabet[remainder])
+    return "".join(reversed(digits))
+
+
+def _publication_candidate_names(
+    parent: Path, final_name: str, identity_token: str, attempt_token: str,
+    collision: int,
+) -> tuple[str, str, str]:
+    collision_suffix = "" if collision == 0 else f".c{_base36(collision)}"
+    sibling = f"p3dco.{_PUBLICATION_ROLE}.{identity_token}.{attempt_token}{collision_suffix}.tmp"
+    journal = f".{sibling}.journal"
+    backup = f".{final_name}.backup.{attempt_token}{collision_suffix}"
+    return sibling, journal, backup
+
+
+def _path_fits(path: Path, budget: PublicationPathBudget) -> bool:
+    return (
+        _utf16_units(str(path)) <= budget.verified_path_units
+        and _utf16_units(path.name) <= budget.verified_component_units
+    )
+
+
+def _publication_paths_fit(names: PublicationNames, budget: PublicationPathBudget) -> bool:
+    return all(
+        _path_fits(path, budget)
+        for path in (
+            names.final_path,
+            names.sibling_path,
+            names.journal_path,
+            names.backup_path,
+        )
+    )
+
+
+def _candidate_fits(parent: Path, names: tuple[str, str, str], budget: PublicationPathBudget) -> bool:
+    parent_units = _utf16_units(str(parent))
+    for name in (names[0], names[1], names[2]):
+        if parent_units + 1 + _utf16_units(name) > budget.verified_path_units:
+            return False
+        if _utf16_units(name) > budget.verified_component_units:
+            return False
+    return True
+
+
+def _derived_identity_token(
+    digest_text: str,
+    parent: Path,
+    final_name: str,
+    attempt_token: str,
+    collision: int,
+    budget: PublicationPathBudget,
+) -> tuple[str, int]:
+    """Fit only the sibling identity representation to the measured grammar budget."""
+    overhead_names = _publication_candidate_names(
+        parent, final_name, "", attempt_token, collision
+    )
+    remaining = min(
+        budget.verified_component_units - max(_utf16_units(name) for name in overhead_names),
+        budget.verified_path_units - _utf16_units(str(parent)) - 1
+        - max(_utf16_units(name) for name in overhead_names),
+    )
+    token_length = min(len(digest_text), remaining)
+    if token_length <= 0:
+        raise ValueError("publication path budget cannot fit canonical transaction identity representation")
+    return digest_text[:token_length], token_length
+
+
+def derive_publication_names(
+    final_path: str | Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+    *,
+    attempt: int,
+    existing_names: Sequence[str] = (),
+    budget: PublicationPathBudget,
+) -> PublicationNames:
+    final = Path(final_path)
+    if not final.name or final.name in {".", ".."}:
+        raise ValueError("final output path must have a name")
+    parent = final.parent.absolute()
+    final = parent / final.name
+    if not _safe_relative_path(canonical_relative_path):
+        raise ValueError("canonical relative path is unsafe")
+    serialized = serialize_canonical_publication_identity(plan, canonical_relative_path)
+    digest = hashlib.sha256(serialized).digest()
+    digest_text = base64.b32encode(digest).decode("ascii").rstrip("=").lower()
+    attempt_token = _base36(attempt)
+    occupied = {str(name).casefold() for name in existing_names}
+    for collision in range(len(occupied) + 2):
+        identity_token, _ = _derived_identity_token(
+            digest_text, parent, final.name, attempt_token, collision, budget
+        )
+        names = _publication_candidate_names(
+            parent, final.name, identity_token, attempt_token, collision
+        )
+        candidate = PublicationNames(
+            final, parent / names[0], parent / names[1], parent / names[2],
+            identity_token, attempt_token,
+            None if collision == 0 else _base36(collision),
+            hashlib.sha256(serialized).hexdigest(),
+        )
+        if not _candidate_fits(parent, names, budget) or not _publication_paths_fit(candidate, budget):
+            raise ValueError("publication path budget cannot fit transaction grammar")
+        if not any(name.casefold() in occupied for name in names):
+            return candidate
+    raise ValueError("publication collision budget exhausted")
+
+
+def _probe_publication_names(
+    final: Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+    existing_names: Sequence[str],
+    budget: PublicationPathBudget,
+) -> PublicationNames:
+    serialized = serialize_canonical_publication_identity(plan, canonical_relative_path)
+    digest_text = base64.b32encode(hashlib.sha256(serialized).digest()).decode("ascii").rstrip("=").lower()
+    occupied = {str(name).casefold() for name in existing_names}
+    for collision in range(len(occupied) + 2):
+        attempt_token = _base36(1)
+        identity_token, _ = _derived_identity_token(
+            digest_text,
+            final.parent,
+            final.name,
+            attempt_token,
+            collision,
+            budget,
+        )
+        sibling, journal, backup = _publication_candidate_names(
+            final.parent, final.name, identity_token, attempt_token, collision
+        )
+        if any(name.casefold() in occupied for name in (sibling, journal, backup)):
+            continue
+        return PublicationNames(
+            final,
+            final.parent / sibling,
+            final.parent / journal,
+            final.parent / backup,
+            identity_token,
+            attempt_token,
+            None if collision == 0 else _base36(collision),
+            hashlib.sha256(serialized).hexdigest(),
+        )
+    raise ValueError("publication probe collision budget exhausted")
+
+
+def _windows_component_limit(parent: Path) -> int:
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_volume_information = kernel32.GetVolumeInformationW
+    get_volume_information.argtypes = [
+        wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(wintypes.DWORD), wintypes.LPWSTR, wintypes.DWORD,
+    ]
+    get_volume_information.restype = wintypes.BOOL
+    volume_name = ctypes.create_unicode_buffer(261)
+    serial_number = wintypes.DWORD()
+    maximum_component_length = wintypes.DWORD()
+    filesystem_flags = wintypes.DWORD()
+    filesystem_name = ctypes.create_unicode_buffer(261)
+    volume_root = Path(parent).anchor or str(parent)
+    if not get_volume_information(
+        volume_root, volume_name, len(volume_name), ctypes.byref(serial_number),
+        ctypes.byref(maximum_component_length), ctypes.byref(filesystem_flags),
+        filesystem_name, len(filesystem_name),
+    ):
+        error = ctypes.get_last_error()
+        raise OSError(error, "GetVolumeInformationW failed")
+    if maximum_component_length.value <= 0:
+        raise OSError("volume reported no component capability")
+    return int(maximum_component_length.value)
+
+
+def _probe_budget(parent: Path) -> PublicationPathBudget:
+    final_path = parent / "canonical-output"
+    try:
+        if os.name == "nt":
+            component_units = _windows_component_limit(parent)
+            path_units = _utf16_units(str(parent)) + 1 + component_units
+        else:
+            path_units = int(os.pathconf(str(parent), "PC_PATH_MAX"))
+            component_units = int(os.pathconf(str(parent), "PC_NAME_MAX"))
+    except (AttributeError, OSError, ValueError, TypeError) as error:
+        raise PublicationBlocked(
+            f"publication path capability is unavailable: {error}",
+            reason="path_capability_unavailable",
+            final_path=final_path,
+            candidate_path=final_path,
+            backup_path=parent / ".canonical-output.backup.unknown",
+        ) from error
+    try:
+        return PublicationPathBudget(path_units, component_units)
+    except ValueError as error:
+        raise PublicationBlocked(
+            f"publication path capability is invalid: {error}",
+            reason="path_capability_unavailable",
+            final_path=final_path,
+            candidate_path=final_path,
+            backup_path=parent / ".canonical-output.backup.unknown",
+        ) from error
+
+
+def probe_publication_operations(
+    final_path: str | Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+) -> PublicationProbeResult:
+    """Probe the exact publication grammar on the target parent and volume."""
+    final = Path(final_path).absolute()
+    parent = final.parent
+    try:
+        parent_stat = parent.stat()
+        budget = _probe_budget(parent)
+        names = _probe_publication_names(
+            final, plan, canonical_relative_path,
+            tuple(entry.name for entry in parent.iterdir()), budget,
+        )
+        if not _publication_paths_fit(names, budget):
+            raise PublicationBlocked(
+                "publication grammar exceeds the measured target path capability",
+                reason="path_budget_unavailable",
+                final_path=names.final_path,
+                candidate_path=names.sibling_path,
+                backup_path=names.backup_path,
+            )
+    except PublicationBlocked:
+        raise
+    except (OSError, ValueError) as error:
+        raise PublicationBlocked(
+            f"publication target cannot establish probe capability: {error}",
+            reason="path_capability_unavailable",
+            final_path=final,
+            candidate_path=final,
+            backup_path=parent / f".{final.name}.backup.unknown",
+        ) from error
+
+    operation_paths = {
+        "create": (names.sibling_path,),
+        "journal": (names.journal_path,),
+        "validate": (names.sibling_path, names.journal_path),
+        "rename": (names.final_path, names.backup_path, names.sibling_path),
+        "rollback": (names.final_path, names.sibling_path, names.backup_path),
+        "read": (names.final_path,),
+    }
+    path_units = {
+        operation: max(_utf16_units(str(path)) for path in paths)
+        for operation, paths in operation_paths.items()
+    }
+    component_units = {
+        operation: max(_utf16_units(path.name) for path in paths)
+        for operation, paths in operation_paths.items()
+    }
+    probe_root = Path(tempfile.mkdtemp(prefix=".p3dco-probe-", dir=str(parent)))
+    probe_final = probe_root / names.final_path.name
+    probe_sibling = probe_root / names.sibling_path.name
+    probe_journal = probe_root / names.journal_path.name
+    probe_backup = probe_root / names.backup_path.name
+    owned_entries = (probe_final, probe_sibling, probe_journal, probe_backup)
+    try:
+        if probe_root.stat().st_dev != parent_stat.st_dev:
+            raise OSError("publication probe namespace is not same-volume")
+        probe_final.mkdir()
+        with probe_journal.open("xb") as stream:
+            stream.write(b"publication-probe\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        probe_sibling.mkdir()
+        if (
+            probe_final.is_symlink()
+            or not probe_final.is_dir()
+            or probe_sibling.is_symlink()
+            or not probe_sibling.is_dir()
+            or not probe_journal.is_file()
+        ):
+            raise OSError("publication probe validation failed")
+        probe_journal.read_bytes()
+        os.replace(probe_final, probe_backup)
+        os.replace(probe_sibling, probe_final)
+        probe_final.stat()
+        tuple(probe_final.iterdir())
+        os.replace(probe_final, probe_sibling)
+        os.replace(probe_backup, probe_final)
+        probe_final.stat()
+        tuple(probe_final.iterdir())
+    except (OSError, UnicodeError, ValueError) as error:
+        raise PublicationBlocked(
+            f"publication operation capability is unavailable: {error}",
+            reason="publication_operation_unavailable",
+            final_path=names.final_path,
+            candidate_path=names.sibling_path,
+            backup_path=names.backup_path,
+        ) from error
+    finally:
+        cleanup_error = None
+        for path in owned_entries:
+            try:
+                if path.is_symlink() or path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+            except FileNotFoundError:
+                continue
+            except OSError as error:
+                cleanup_error = error
+        try:
+            probe_root.rmdir()
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            cleanup_error = cleanup_error or error
+        if cleanup_error is not None:
+            raise PublicationBlocked(
+                f"publication probe cleanup failed: {cleanup_error}",
+                reason="publication_operation_unavailable",
+                final_path=names.final_path,
+                candidate_path=names.sibling_path,
+                backup_path=names.backup_path,
+            ) from cleanup_error
+    if parent_stat.st_dev != parent.stat().st_dev:
+        raise PublicationBlocked(
+            "publication target volume changed during capability probe",
+            reason="same_volume_probe_failed",
+            final_path=names.final_path,
+            candidate_path=names.sibling_path,
+            backup_path=names.backup_path,
+        )
+    verified_budget = PublicationPathBudget(
+        max(path_units.values()), max(component_units.values())
+    )
+    return PublicationProbeResult(
+        verified_budget, _PUBLICATION_PROBE_OPERATIONS, path_units, component_units
+    )
+
+
+def request_publication_capability(provider: Any = os.urandom) -> bytes:
+    try:
+        capability = provider(_CAPABILITY_BYTES)
+    except Exception as error:
+        raise ValueError("OS CSPRNG capability is unavailable") from error
+    if not isinstance(capability, (bytes, bytearray)) or len(capability) != _CAPABILITY_BYTES:
+        raise ValueError("OS CSPRNG capability must return exactly 32 bytes")
+    return bytes(capability)
+
+
+def _write_prepared_journal(path: Path, payload: bytes) -> None:
+    if os.name == "nt":
+        descriptor = _windows_create_owner_only_file(path)
+    else:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_BINARY"):
+            flags |= os.O_BINARY
+        descriptor = os.open(path, flags, 0o600)
+    try:
+        if os.name != "nt" and hasattr(os, "fchmod"):
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if os.name == "nt":
+        _verify_owner_only_acl(path)
+    else:
+        _ensure_owner_only_acl(path)
+    _durable_file(path)
+    _durable_parent_directory(path.parent)
+
+
+def prepare_publication_transaction(
+    final_path: str | Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+    *,
+    attempt: int,
+    owner_token: str,
+    expected_manifest_hash: str,
+    budget: PublicationPathBudget,
+    capability_provider: Any = os.urandom,
+) -> PreparedPublication:
+    if not isinstance(owner_token, str) or not owner_token:
+        raise ValueError("owner token is required")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_manifest_hash):
+        raise ValueError("expected manifest hash must be a lowercase SHA-256 digest")
+    final = Path(final_path)
+    names = derive_publication_names(
+        final, plan, canonical_relative_path, attempt=attempt,
+        existing_names=tuple(entry.name for entry in final.parent.iterdir()), budget=budget,
+    )
+    capability = request_publication_capability(capability_provider)
+    parent_stat = names.final_path.parent.stat()
+    final_present = names.final_path.exists() or names.final_path.is_symlink()
+    final_stat = names.final_path.stat() if final_present else parent_stat
+    final_ids = _candidate_file_identifiers(names.final_path) if final_present else None
+    journal = {
+        "schema_version": _PUBLICATION_SCHEMA_VERSION,
+        "protocol_version": _PUBLICATION_PROTOCOL_VERSION,
+        "state": "prepared",
+        "owner_token": owner_token,
+        "attempt_token": names.attempt_token,
+        "collision_token": names.collision_token,
+        "role": _PUBLICATION_ROLE,
+        "canonical_relative_path": canonical_relative_path,
+        "canonical_identity_sha256": names.canonical_identity_sha256,
+        "identity_token_length": len(names.identity_token),
+        "sibling_name": names.sibling_path.name,
+        "final_name": names.final_path.name,
+        "backup_name": names.backup_path.name,
+        "expected_manifest_hash": expected_manifest_hash,
+        "capability_hex": capability.hex(),
+        "same_volume_file_identifiers": {
+            "parent_device": parent_stat.st_dev, "final_device": final_stat.st_dev,
+        },
+        "final_present": final_present,
+        "final_file_identifiers": final_ids,
+        "type_mode": {"expected_type": "directory", "final_mode": final_stat.st_mode},
+    }
+    payload = (json.dumps(journal, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    try:
+        _write_prepared_journal(names.journal_path, payload)
+    except PublicationBlocked:
+        raise
+    except Exception as error:
+        raise PublicationBlocked(
+            f"journal preparation blocked before publication: {error}",
+            reason="journal_acl_or_durability_failed",
+            final_path=names.final_path,
+            candidate_path=names.sibling_path,
+            backup_path=names.backup_path,
+        ) from error
+    return PreparedPublication(
+        names,
+        names.journal_path,
+        capability,
+        canonical_relative_path,
+        owner_token,
+        expected_manifest_hash,
+    )
+
+
+def _read_publication_journal(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("journal provenance is not an owned file")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError("journal provenance is unreadable") from error
+    if not isinstance(payload, Mapping):
+        raise ValueError("journal provenance is not an object")
+    return dict(payload)
+
+
+def _validate_prepared_publication(
+    publication: PreparedPublication,
+    plan: ConceptEvaluationPlan,
+    artifacts: Mapping[str, bytes],
+    *,
+    required_state: str = "prepared",
+) -> dict[str, Any]:
+    names = publication.names
+    if publication.state != required_state:
+        raise ValueError(f"journal state is not {required_state}")
+    if (
+        publication.canonical_relative_path is None
+        or publication.owner_token is None
+        or publication.expected_manifest_hash is None
+    ):
+        raise ValueError("journal provenance is incomplete")
+    if not _safe_relative_path(publication.canonical_relative_path):
+        raise ValueError("journal canonical path is unsafe")
+    if set(artifacts) != set(plan.intended_relative_paths):
+        raise ValueError("artifacts must exactly match the evaluation plan")
+    if any(not _safe_relative_path(path) for path in artifacts):
+        raise ValueError("artifacts contain an unsafe path")
+    manifest_payload = artifacts.get("evaluation_manifest.json")
+    if not isinstance(manifest_payload, bytes):
+        raise ValueError("artifacts must include evaluation_manifest.json")
+    if hashlib.sha256(manifest_payload).hexdigest() != publication.expected_manifest_hash:
+        raise ValueError("candidate manifest hash does not match prepared journal")
+
+    journal = _read_publication_journal(publication.journal_path)
+    expected = {
+        "schema_version": _PUBLICATION_SCHEMA_VERSION,
+        "protocol_version": _PUBLICATION_PROTOCOL_VERSION,
+        "state": required_state,
+        "owner_token": publication.owner_token,
+        "attempt_token": names.attempt_token,
+        "collision_token": names.collision_token,
+        "role": _PUBLICATION_ROLE,
+        "canonical_relative_path": publication.canonical_relative_path,
+        "canonical_identity_sha256": names.canonical_identity_sha256,
+        "identity_token_length": len(names.identity_token),
+        "sibling_name": names.sibling_path.name,
+        "final_name": names.final_path.name,
+        "backup_name": names.backup_path.name,
+        "expected_manifest_hash": publication.expected_manifest_hash,
+    }
+    if any(journal.get(key) != value for key, value in expected.items()):
+        raise ValueError("journal identity or grammar binding mismatch")
+    if journal.get("capability_hex") != publication.capability.hex():
+        raise ValueError("journal capability binding mismatch")
+    try:
+        capability = bytes.fromhex(str(journal["capability_hex"]))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("journal capability is invalid") from error
+    if capability != publication.capability or len(capability) != _CAPABILITY_BYTES:
+        raise ValueError("journal capability binding mismatch")
+    identity = hashlib.sha256(
+        serialize_canonical_publication_identity(
+            plan, publication.canonical_relative_path
+        )
+    ).hexdigest()
+    if identity != names.canonical_identity_sha256:
+        raise ValueError("journal canonical identity mismatch")
+
+    parent = names.final_path.parent
+    if any(path.parent != parent for path in (names.sibling_path, names.journal_path)):
+        raise ValueError("journal and sibling are not in the final parent")
+    if names.journal_path.name != f".{names.sibling_path.name}.journal":
+        raise ValueError("journal grammar binding mismatch")
+    parent_stat = parent.stat()
+    final_stat = names.final_path.stat() if names.final_path.exists() else parent_stat
+    volume_ids = journal.get("same_volume_file_identifiers")
+    if not isinstance(volume_ids, Mapping):
+        raise ValueError("journal volume binding is missing")
+    if (
+        volume_ids.get("parent_device") != parent_stat.st_dev
+        or volume_ids.get("final_device") != final_stat.st_dev
+    ):
+        raise ValueError("journal volume binding mismatch")
+    type_mode = journal.get("type_mode")
+    if not isinstance(type_mode, Mapping) or type_mode.get("expected_type") != "directory":
+        raise ValueError("journal type binding mismatch")
+    final_present = journal.get("final_present")
+    final_ids = journal.get("final_file_identifiers")
+    if not isinstance(final_present, bool):
+        raise ValueError("journal final presence binding is missing")
+    final_exists = names.final_path.exists() or names.final_path.is_symlink()
+    if final_present:
+        if not isinstance(final_ids, Mapping):
+            raise ValueError("journal final identity binding is missing")
+        if final_exists:
+            current_ids = _candidate_file_identifiers(names.final_path)
+            if dict(final_ids) != current_ids:
+                raise ValueError("journal final identity binding mismatch")
+    elif final_ids is not None or final_exists:
+        raise ValueError("journal final presence binding mismatch")
+    if (
+        final_present
+        and (names.final_path.exists() or names.final_path.is_symlink())
+        and type_mode.get("final_mode") != final_stat.st_mode
+    ):
+        raise ValueError("journal final mode binding mismatch")
+    return journal
+
+
+def _write_validated_journal(path: Path, journal: Mapping[str, Any]) -> None:
+    payload = (json.dumps(dict(journal), sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    flags = os.O_WRONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        os.ftruncate(descriptor, 0)
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("journal state transition made no progress")
+            view = view[written:]
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    _ensure_owner_only_acl(path)
+    _durable_file(path)
+    _durable_parent_directory(path.parent)
+
+
+def _durably_mark_aborted(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+    reason: str,
+) -> None:
+    aborted = dict(journal)
+    aborted["state"] = "aborted"
+    aborted["abort_reason"] = str(reason)[:512]
+    try:
+        _write_validated_journal(publication.journal_path, aborted)
+    except Exception as error:
+        raise OSError(f"aborted journal state could not be persisted: {error}") from error
+
+
+def create_validated_publication_sibling(
+    publication: PreparedPublication,
+    plan: ConceptEvaluationPlan,
+    artifacts: Mapping[str, bytes],
+    *,
+    writer: Any = None,
+) -> PreparedPublication:
+    """Create, fully validate, and durably mark an owned publication sibling.
+
+    This is deliberately limited to the pre-promotion transaction boundary. It
+    never renames, replaces, removes, or adopts the canonical final path or a
+    foreign collision entry.
+    """
+    journal = _validate_prepared_publication(publication, plan, artifacts)
+    sibling = publication.sibling_path
+    parent = publication.final_path.parent
+    try:
+        try:
+            sibling.mkdir()
+        except FileExistsError as error:
+            raise ValueError("publication sibling collision was preserved") from error
+        if sibling.is_symlink() or _is_reparse_point(sibling) or not sibling.is_dir():
+            raise ValueError("publication sibling is not an owned directory")
+        if sibling.parent != parent or sibling.stat().st_dev != parent.stat().st_dev:
+            raise ValueError("publication sibling volume binding mismatch")
+        _ensure_owner_only_acl(sibling)
+
+        write = writer or _default_output_writer
+        ordered_paths = [
+            path for path in plan.intended_relative_paths
+            if path != "evaluation_manifest.json"
+        ]
+        if "evaluation_manifest.json" in plan.intended_relative_paths:
+            ordered_paths.append("evaluation_manifest.json")
+        for relative_path in ordered_paths:
+            write(sibling / relative_path, artifacts[relative_path])
+
+        try:
+            _validate_allowlisted_tree(sibling, set(plan.intended_relative_paths))
+        except RuntimeError as error:
+            raise ValueError(f"candidate output validation failed: {error}") from error
+        for path in (sibling, *sibling.rglob("*")):
+            if path.is_symlink() or not path.exists():
+                raise ValueError(f"candidate tree contains an ambiguous entry: {path}")
+            _ensure_owner_only_acl(path)
+        _verify_candidate_tree_acl(sibling)
+        manifest_hash = hashlib.sha256(
+            (sibling / "evaluation_manifest.json").read_bytes()
+        ).hexdigest()
+        if manifest_hash != publication.expected_manifest_hash:
+            raise ValueError("candidate manifest hash diverged")
+        try:
+            verify_completed_output(sibling, expected_identity=plan.evaluation_identity)
+        except (OSError, ValueError) as error:
+            raise ValueError(f"candidate output validation failed: {error}") from error
+        _durable_tree(sibling)
+
+        journal = _validate_prepared_publication(publication, plan, artifacts)
+        journal["candidate_file_identifiers"] = _candidate_file_identifiers(sibling)
+        type_mode = journal["type_mode"]
+        if not isinstance(type_mode, Mapping):
+            raise ValueError("candidate type binding is incomplete")
+        journal["type_mode"] = {
+            **type_mode,
+            "candidate_mode": sibling.stat().st_mode,
+        }
+        journal["state"] = "validated"
+        _write_validated_journal(publication.journal_path, journal)
+    except Exception as error:
+        try:
+            _durably_mark_aborted(publication, journal, str(error))
+        except Exception as abort_error:
+            raise PublicationBlocked(
+                f"candidate publication failed and aborted state was not durable: {abort_error}",
+                reason="candidate_abort_durability_failed",
+                final_path=publication.final_path,
+                candidate_path=sibling,
+                backup_path=publication.names.backup_path,
+            ) from error
+        if isinstance(error, ValueError):
+            raise
+        raise PublicationBlocked(
+            f"candidate publication blocked at a durability boundary: {error}",
+            reason="candidate_durability_failed",
+            final_path=publication.final_path,
+            candidate_path=sibling,
+            backup_path=publication.names.backup_path,
+        ) from error
+    return PreparedPublication(
+        publication.names,
+        publication.journal_path,
+        publication.capability,
+        publication.canonical_relative_path,
+        publication.owner_token,
+        publication.expected_manifest_hash,
+        "validated",
+    )
+
+
+def _validate_validated_publication(
+    publication: PreparedPublication,
+    plan: ConceptEvaluationPlan,
+    *,
+    recovery: bool = False,
+) -> dict[str, Any]:
+    sibling = publication.sibling_path
+    if sibling.is_symlink() or _is_reparse_point(sibling) or not sibling.is_dir():
+        raise PublicationBlocked(
+            "validated publication sibling is missing or ambiguous",
+            reason="candidate_not_authenticated",
+            final_path=publication.final_path,
+            candidate_path=sibling,
+            backup_path=publication.names.backup_path,
+        )
+    try:
+        _verify_candidate_tree_acl(sibling)
+        candidate_artifacts = {
+            relative_path: (sibling / relative_path).read_bytes()
+            for relative_path in plan.intended_relative_paths
+        }
+        journal = _validate_prepared_publication(
+            publication, plan, candidate_artifacts, required_state="validated"
+        )
+        type_mode = journal.get("type_mode")
+        if not isinstance(type_mode, Mapping) or type_mode.get("expected_type") != "directory":
+            raise ValueError("candidate type binding mismatch")
+        if (
+            isinstance(type_mode.get("candidate_mode"), bool)
+            or not isinstance(type_mode.get("candidate_mode"), int)
+            or type_mode["candidate_mode"] != sibling.stat().st_mode
+        ):
+            raise ValueError("candidate mode binding mismatch")
+        candidate_ids = journal.get("candidate_file_identifiers")
+        current_ids = _candidate_file_identifiers(sibling)
+        if (
+            not isinstance(candidate_ids, Mapping)
+            or candidate_ids.get("device") != current_ids["device"]
+            or candidate_ids.get("inode") != current_ids["inode"]
+        ):
+            raise ValueError("candidate file identity binding mismatch")
+        verify_completed_output(sibling, expected_identity=plan.evaluation_identity)
+    except (OSError, ValueError) as error:
+        raise PublicationBlocked(
+            f"validated publication sibling is not authenticated: {error}",
+            reason="candidate_validation_failed",
+            final_path=publication.final_path,
+            candidate_path=sibling,
+            backup_path=publication.names.backup_path,
+        ) from error
+
+    final = publication.final_path
+    parent = final.parent
+    backup = publication.names.backup_path
+    if any(path.parent != parent for path in (sibling, publication.journal_path, backup)):
+        raise PublicationBlocked(
+            "publication entries are not same-parent",
+            reason="same_parent_binding_failed",
+            final_path=final,
+            candidate_path=sibling,
+            backup_path=backup,
+        )
+    if backup.exists() or backup.is_symlink():
+        raise PublicationBlocked(
+            "authenticated backup path is occupied by a foreign entry",
+            reason="backup_collision",
+            final_path=final,
+            candidate_path=sibling,
+            backup_path=backup,
+        )
+    if final.is_symlink():
+        raise PublicationBlocked(
+            "existing final is ambiguous and was not modified",
+            reason="invalid_final",
+            final_path=final,
+            candidate_path=sibling,
+            backup_path=backup,
+        )
+    if final.exists():
+        try:
+            if not final.is_dir() or final.stat().st_dev != parent.stat().st_dev:
+                raise ValueError("existing final is not a same-volume directory")
+            verify_completed_output(final)
+        except (OSError, ValueError) as error:
+            raise PublicationBlocked(
+                f"existing final is invalid and was not modified: {error}",
+                reason="invalid_final",
+                final_path=final,
+                candidate_path=sibling,
+                backup_path=backup,
+            ) from error
+    return journal
+
+
+_PUBLICATION_CANDIDATE_RE = re.compile(
+    r"^p3dco\.concept-output\.(?P<identity>[a-z2-7]+)\.(?P<attempt>[0-9a-z]+)"
+    r"(?:\.c(?P<collision>[0-9a-z]+))?\.tmp$"
+)
+_PUBLICATION_JOURNAL_RE = re.compile(
+    r"^\.(?P<sibling>p3dco\.concept-output\.[a-z2-7]+\.[0-9a-z]+"
+    r"(?:\.c[0-9a-z]+)?\.tmp)\.journal$"
+)
+
+
+def _parse_base36_token(token: str) -> int:
+    if not token or any(character not in "0123456789abcdefghijklmnopqrstuvwxyz" for character in token):
+        raise ValueError("publication token is not lowercase base36")
+    value = 0
+    for character in token:
+        value = value * 36 + "0123456789abcdefghijklmnopqrstuvwxyz".index(character)
+    if _base36(value) != token:
+        raise ValueError("publication token is not canonical base36")
+    return value
+
+
+def _recovery_names(
+    final: Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+    sibling: Path,
+    budget: PublicationPathBudget,
+) -> PublicationNames:
+    match = _PUBLICATION_CANDIDATE_RE.fullmatch(sibling.name)
+    if match is None:
+        raise ValueError("publication sibling grammar is not exact")
+    attempt_token = match.group("attempt")
+    _parse_base36_token(attempt_token)
+    collision_token = match.group("collision")
+    collision = 0 if collision_token is None else _parse_base36_token(collision_token)
+    if collision_token is not None and collision == 0:
+        raise ValueError("publication collision token is not canonical")
+    serialized = serialize_canonical_publication_identity(plan, canonical_relative_path)
+    identity_digest = hashlib.sha256(serialized).hexdigest()
+    digest_text = base64.b32encode(bytes.fromhex(identity_digest)).decode("ascii").rstrip("=").lower()
+    expected_token, expected_token_length = _derived_identity_token(
+        digest_text,
+        final.parent,
+        final.name,
+        attempt_token,
+        collision,
+        budget,
+    )
+    identity_token = match.group("identity")
+    if len(identity_token) != expected_token_length:
+        raise ValueError("publication identity token length does not fit the verified budget")
+    if identity_token != expected_token:
+        raise ValueError("publication identity token mismatch")
+    names = _publication_candidate_names(final.parent, final.name, identity_token, attempt_token, collision)
+    if not _candidate_fits(final.parent, names, budget):
+        raise ValueError("publication transaction grammar exceeds the verified budget")
+    candidate = PublicationNames(
+        final, sibling, final.parent / names[1], final.parent / names[2],
+        identity_token, attempt_token, collision_token, identity_digest,
+    )
+    if not _publication_paths_fit(candidate, budget):
+        raise ValueError("publication transaction grammar exceeds the verified budget")
+    if sibling.name != names[0]:
+        raise ValueError("publication sibling grammar mismatch")
+    return PublicationNames(
+        final, sibling, final.parent / names[1], final.parent / names[2],
+        identity_token, attempt_token, collision_token, identity_digest,
+    )
+
+
+def _publication_candidate_like(name: str) -> bool:
+    lowered = name.casefold()
+    return lowered.startswith("p3dco.concept-output.") or lowered.startswith(".p3dco.concept-output.")
+
+
+def _recovery_candidates(parent: Path) -> tuple[list[Path], list[Path]]:
+    exact: list[Path] = []
+    ambiguous: list[Path] = []
+    try:
+        entries = tuple(parent.iterdir())
+    except OSError as error:
+        raise ValueError(f"publication parent cannot be enumerated: {error}") from error
+    for entry in entries:
+        if _PUBLICATION_CANDIDATE_RE.fullmatch(entry.name):
+            exact.append(entry)
+            continue
+        if _PUBLICATION_JOURNAL_RE.fullmatch(entry.name):
+            sibling = parent / entry.name[1:-len(".journal")]
+            if (
+                not _PUBLICATION_CANDIDATE_RE.fullmatch(sibling.name)
+                or not sibling.exists() and not sibling.is_symlink()
+            ):
+                ambiguous.append(entry)
+            continue
+        if _publication_candidate_like(entry.name):
+            ambiguous.append(entry)
+    return exact, ambiguous
+
+
+def _authenticated_promoted_candidate_identity(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+) -> dict[str, int]:
+    """Require the current final to be the exact candidate named by the journal."""
+    final = publication.final_path
+    parent = final.parent
+    if final.is_symlink() or not final.is_dir():
+        raise ValueError("promoted candidate final is ambiguous")
+    candidate_ids = journal.get("candidate_file_identifiers")
+    type_mode = journal.get("type_mode")
+    if not isinstance(candidate_ids, Mapping):
+        raise ValueError("promoted candidate identity is missing")
+    if (
+        not isinstance(type_mode, Mapping)
+        or type_mode.get("expected_type") != "directory"
+        or isinstance(type_mode.get("candidate_mode"), bool)
+        or not isinstance(type_mode.get("candidate_mode"), int)
+    ):
+        raise ValueError("promoted candidate type or mode binding is missing")
+    current = _candidate_file_identifiers(final)
+    metadata = os.lstat(final)
+    if (
+        dict(candidate_ids) != current
+        or metadata.st_dev != parent.stat().st_dev
+        or metadata.st_mode != type_mode["candidate_mode"]
+    ):
+        raise ValueError("promoted candidate final identity binding mismatch")
+    return current
+
+
+def _authenticated_backup_identity(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+) -> dict[str, int]:
+    """Require the exact object created by the final-to-backup rename."""
+    final = publication.final_path
+    backup = publication.names.backup_path
+    parent = final.parent
+    if backup.parent != parent or backup.is_symlink() or not backup.is_dir():
+        raise ValueError("authenticated backup is unavailable")
+    if (
+        journal.get("capability_hex") != publication.capability.hex()
+        or journal.get("backup_capability_hex") != publication.capability.hex()
+    ):
+        raise ValueError("authenticated backup capability binding mismatch")
+    expected = journal.get("backup_file_identifiers")
+    source_final = journal.get("backup_source_final_file_identifiers")
+    backup_mode = journal.get("backup_type_mode")
+    if not isinstance(expected, Mapping) or not isinstance(source_final, Mapping):
+        raise ValueError("authenticated backup identity is missing")
+    if (
+        not isinstance(backup_mode, Mapping)
+        or backup_mode.get("expected_type") != "directory"
+        or isinstance(backup_mode.get("mode"), bool)
+        or not isinstance(backup_mode.get("mode"), int)
+    ):
+        raise ValueError("authenticated backup type or mode binding is missing")
+    current = _candidate_file_identifiers(backup)
+    if dict(expected) != current:
+        raise ValueError("authenticated backup object identity mismatch")
+    metadata = os.lstat(backup)
+    if metadata.st_mode != backup_mode["mode"] or metadata.st_dev != parent.stat().st_dev:
+        raise ValueError("authenticated backup type, mode, or volume mismatch")
+    if final.exists() or final.is_symlink():
+        if final.is_symlink() or not final.is_dir():
+            raise ValueError("rollback final is ambiguous")
+        final_ids = _candidate_file_identifiers(final)
+        if final_ids == current:
+            raise ValueError("authenticated backup is not distinct from final")
+    if source_final != expected:
+        raise ValueError("final-to-backup object identity was not preserved")
+    return current
+
+
+def _rollback_authenticated_backup(
+    publication: PreparedPublication,
+    *,
+    replace: Any,
+    journal: Mapping[str, Any],
+) -> None:
+    final = publication.final_path
+    sibling = publication.sibling_path
+    backup = publication.names.backup_path
+    _authenticated_backup_identity(publication, journal)
+    if final.exists() or final.is_symlink():
+        _authenticated_promoted_candidate_identity(publication, journal)
+        if sibling.exists() or sibling.is_symlink():
+            raise ValueError("rollback destination is ambiguous")
+        replace(final, sibling)
+        _durable_parent_directory(final.parent)
+    if final.exists() or final.is_symlink():
+        raise ValueError("final path remained occupied during rollback")
+    _authenticated_backup_identity(publication, journal)
+    replace(backup, final)
+    _durable_tree(final)
+    _durable_parent_directory(final.parent)
+    verify_completed_output(final)
+
+
+def _cleanup_authenticated_backup(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+) -> None:
+    backup = publication.names.backup_path
+    _authenticated_backup_identity(publication, journal)
+    verify_completed_output(backup)
+    shutil.rmtree(backup)
+    if backup.exists() or backup.is_symlink():
+        raise OSError("authenticated backup cleanup did not remove the exact object")
+    _durable_parent_directory(backup.parent)
+
+
+def _durably_mark_publishing(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+) -> dict[str, Any]:
+    publishing = dict(journal)
+    publishing["state"] = "publishing"
+    _write_validated_journal(publication.journal_path, publishing)
+    return publishing
+
+
+def _record_authenticated_backup_after_rename(
+    publication: PreparedPublication,
+    journal: Mapping[str, Any],
+) -> dict[str, Any]:
+    backup = publication.names.backup_path
+    final_ids = journal.get("final_file_identifiers")
+    if not journal.get("final_present") or not isinstance(final_ids, Mapping):
+        raise ValueError("final-to-backup source identity is missing")
+    if backup.is_symlink() or not backup.is_dir():
+        raise ValueError("renamed backup is not an owned directory")
+    backup_ids = _candidate_file_identifiers(backup)
+    backup_stat = os.lstat(backup)
+    parent_stat = publication.final_path.parent.stat()
+    if backup_stat.st_dev != parent_stat.st_dev or dict(final_ids) != backup_ids:
+        raise ValueError("renamed backup identity or volume binding mismatch")
+    updated = dict(journal)
+    updated["backup_file_identifiers"] = backup_ids
+    updated["backup_source_final_file_identifiers"] = dict(final_ids)
+    updated["backup_type_mode"] = {
+        "expected_type": "directory", "mode": backup_stat.st_mode,
+    }
+    updated["backup_capability_hex"] = publication.capability.hex()
+    _durable_tree(backup)
+    _durable_parent_directory(backup.parent)
+    return _durably_mark_publishing(publication, updated)
+
+
+def publish_validated_publication(
+    publication: PreparedPublication,
+    plan: ConceptEvaluationPlan,
+    *,
+    absent_window_timeout_seconds: float | None,
+    replace: Any = os.replace,
+    clock: Any = time.monotonic,
+) -> Path:
+    """Promote one authenticated sibling through the bounded two-rename window.
+
+    ``absent_window_timeout_seconds`` is intentionally required: this slice does
+    not invent a policy value when the caller has not supplied ``T_absent_max``.
+    The final path may be absent between the two same-volume renames; this is
+    not an atomic exchange or a continuous-presence guarantee.
+    """
+    final = publication.final_path
+    parent = final.parent
+    backup = publication.names.backup_path
+    sibling = publication.sibling_path
+    with _publisher_lock(parent, final.name):
+        journal = _validate_validated_publication(publication, plan)
+        if (
+            final.exists()
+            and (
+                absent_window_timeout_seconds is None
+                or isinstance(absent_window_timeout_seconds, bool)
+                or not isinstance(absent_window_timeout_seconds, (int, float))
+                or not np.isfinite(absent_window_timeout_seconds)
+                or absent_window_timeout_seconds < 0
+            )
+        ):
+            raise PublicationBlocked(
+                "absent-window policy is required and must be finite and non-negative",
+                reason="absent_window_policy_missing",
+                final_path=publication.final_path,
+                candidate_path=publication.sibling_path,
+                backup_path=publication.names.backup_path,
+            )
+        backup_moved = False
+        absent_started: float | None = None
+        try:
+            if final.exists():
+                replace(final, backup)
+                backup_moved = True
+                absent_started = clock()
+                journal = _record_authenticated_backup_after_rename(publication, journal)
+                if (
+                    absent_started is not None
+                    and clock() - absent_started > absent_window_timeout_seconds
+                ):
+                    raise TimeoutError("absent window exceeded policy before promotion")
+            else:
+                journal = _durably_mark_publishing(publication, journal)
+            replace(sibling, final)
+            _durable_tree(final)
+            if absent_started is not None:
+                absent_duration = clock() - absent_started
+                if absent_duration > absent_window_timeout_seconds:
+                    raise TimeoutError(
+                        f"absent window exceeded policy: {absent_duration:.9f}s"
+                    )
+            verify_completed_output(final)
+            journal["state"] = "published"
+            _write_validated_journal(publication.journal_path, journal)
+            if backup_moved:
+                _cleanup_authenticated_backup(publication, journal)
+            return final
+        except Exception as error:
+            if not backup_moved and backup.exists() and not backup.is_symlink():
+                try:
+                    _authenticated_backup_identity(publication, journal)
+                except Exception as backup_error:
+                    try:
+                        _durably_mark_aborted(publication, journal, str(backup_error))
+                    except Exception as abort_error:
+                        raise PublicationBlocked(
+                            f"promotion failed; backup evidence was not authenticated and abort durability failed: {abort_error}",
+                            reason="backup_authentication_and_abort_failed",
+                            final_path=final,
+                            candidate_path=sibling,
+                            backup_path=backup,
+                            rollback_succeeded=False,
+                        ) from error
+                    raise PublicationBlocked(
+                        f"promotion failed; unauthenticated backup evidence was preserved: {backup_error}",
+                        reason="backup_authentication_failed",
+                        final_path=final,
+                        candidate_path=sibling,
+                        backup_path=backup,
+                        rollback_succeeded=False,
+                    ) from error
+                else:
+                    backup_moved = True
+            if backup_moved:
+                try:
+                    _rollback_authenticated_backup(
+                        publication, replace=replace, journal=journal
+                    )
+                    _durably_mark_aborted(publication, journal, str(error))
+                except Exception as rollback_error:
+                    try:
+                        _durably_mark_aborted(publication, journal, str(rollback_error))
+                    except Exception as abort_error:
+                        rollback_error = OSError(
+                            f"{rollback_error}; aborted state durability failed: {abort_error}"
+                        )
+                    raise PublicationBlocked(
+                        f"promotion failed and rollback or abort durability failed: {rollback_error}",
+                        reason="rollback_failed",
+                        final_path=final,
+                        candidate_path=sibling,
+                        backup_path=backup,
+                        rollback_succeeded=False,
+                    ) from error
+                raise PublicationBlocked(
+                    f"promotion failed; rollback succeeded: {error}",
+                    reason="promotion_failed",
+                    final_path=final,
+                    candidate_path=sibling,
+                    backup_path=backup,
+                    rollback_succeeded=True,
+                ) from error
+            try:
+                _durably_mark_aborted(publication, journal, str(error))
+            except Exception as abort_error:
+                raise PublicationBlocked(
+                    f"promotion failed and aborted state was not durable: {abort_error}",
+                    reason="abort_state_durability_failed",
+                    final_path=final,
+                    candidate_path=sibling,
+                    backup_path=backup,
+                ) from error
+            raise PublicationBlocked(
+                f"promotion failed without an authenticated backup: {error}",
+                reason="promotion_failed_without_backup",
+                final_path=final,
+                candidate_path=sibling,
+                backup_path=backup,
+            ) from error
+
+
+def recover_validated_publication(
+    final_path: str | Path,
+    plan: ConceptEvaluationPlan,
+    canonical_relative_path: str,
+    *,
+    budget: PublicationPathBudget,
+    absent_window_timeout_seconds: float | None,
+    replace: Any = os.replace,
+    clock: Any = time.monotonic,
+) -> Path | None:
+    """Recover one exact stale transaction without broad cleanup or adoption.
+
+    Only a complete, exact, durably ``validated`` transaction can enter the
+    existing authenticated promotion path. Foreign and look-alike entries are
+    surfaced and preserved. This is normal stale-process provenance, not a
+    claim of authentication against a filesystem actor able to copy or alter
+    entries.
+    """
+    final = Path(final_path).absolute()
+    parent = final.parent
+    unknown_backup = parent / f".{final.name}.backup.unknown"
+    if final.is_symlink() or _is_reparse_point(final):
+        raise PublicationBlocked(
+            "existing final is ambiguous and was not modified",
+            reason="invalid_final", final_path=final,
+            candidate_path=final, backup_path=unknown_backup,
+        )
+    if final.exists():
+        if not final.is_dir():
+            raise PublicationBlocked(
+                "existing final is invalid and was not modified",
+                reason="invalid_final", final_path=final,
+                candidate_path=final, backup_path=unknown_backup,
+            )
+        try:
+            verify_completed_output(final)
+        except (OSError, ValueError) as error:
+            raise PublicationBlocked(
+                f"existing final is invalid and was not modified: {error}",
+                reason="invalid_final", final_path=final,
+                candidate_path=final, backup_path=unknown_backup,
+            ) from error
+        return final
+
+    try:
+        candidates, ambiguous = _recovery_candidates(parent)
+    except ValueError as error:
+        raise PublicationBlocked(
+            str(error), reason="candidate_discovery_failed", final_path=final,
+            candidate_path=final, backup_path=unknown_backup,
+        ) from error
+    if ambiguous:
+        entry = ambiguous[0]
+        raise PublicationBlocked(
+            f"foreign or look-alike publication entry was preserved: {entry.name}",
+            reason="candidate_not_authenticated", final_path=final,
+            candidate_path=entry, backup_path=unknown_backup,
+        )
+    if not candidates:
+        return None
+    if len(candidates) != 1:
+        raise PublicationBlocked(
+            "multiple publication candidates are ambiguous and were preserved",
+            reason="candidate_ambiguous", final_path=final,
+            candidate_path=candidates[0], backup_path=unknown_backup,
+        )
+
+    sibling = candidates[0]
+    try:
+        names = _recovery_names(final, plan, canonical_relative_path, sibling, budget)
+        journal_path = names.journal_path
+        if journal_path.is_symlink() or not journal_path.is_file():
+            raise ValueError("publication journal is missing or not an owned file")
+        parent_stat = parent.stat()
+        if sibling.is_symlink() or _is_reparse_point(sibling) or not sibling.is_dir():
+            raise ValueError("publication sibling is not an owned directory")
+        if sibling.parent != parent or sibling.stat().st_dev != parent_stat.st_dev:
+            raise ValueError("publication sibling is not same-parent and same-volume")
+        journal_stat = journal_path.stat()
+        if journal_path.parent != parent or journal_stat.st_dev != parent_stat.st_dev:
+            raise ValueError("publication journal is not same-parent and same-volume")
+        if os.name != "nt" and (journal_stat.st_mode & 0o777) != 0o600:
+            raise ValueError("publication journal mode is not restrictive")
+        _verify_owner_only_acl(journal_path)
+        _verify_candidate_tree_acl(sibling)
+
+        journal = _read_publication_journal(journal_path)
+        required_keys = {
+            "schema_version", "protocol_version", "state", "owner_token",
+            "attempt_token", "collision_token", "role", "canonical_relative_path",
+            "canonical_identity_sha256", "identity_token_length", "sibling_name",
+            "final_name", "backup_name", "expected_manifest_hash", "capability_hex",
+            "same_volume_file_identifiers",
+            "final_present", "final_file_identifiers", "type_mode", "candidate_file_identifiers",
+        }
+        if set(journal) != required_keys:
+            raise ValueError("journal provenance is incomplete")
+        capability_hex = journal.get("capability_hex")
+        if not isinstance(capability_hex, str) or not re.fullmatch(r"[0-9a-f]{64}", capability_hex):
+            raise ValueError("journal capability is incomplete")
+        capability = bytes.fromhex(capability_hex)
+        owner_token = journal.get("owner_token")
+        expected_manifest_hash = journal.get("expected_manifest_hash")
+        if not isinstance(owner_token, str) or not owner_token:
+            raise ValueError("journal owner token is incomplete")
+        if not isinstance(expected_manifest_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_manifest_hash):
+            raise ValueError("journal manifest hash is incomplete")
+        if journal.get("state") != "validated":
+            raise ValueError("journal state is not validated")
+        type_mode = journal.get("type_mode")
+        if (
+            not isinstance(type_mode, Mapping)
+            or type_mode.get("expected_type") != "directory"
+            or isinstance(type_mode.get("final_mode"), bool)
+            or not isinstance(type_mode.get("final_mode"), int)
+            or isinstance(type_mode.get("candidate_mode"), bool)
+            or not isinstance(type_mode.get("candidate_mode"), int)
+        ):
+            raise ValueError("journal type or mode binding is incomplete")
+        volume_ids = journal.get("same_volume_file_identifiers")
+        if (
+            not isinstance(volume_ids, Mapping)
+            or volume_ids.get("parent_device") != parent_stat.st_dev
+            or volume_ids.get("final_device") != parent_stat.st_dev
+        ):
+            raise ValueError("journal volume binding mismatch")
+        candidate_ids = journal.get("candidate_file_identifiers")
+        if not isinstance(candidate_ids, Mapping):
+            raise ValueError("journal candidate file identity is incomplete")
+        if (
+            candidate_ids.get("device") != sibling.stat().st_dev
+            or candidate_ids.get("inode") != sibling.stat().st_ino
+            or type_mode["candidate_mode"] != sibling.stat().st_mode
+        ):
+            raise ValueError("journal candidate binding mismatch")
+
+        publication = PreparedPublication(
+            names, journal_path, capability, canonical_relative_path,
+            owner_token, expected_manifest_hash, "validated",
+        )
+        _validate_validated_publication(publication, plan, recovery=True)
+    except PublicationBlocked:
+        raise
+    except (OSError, ValueError) as error:
+        raise PublicationBlocked(
+            f"validated publication sibling is not authenticated: {error}",
+            reason="candidate_validation_failed", final_path=final,
+            candidate_path=sibling, backup_path=unknown_backup,
+        ) from error
+
+    return publish_validated_publication(
+        publication, plan,
+        absent_window_timeout_seconds=absent_window_timeout_seconds,
+        replace=replace, clock=clock,
+    )
 
 
 def evaluate_binary_concept_records(
@@ -972,6 +3020,18 @@ def _publish_output(
             shutil.rmtree(backup, ignore_errors=True)
 
 
+def _publication_budget_from_probe(result: Any) -> PublicationPathBudget:
+    if isinstance(result, PublicationProbeResult):
+        return result.budget
+    raise PublicationBlocked(
+        "publication probe returned no verified path capability",
+        reason="path_capability_unavailable",
+        final_path=Path("."),
+        candidate_path=Path("."),
+        backup_path=Path("."),
+    )
+
+
 def commit_output(
     output_root: str | Path,
     plan: ConceptEvaluationPlan,
@@ -980,34 +3040,52 @@ def commit_output(
     overwrite: bool = False,
     writer: Any = None,
     replace: Any = os.replace,
+    absent_window_timeout_seconds: float | None = None,
+    publication_probe: Any = None,
 ) -> Path:
-    """Publish an exact completed tree without destructive non-overwrite behavior."""
-    output = Path(output_root)
-    output.parent.mkdir(parents=True, exist_ok=True)
+    """Publish through the bounded journaled same-volume transaction."""
+    output = Path(output_root).absolute()
     expected_files = set(plan.intended_relative_paths)
     if set(artifacts.keys()) != expected_files:
         raise ValueError("artifacts must exactly match the evaluation plan")
+    output.parent.mkdir(parents=True, exist_ok=True)
 
-    write = writer or _default_output_writer
-    if overwrite:
-        with _allocation_lock(output.parent, output.name) as owner:
-            if output.exists() or output.is_symlink():
-                _validate_allowlisted_tree(output, expected_files)
-                verify_completed_output(output)
-            return _publish_output(
-                output, plan, artifacts, overwrite=True, write=write,
-                replace=replace, reservation=None, owner=owner,
+    if output.is_symlink() or output.exists():
+        if output.is_symlink() or not output.is_dir():
+            raise ValueError("existing output is not a completed directory")
+        _validate_allowlisted_tree(output, expected_files)
+        existing_manifest = verify_completed_output(output)
+        if not overwrite:
+            if existing_manifest["evaluation_identity"] == plan.evaluation_identity:
+                return output
+            raise ValueError(
+                "existing output has a different evaluation identity; explicit overwrite is required"
             )
 
-    with _allocation_lock(output.parent, output.name) as owner:
-        destination, reservation = _find_non_overwrite_destination(
-            output, plan.evaluation_identity, owner=owner
-        )
-        if reservation is None:
-            return destination
-    return _publish_output(
-        destination, plan, artifacts, overwrite=False, write=write,
-        replace=replace, reservation=reservation, owner=owner,
+    canonical_relative_path = "reports/concepts/evaluation_manifest.json"
+    probe = publication_probe or probe_publication_operations
+    budget = _publication_budget_from_probe(
+        probe(output, plan, canonical_relative_path)
+    )
+    owner_token = uuid.uuid4().hex
+    manifest_hash = hashlib.sha256(artifacts["evaluation_manifest.json"]).hexdigest()
+    prepared = prepare_publication_transaction(
+        output,
+        plan,
+        canonical_relative_path,
+        attempt=1,
+        owner_token=owner_token,
+        expected_manifest_hash=manifest_hash,
+        budget=budget,
+    )
+    validated = create_validated_publication_sibling(
+        prepared, plan, artifacts, writer=writer,
+    )
+    return publish_validated_publication(
+        validated,
+        plan,
+        absent_window_timeout_seconds=absent_window_timeout_seconds,
+        replace=replace,
     )
 
 
@@ -1083,6 +3161,8 @@ def generate_concept_report(
     writer: Any = None,
     replace: Any = os.replace,
     task_id: str | None = None,
+    absent_window_timeout_seconds: float | None = None,
+    publication_probe: Any = None,
 ) -> Path:
     """
     Generate complete concept evaluation report.
@@ -1146,4 +3226,6 @@ def generate_concept_report(
     return commit_output(
         output_root, plan, artifacts, overwrite=overwrite,
         writer=writer, replace=replace,
+        absent_window_timeout_seconds=absent_window_timeout_seconds,
+        publication_probe=publication_probe,
     )

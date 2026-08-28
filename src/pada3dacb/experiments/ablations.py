@@ -13,7 +13,7 @@ import platform
 import stat
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +34,7 @@ from pada3dacb.ablations.registry import (
     list_ablations,
 )
 from pada3dacb.ablations.schemas import sha256_payload
+from pada3dacb.adaptation import MMDAdaptationMethod
 from pada3dacb.binary import binary_ablation_plan
 from pada3dacb.exceptions import ExperimentValidationError
 from pada3dacb.experiments.run_manifest import ablation_output_path, atomic_json, sha256_file
@@ -41,15 +42,25 @@ from pada3dacb.losses import CorePADA3DACBLoss
 from pada3dacb.models import build_pada3dacb, prepare_feature_grid_roi_masks
 from pada3dacb.models.ablations import build_mean_pool_model
 from pada3dacb.training.reproducibility import seed_everything
-from pada3dacb.training.uda_trainer import (
-    ComposedCoreLoss,
-    ProposedPrototypePseudoAdaptationMethod,
-)
+from pada3dacb.training.uda_trainer import ComposedCoreLoss
 
-APPROVED_ABLATIONS = ("no_proto", "no_pl", "no_cons", "no_concept", "no_anat", "mean_pool")
+APPROVED_ABLATIONS = ("no_proto", "no_pl", "no_cons", "no_concept", "no_anat", "mean_pool", "no_da")
 SUPPORTED_DOMAINS = ("ADNI", "OASIS")
 DEFAULT_DIRECTIONS = ("ADNI_to_OASIS", "OASIS_to_ADNI")
 MONITORING_LABEL = "MONITORING ONLY — NOT A TRAINING LOSS"
+MMD_BASELINE_ADAPTATION = {
+    "name": "mmd",
+    "feature": "z",
+    "active_during_warmup": False,
+    "kernel": {
+        "name": "gaussian_rbf_mixture",
+        "bandwidths": [0.5, 1.0, 2.0],
+        "aggregation": "mean",
+    },
+    "estimator": "biased",
+    "include_diagonal": True,
+    "compute_dtype": "float32",
+}
 
 
 class AblationCLIError(ValueError):
@@ -322,6 +333,16 @@ def build_equivalence_reference(requested_name: str) -> dict[str, Any]:
             "real_data_run": False,
             "publication_metrics_present": False,
             "read_only": not bool(payload.get("canonical_id")),
+                "adaptation_method": "mmd" if requested_name in APPROVED_ABLATIONS else "prototype_pseudo",
+                "adaptation_weight": 0.0 if requested_name == "no_da" else 1.0,
+                "adaptation_configuration": {
+                    **copy.deepcopy(MMD_BASELINE_ADAPTATION),
+                    "weight": 0.0 if requested_name == "no_da" else 1.0,
+                } if requested_name in APPROVED_ABLATIONS else None,
+                "adaptation_configuration_hash": sha256_payload({
+                    **MMD_BASELINE_ADAPTATION,
+                    "weight": 0.0 if requested_name == "no_da" else 1.0,
+                }) if requested_name in APPROVED_ABLATIONS else None,
         }
     )
     payload["equivalence_manifest_hash"] = sha256_payload(payload)
@@ -365,6 +386,10 @@ def _plan(
         "method": "ablation",
         "ablation_id": resolved.candidate_id,
         "base_method": "prototype_pseudo",
+        "adaptation_method": resolved.adaptation_method,
+        "adaptation_weight": resolved.adaptation_weight,
+        "adaptation_configuration": copy.deepcopy(resolved.adaptation_configuration),
+        "adaptation_configuration_hash": resolved.adaptation_configuration_hash,
         "requested_name": requested_name,
         "direction": direction,
         "seed": seed,
@@ -412,6 +437,10 @@ def _plan(
         "target_loader_use": "unlabeled_target_adaptation",
         "target_monitoring_enabled": config.target_monitoring,
         "forward_executed": False,
+        "target_forward_executed": False,
+        "adaptation_method": resolved.adaptation_method,
+        "adaptation_weight": resolved.adaptation_weight,
+        "adaptation_configuration_hash": resolved.adaptation_configuration_hash,
         "validated": False,
     }
 
@@ -420,6 +449,10 @@ _LIFECYCLE_IDENTITY_FIELDS = (
     "phase",
     "method",
     "base_method",
+    "adaptation_method",
+    "adaptation_weight",
+    "adaptation_configuration",
+    "adaptation_configuration_hash",
     "ablation_id",
     "requested_name",
     "direction",
@@ -1022,7 +1055,7 @@ def _validate_synthetic(
         )
         core = (
             base_core
-            if resolved.candidate_id == "mean_pool"
+            if resolved.candidate_id in {"mean_pool", "no_da"}
             else ComposedCoreLoss(base_core, resolved, binary_plan=binary_plan)
         )
         core_output = core(
@@ -1032,29 +1065,13 @@ def _validate_synthetic(
             source_batch["g_bar"],
             stage="full",
         )
-        if resolved.candidate_id == "mean_pool":
-            adaptation_method = ProposedPrototypePseudoAdaptationMethod(
-                lambda_proto=resolved.losses.lambda_proto,
-                lambda_pl=resolved.losses.lambda_pl,
-                tau_p=resolved.losses.tau_p,
-                proto_margin=resolved.losses.proto_margin,
-                lambda_sep=resolved.losses.lambda_sep,
-                num_classes=kwargs["num_classes"],
-            )
-        else:
-            adaptation_method = ProposedPrototypePseudoAdaptationMethod(
-                resolved_ablation=resolved
-            )
-        if binary_plan is not None:
-            adaptation_method.config = replace(
-                adaptation_method.config, num_classes=kwargs["num_classes"]
-            )
-            adaptation_method.loss = adaptation_method.loss.__class__(adaptation_method.config)
-            adaptation_method.binary_ablation_plan = binary_plan
-        adaptation = adaptation_method.compute(
-            source_output, target_output, "full", labels_src=source_batch["y"]
-        )
-        objective = core_output.total + adaptation.total
+        adaptation_configuration = resolved.adaptation_configuration
+        kernel = adaptation_configuration["kernel"]
+        assert isinstance(kernel, dict)
+        adaptation_method = MMDAdaptationMethod(kernel["bandwidths"])
+        adaptation = adaptation_method.compute(source_output, target_output, "full")
+        weighted_adaptation = resolved.adaptation_weight * adaptation.total
+        objective = core_output.total + weighted_adaptation
     if not torch.isfinite(objective):
         raise AblationCLIError("validation_failed", "resolved synthetic objective is non-finite")
     if any(not torch.equal(before[name], value) for name, value in model.state_dict().items()):
@@ -1076,6 +1093,14 @@ def _validate_synthetic(
         "target_batch_keys": sorted(target_batch),
         "target_labels_in_adaptation": False,
         "resolved_objective": float(objective.detach().cpu()),
+        "adaptation_method": adaptation_method.name,
+        "adaptation_weight": resolved.adaptation_weight,
+        "mmd_loss": float(adaptation.total.detach().cpu()),
+        "raw_mmd_loss": float(adaptation.total.detach().cpu()),
+        "weighted_mmd_loss": float(weighted_adaptation.detach().cpu()),
+        "weighted_raw_mmd_loss": float(weighted_adaptation.detach().cpu()),
+        "target_forward_executed": True,
+        "mmd_diagnostics": adaptation.detached(),
         "model_variant": resolved.model_variant.name,
         "feature_shape": list(feature_shape),
         "target_monitoring_enabled": config.target_monitoring,

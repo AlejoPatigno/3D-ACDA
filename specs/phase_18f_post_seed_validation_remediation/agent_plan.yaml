@@ -1,0 +1,277 @@
+change_id: phase-18f-post-seed-validation-remediation
+phase: F
+status: planning_only
+artifact_store: file_package
+execution_mode: bounded_post_seed_remediation
+single_final_candidate: true
+single_native_receipt: true
+high_risk_review_lenses:
+  - review-risk
+  - review-resilience
+  - review-readability
+  - review-reliability
+
+context:
+  user_authorization: final_post_seed_remediation_after_all_seeds_finished
+  prior_phase: phase_18e_reporting_only
+  known_failure:
+    path: src/pada3dacb/evaluation/concepts/report.py
+    cause: windows_path_length
+    scientific_cause: false
+  historical_freeze_document: docs/EXPERIMENT_FREEZE_PRE_3D_ACDA.md
+  official_untracked_poc_notebook: train-pada3dacb-baselines-ablation (2).ipynb
+  no_invented_scientific_values: true
+
+owned_evidence_paths:
+  baseline_exclusion: specs/phase_18f_post_seed_validation_remediation/evidence/baseline-exclusion-manifest.yaml
+  candidate_admission: specs/phase_18f_post_seed_validation_remediation/evidence/candidate-admission-manifest.yaml
+  stale_test_proof: specs/phase_18f_post_seed_validation_remediation/evidence/stale-test-production-proof.yaml
+  validation: specs/phase_18f_post_seed_validation_remediation/evidence/validation-manifest.yaml
+  final_candidate: specs/phase_18f_post_seed_validation_remediation/evidence/final-candidate-manifest.yaml
+  generated_evidence_elsewhere: forbidden
+
+admission_snapshots:
+  A:
+    name: immutable_baseline_exclusion
+    path: specs/phase_18f_post_seed_validation_remediation/evidence/baseline-exclusion-manifest.yaml
+    owner: evidence-verifier
+    capture_boundary: before_any_authorized_implementation_or_test_maintenance
+    immutable: true
+    use: final_candidate_allowlist_and_exclusion_authorization
+  B:
+    name: stale_test_maintenance_before_after_projection
+    path: specs/phase_18f_post_seed_validation_remediation/evidence/stale-test-production-proof.yaml
+    owner: stale-test-maintainer
+    capture_boundary: after_all_authorized_production_and_alias_implementation_and_immediately_before_stale_test_edit
+    comparison: F7_compares_B_before_with_B_after_only
+    cannot_authorize: candidate_scope_or_final_candidate
+
+runtime_and_scientific_boundary:
+  production_scope:
+    - bounded_controlled_siblings_for_concept_output_publication
+    - durable_exclusive_transaction_journal_and_normal_stale_recovery
+    - existing_report_time_alias_integration_only
+    - exact_stale_prototype_test_maintenance_after_admission_and_proof_gates
+    - prospective_status_update_only
+  forbidden:
+    - model_loss_training_adaptation_or_evaluation_math_changes
+    - canonical_id_schema_hash_or_canonical_output_path_changes
+    - checkpoint_resume_identity_changes
+    - notebook_output_checkpoint_manifest_runs_results_mutation
+    - historical_freeze_rewrite
+    - broad_prototype_test_refresh
+    - git_state_mutation
+    - foreign_or_lookalike_entry_promotion_overwrite_rename_or_deletion
+
+candidate_admission:
+  inventory: all_tracked_and_untracked_production_code_configuration_paths
+  inadequate_check_rejected: git_diff_src_only
+  record_fields: [path, tracked_state, kind, mode_or_attributes, size, sha256, baseline_identity, disposition, owner, reason]
+  allowlist:
+    - publication_source_path
+    - newly_required_focused_behavior_tests
+    - baseline_enumerated_pre_existing_alias_paths
+    - exact_stale_test_path_after_focused_failure
+    - one_preidentified_prospective_status_surface
+  unlisted_default: immutable_and_blocked
+  baseline_binding: every_path_and_disposition_is_bound_to_immutable_snapshot_A
+  stale_test_proof_projection: snapshot_B_before_and_after_complete_production_code_configuration_inventory
+  final_authorization: validate_entire_allowlist_and_all_excluded_or_unlisted_paths_against_A
+
+path_budget:
+  policy: derive_from_verified_target_windows_api_runtime_and_volume
+  units: utf16_code_units
+  forbidden_magic_values: [260, 255, 32767]
+  invariant:
+    - parent_absolute_units + 1 + sibling_name_units <= verified_path_budget
+    - parent_absolute_units + 1 + final_name_units <= verified_path_budget
+    - sibling_component_units <= verified_component_budget
+  token_length: derived_from_remaining_budget
+  preflight_rejection_before_mutation: true
+  probe_location: isolated_test_location_only
+
+transaction_provenance:
+  capability:
+    provider: operating_system_cs_prng
+    minimum_bytes: 32
+    exact_length_required: true
+    short_read_or_unavailable: BLOCKED
+    truncation_padding_or_entropy_reduction: forbidden
+  journal:
+    creation: exclusive_create_new_equivalent
+    parent_and_volume: same_as_final
+    permissions: restrictive_owner_only_policy
+    durable_flush: required_for_creation_and_each_state_transition
+    binds: [complete_capability, canonical_identity, final_relative_path, schema_version, owner_attempt_collision_tokens, expected_manifest_hash, same_volume_file_identifiers, type_mode, state]
+  states: [prepared, validated, publishing, published, aborted]
+  recovery_admission: exact_grammar_complete_tree_exact_journal_capability_durable_validated_all_identity_type_mode_volume_checks
+  threat_boundary: normal_stale_process_recovery_only; no_claim_of_adversarial_filesystem_authentication
+  uncertain_or_foreign_provenance: preserve_surface_and_BLOCKED
+
+sibling_grammar:
+  pattern: p3dco.<role>.<identity-token>.<attempt-token>[.c<collision-token>].tmp
+  role: concept-output
+  identity_input: canonical_final_identity_relative_path_schema_version
+  identity_excludes: [display_alias, absolute_path, timestamp, raw_user_label]
+  attempt_encoding: lowercase_base36
+  collision_encoding: lowercase_base36
+  final_canonical_path_changed: false
+
+publication:
+  parent_and_final_same_volume: required
+  sequence:
+    - create_exclusive_journal_and_sibling
+    - populate_validate_and_flush_complete_candidate
+    - record_durable_validated
+    - acquire_publisher_lock
+    - rename_valid_final_to_owned_same_parent_backup_if_present
+    - record_durable_publishing
+    - rename_validated_sibling_to_final
+    - revalidate_final_and_record_published
+    - cleanup_only_authenticated_backup
+  atomic_directory_exchange_claim: forbidden
+  continuous_final_presence_claim: forbidden
+  absent_interval: bounded_by_T_absent_max_under_normal_execution
+  reader_semantics:
+    cooperating: shared_lock_bounded_retry_then_unavailable
+    non_cooperating: may_observe_old_absent_new_never_partial_or_empty_interpretation
+  rollback: restore_authenticated_backup_on_promotion_failure; rollback_failure_preserve_and_BLOCKED
+  cross_volume_copy_delete_then_publish_broad_cleanup: forbidden
+
+foreign_entry_policy:
+  unknown_lookalike_controlled_siblings: preserve_and_surface
+  promote_overwrite_rename_delete: forbidden
+  exact_owned_cleanup: only_after_authenticated_distinctness_and_state_policy
+  normal_stale_recovery: exact_durable_provenance_only
+
+ownership:
+  no_overlapping_writers: true
+  groups:
+    - id: P0
+      owner: evidence-verifier
+      writes: [baseline_exclusion_manifest, candidate_admission_manifest, validation_manifest]
+      owns_actions: [f0-baseline, f1-admission, f9-validation]
+
+    - id: P1
+      owner: publication-implementation-owner
+      writes: [src/pada3dacb/evaluation/concepts/report.py, newly_allowlisted_focused_publication_tests]
+      owns_actions: [f2-budget-provenance, f3-publication, f4-safety-tests]
+    - id: P2
+      owner: alias-integration-owner
+      writes: [baseline_enumerated_pre_existing_alias_paths_only]
+      owns_actions: [f5-existing-alias-integration]
+    - id: P3
+      owner: stale-test-maintainer
+      writes: [exact_admitted_stale_prototype_test_only, owned_stale_test_proof]
+      owns_actions: [f6-conditional-stale-test, f7-proof]
+    - id: P4
+      owner: status-owner
+      writes: [one_preidentified_prospective_status_surface_or_none]
+      owns_actions: [f8-prospective-status]
+    - id: P5
+      owner: receipt-controller
+      writes: [owned_final_candidate_manifest_only]
+      owns_actions: [f10-final-candidate, f11-one-native-receipt]
+
+actions:
+  - id: f0-baseline
+    owner: evidence-verifier
+    depends_on: [all_seeds_finished, explicit_final_remediation_authorization]
+    status: pending
+    outputs: [immutable_snapshot_A, baseline_exclusion_manifest]
+    fail_closed: protected_or_excluded_or_baseline_surface_drift
+  - id: f1-admission
+    owner: evidence-verifier
+    depends_on: [f0-baseline]
+    status: pending
+    outputs: [candidate_admission_manifest, A_bound_exact_allowlist]
+    fail_closed: unlisted_or_unowned_or_A_unbound_tracked_or_untracked_production_code_config_path
+  - id: f2-budget-provenance
+    owner: publication-implementation-owner
+    depends_on: [f1-admission]
+    status: pending
+    outputs: [verified_windows_budget_probe, derived_grammar, capability_journal_contract]
+    fail_closed: budget_unverified_short_cs_prng_read_or_nonexclusive_journal
+  - id: f3-publication
+    owner: publication-implementation-owner
+    depends_on: [f2-budget-provenance]
+    status: pending
+    writes: [src/pada3dacb/evaluation/concepts/report.py]
+    outputs: [bounded_same_volume_publication_conditional_rollback]
+    fail_closed: continuous_presence_claim_or_any_ambiguous_final_backup_sibling_state
+  - id: f4-safety-tests
+    owner: publication-implementation-owner
+    depends_on: [f3-publication]
+    status: pending
+    writes: [newly_allowlisted_focused_publication_tests]
+    required_cases: [admission, cs_prng_exact_length, exclusive_journal, recovery_provenance, foreign_preservation, absent_interval, reader_semantics, rollback, collision, lookalike, windows_integration]
+    fail_closed: missing_safety_case_or_unknown_entry_mutation
+  - id: f5-existing-alias-integration
+    owner: alias-integration-owner
+    depends_on: [f1-admission, f3-publication, f4-safety-tests]
+    status: pending
+    writes: [baseline_enumerated_pre_existing_alias_paths_only]
+    outputs: [report_time_alias_projection_evidence]
+    fail_closed: canonical_identity_path_schema_hash_or_unadmitted_path_drift
+  - id: f6-conditional-stale-test
+    owner: stale-test-maintainer
+    depends_on: [f1-admission, f4-safety-tests, f5-existing-alias-integration, exact_stale_failure_record]
+    status: conditional
+    writes: [exact_admitted_stale_prototype_test_only, owned_stale_test_proof]
+    outputs: [snapshot_B_before_or_explicit_not_applicable_decision, test_only_change]
+    capture: after_all_authorized_production_and_alias_implementation_and_immediately_before_edit
+    fail_closed: wrong_test_scope_or_production_edit_during_maintenance
+  - id: f7-proof
+    owner: stale-test-maintainer
+    depends_on: [f6-conditional-stale-test]
+    status: pending
+    outputs: [snapshot_B_after, B_only_postmaintenance_production_projection_comparison, owned_stale_test_proof]
+    compare_only: snapshot_B_before_to_snapshot_B_after_when_f6_applies
+    when_not_applicable: record_no_stale_maintenance_comparison_and_do_not_substitute_A
+    evidence_verifier_mode: read_only
+    fail_closed: any_production_byte_path_mode_kind_size_or_hash_drift
+  - id: f8-prospective-status
+    owner: status-owner
+    depends_on: [f1-admission, f7-proof]
+    status: conditional
+    writes: [one_preidentified_prospective_status_surface_or_none]
+    outputs: [prospective_phase_18f_status]
+    fail_closed: historical_surface_or_unadmitted_status_path
+  - id: f9-validation
+    owner: evidence-verifier
+    depends_on: [f0-baseline, f1-admission, f4-safety-tests, f5-existing-alias-integration, f7-proof, f8-prospective-status]
+    status: pending
+    outputs: [validation_manifest, focused_and_full_suite_evidence, A_bound_allowlist_authorization, B_only_stale_proof_consumption, exclusion_comparison]
+    fail_closed: any_validation_A_allowlist_or_B_stale_proof_or_exclusion_failure
+  - id: f10-final-candidate
+    owner: receipt-controller
+    depends_on: [f9-validation]
+    status: pending
+    outputs: [final_candidate_manifest]
+    fail_closed: more_than_one_candidate_or_postfreeze_change
+  - id: f11-one-native-receipt
+    owner: receipt-controller
+    depends_on: [f10-final-candidate]
+    status: pending
+    outputs: [one_high_risk_4r_native_receipt]
+    lenses: [review-risk, review-resilience, review-readability, review-reliability]
+    lifecycle_run_by_this_package: false
+    fail_closed: missing_ambiguous_or_mismatched_receipt
+
+required_validation_commands:
+  - python -m pytest -q tests/test_phase_18f_post_seed_validation.py
+  - python -m pytest -q -m windows_integration tests/test_phase_18f_post_seed_validation.py
+  - python -m pytest -q tests/test_evaluation_display_names.py tests/test_evaluation_tables.py
+  - python -m pytest -q
+  - git diff --check
+  - git status --short --untracked-files=all
+
+non_goals:
+  - new_scientific_values_or_runs
+  - model_loss_training_adaptation_or_evaluation_math_changes
+  - canonical_id_schema_hash_path_or_checkpoint_identity_migration
+  - notebook_output_checkpoint_manifest_runs_results_mutation
+  - historical_freeze_rewrite
+  - broad_prototype_test_maintenance
+  - git_staging_commit_or_lifecycle_execution
+  - multiple_candidates_or_native_receipts

@@ -176,6 +176,49 @@ def test_synthetic_reuse_rejects_output_bound_to_stale_fixture_identity(tmp_path
     ]) == ExitCode.REUSE_REJECTED
 
 
+
+def test_synthetic_reuse_reads_through_the_cooperative_publication_contract(
+    tmp_path, monkeypatch
+) -> None:
+    config = _fixture_config(tmp_path)
+    output = tmp_path / "results"
+    assert main([
+        *_base_args(tmp_path, config),
+        "--output-root", str(output),
+        "--bootstrap-seed", "7",
+    ]) == ExitCode.SUCCESS
+
+    config_data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    config_data["completed_reuse"] = {"approved_output_roots": [str(output)]}
+    config.write_text(yaml.safe_dump(config_data, sort_keys=True), encoding="utf-8")
+    observed = []
+    original = concept_cli.read_cooperative_publication
+
+    def capture_read(final_path, *, policy, reader, sleep=None):
+        observed.append((Path(final_path), policy))
+        kwargs = {"policy": policy, "reader": reader}
+        if sleep is not None:
+            kwargs["sleep"] = sleep
+        return original(final_path, **kwargs)
+
+    monkeypatch.setattr(concept_cli, "read_cooperative_publication", capture_read)
+
+    assert main([
+        "--config", str(config),
+        "--output-root", str(output),
+        "--direction", "adni_to_oasis",
+        "--method", "source_only",
+        "--bootstrap-seed", "7",
+        "--reuse",
+    ]) == ExitCode.SUCCESS
+    assert observed == [
+        (
+            output.absolute(),
+            concept_cli.CooperativeReaderPolicy(max_attempts=1, delay_seconds=0.0),
+        )
+    ]
+
+
 def test_validate_only_fixture_payload_identity_includes_manifest_bytes(tmp_path) -> None:
     config = _fixture_config(tmp_path)
     config_data = yaml.safe_load(config.read_text(encoding="utf-8"))

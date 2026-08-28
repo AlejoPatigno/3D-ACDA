@@ -1,0 +1,267 @@
+manifest_type: phase_18f_validation_manifest
+manifest_version: 1
+revision: 2
+phase: 18F
+action: F9
+status: BLOCKED
+owner: evidence-verifier
+scope: truthful_post_recovery_evidence_only
+
+admission_authority:
+  snapshot_a:
+    name: A
+    immutable: true
+    path: specs/phase_18f_post_seed_validation_remediation/evidence/baseline-exclusion-manifest.yaml
+    manifest_sha256: 714022d61b4c2ee53aaeccd1dc516b16175531a86a423d7ca74f746169b84b95
+  candidate_admission:
+    path: specs/phase_18f_post_seed_validation_remediation/evidence/candidate-admission-manifest.yaml
+    revision: 6
+    manifest_sha256: 6a9cbf4db47eb78e80869a1270effc54dd04ca5bf00229a9f43c1403d324aa83
+    preserved_as_is: false
+    binding_role: F9_evidence_only_not_F8_status_surface
+  final_candidate_manifest:
+    path: specs/phase_18f_post_seed_validation_remediation/evidence/final-candidate-manifest.yaml
+    created: false
+    reason: F9 is blocked; no candidate may be frozen.
+
+f5_existing_alias_integration:
+  status: NOT_APPLICABLE
+  admitted_alias_count: 0
+  evidence:
+    - F1r6 explicitly admits zero pre-existing alias paths.
+    - No alias path, alias source, alias test, or alias-like path was inferred or changed.
+
+f6_stale_test_maintenance:
+  status: NOT_APPLICABLE
+  exact_stale_test_path: null
+  reason: No exact narrow stale-test maintenance was established.
+  classification: The eight tests were F4 publication-contract maintenance, not narrow stale-test maintenance.
+  snapshot_b:
+    created: false
+    reason: F6 does not apply.
+
+f7_stale_test_production_proof:
+  status: NOT_APPLICABLE
+  comparison: none
+  reason: F6 does not apply; no B-before/B-after stale-maintenance comparison is performed.
+  snapshot_a_substitution: forbidden
+
+f8_prospective_status:
+  status: RECORDED
+  admitted_status_surface: specs/phase_18f_post_seed_validation_remediation/tasks.md
+  authority: tasks.md only; this validation manifest is F9 evidence and not an F8 status surface.
+  reason: The F1r6 lineage-gap exception and independent current-candidate re-attestation preserve this existing path as P4's only prospective status surface; the exact recorded semantics are `F8 recorded; F9 BLOCKED; F10/F11 ineligible`. The separately admitted decisions path is decision-authority-only and is not a status surface.
+  historical_freeze_document_changed: false
+
+validation_results:
+  focused_pytest:
+    - command: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/test_concept_report.py
+      exit_code: 0
+      result: 19 passed
+    - command: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/test_phase_18f_post_seed_validation.py
+      exit_code: 0
+      result: 100 passed, 1 skipped
+    - command: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider -m windows_integration tests/test_phase_18f_post_seed_validation.py
+      exit_code: 0
+      result: 8 passed
+  focused_ruff:
+    command: python -m ruff check --no-cache src/pada3dacb/evaluation/concepts/report.py scripts/evaluate_concepts.py tests/test_concept_report.py tests/test_phase_18f_post_seed_validation.py
+    exit_code: 0
+    result: pass
+  full_pytest:
+    command: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider
+    exit_code: 1
+    result: 1517 passed, 12 failed, 1 skipped
+    pass_claim: false
+  full_ruff:
+    command: python -m ruff check --no-cache .
+    exit_code: 1
+    result: exactly 2 findings in tests/test_prototype_loss.py
+    pass_claim: false
+  diff_check:
+    command: git diff --check
+    exit_code: 0
+    result: clean
+
+cache_and_worktree_recovery:
+  pytest_temp_path: artifacts/pytest-tmp-phase13/
+  cleanup_action: Safely cleaned the exact stale pytest temporary directory after recovery.
+  cleanup_result: Directory absent after cleanup.
+  status_check:
+    command: git status --short --untracked-files=all
+    result: Matched Snapshot A at the cleanup checkpoint.
+  no_bytecode_or_cache_strategy:
+    pytest:
+      - PYTHONDONTWRITEBYTECODE=1 prevents Python bytecode writes.
+      - -p no:cacheprovider disables pytest cache-provider writes.
+    ruff:
+      - --no-cache disables Ruff cache use.
+    boundary: No-cache/no-bytecode validation does not make failing full-suite or Ruff results pass.
+
+full_suite_failure_attribution:
+  current_baseline:
+    result: 1517 passed, 12 failed, 1 skipped
+    interpretation: Current recovery-checkpoint baseline only; not a passing validation result.
+  known_phase_18f_failure:
+    path: src/pada3dacb/evaluation/concepts/report.py
+    cause: windows_path_length
+    scientific_cause: false
+  prototype_surface:
+    path: tests/test_prototype_loss.py
+    ruff_findings: 2
+    interpretation: The two Ruff findings are unresolved prototype-loss test-surface findings.
+  attribution_limit: The supplied verified result does not include a per-test failure list; no omitted outcome or unsupported assignment of all 12 pytest failures is inferred.
+  scientific_claims: none
+
+f9_decision:
+  status: BLOCKED
+  blockers:
+    - Full pytest exits 1 with 1517 passed, 12 failed, and 1 skipped.
+    - Full Ruff exits 1 with exactly 2 findings in tests/test_prototype_loss.py.
+  preserved_results:
+    - Focused concept-report tests pass: 19.
+    - Focused Phase 18F tests pass: 100, with 1 skipped.
+    - Focused Windows selection passes: 8.
+    - Focused Phase 18F Ruff passes.
+    - git diff --check exits 0.
+  final_candidate_authorization: BLOCKED
+  receipt_authorization: BLOCKED
+
+f10_final_candidate:
+  status: BLOCKED
+  final_candidate_manifest_created: false
+  reason: F9 is BLOCKED.
+
+f11_native_receipt:
+  status: BLOCKED
+  claimed_pass: false
+  lifecycle_invoked: false
+  reason: F9 and F10 are not eligible; native review authority is corrupted/STOP.
+
+detached_independent_re_attestation:
+  status: RECORDED_FOR_F8_ADMISSION_ONLY
+  verifier_role: independent evidence verifier
+  attested_at_utc: 2026-08-24T01:42:53Z
+  method:
+    - Read the final F1r6 candidate-admission bytes and recomputed SHA-256.
+    - Read immutable Snapshot-A bytes and verified its recorded SHA-256 without rewriting or recalculating Snapshot A.
+    - Parsed the F1r6 manifest, verified exactly six explicit allowlist paths, and verified their corrected Snapshot-A baseline identities and current candidate identities below.
+    - Bound the complete production/code/config inventory identity to the F1r6 inventory projection and compared excluded records by path, kind, mode/attributes, size, and SHA-256 without running tests.
+  bindings:
+    final_f1r6:
+      path: specs/phase_18f_post_seed_validation_remediation/evidence/candidate-admission-manifest.yaml
+      sha256: 6a9cbf4db47eb78e80869a1270effc54dd04ca5bf00229a9f43c1403d324aa83
+      revision: 6
+    immutable_snapshot_a:
+      path: specs/phase_18f_post_seed_validation_remediation/evidence/baseline-exclusion-manifest.yaml
+      sha256: 714022d61b4c2ee53aaeccd1dc516b16175531a86a423d7ca74f746169b84b95
+    exact_allowlist:
+      count: 6
+      paths:
+        - src/pada3dacb/evaluation/concepts/report.py
+        - scripts/evaluate_concepts.py
+        - tests/test_phase_18f_post_seed_validation.py
+        - tests/test_concept_report.py
+        - specs/phase_18f_post_seed_validation_remediation/tasks.md
+        - specs/phase_18f_post_seed_validation_remediation/decisions.md
+      status_path: specs/phase_18f_post_seed_validation_remediation/tasks.md
+      status_owner: P4
+      decision_authority_path: specs/phase_18f_post_seed_validation_remediation/decisions.md
+      decision_authority_owner: P0
+      decision_authority_is_status_surface: false
+    inventory_projection:
+      source: F1r6 candidate-admission inventory
+      records_count: 276
+      tracked_records: 216
+      untracked_records: 36
+      untracked_ignored_records: 24
+      projection_sha256: 205df4109a8871f222204e8069d043841a10615bf24694991d226c580a59dda2
+    current_candidate_projection:
+      projection_sha256: f58a2a1a25eafb2396351135da7442230fed62d5515fd48c9feb5e70ba3ab10c
+      paths:
+        - path: src/pada3dacb/evaluation/concepts/report.py
+          kind: file
+          mode_bits: 0o0666
+          size_bytes: 131623
+          sha256: 07758cc018d57825eb56e9f037224db5dc8e70ed422bbbfa649f8ff3aa1423f1
+        - path: scripts/evaluate_concepts.py
+          kind: file
+          mode_bits: 0o0666
+          size_bytes: 34813
+          sha256: 06a25a96c2544303107375442fbd8db9edd4ad693ddc676d2eca1ce0f4841f27
+        - path: tests/test_phase_18f_post_seed_validation.py
+          kind: file
+          mode_bits: 0o0666
+          size_bytes: 89756
+          sha256: a114889dfde9469eae96343eb757a0bc36c9c799524049f8a982660e7302290b
+        - path: tests/test_concept_report.py
+          baseline_identity:
+            snapshot: A
+            kind: file
+            mode_bits: 0o0666
+            size_bytes: 16506
+            sha256: 275fba6ba73ad987df27bcee0c37c80e30e8530c583b7aa02e0a732b993c1cb1
+          kind: file
+          mode_bits: 0o0666
+          size_bytes: 15749
+          sha256: 67a291cbd431020730e3d879d8c48ca579ac4b9ddb07f6a8998d77cc9ebb538b
+        - path: specs/phase_18f_post_seed_validation_remediation/tasks.md
+          kind: file
+          mode_bits: 0o0666
+          size_bytes: 15729
+          sha256: 9f2afc6ac5144887c50e0f09c9ac7612680524f8d18c7b89eb9e17f5d5b82c8f
+    decision_authority_identity:
+      path: specs/phase_18f_post_seed_validation_remediation/decisions.md
+      baseline:
+        snapshot: A
+        kind: file
+        mode_bits: 0o0666
+        file_attributes: 32
+        size_bytes: 9723
+        sha256: c8056950738bbc9af343015f5e134b1462bfa21985a8f3b0c9f41f032bdd0a36
+      current:
+        kind: file
+        mode_bits: 0o0666
+        file_attributes: 32
+        size_bytes: 11068
+        sha256: 11c61d394342c01bf873016595a23b36b37c0c3e10bee2f60817a3211e0e449a
+      authorized_scope: maintainer_authorizations_and_F1_lineage_exception_decisions_only
+      status_surface: false
+    tasks_identity:
+      path: specs/phase_18f_post_seed_validation_remediation/tasks.md
+      baseline:
+        snapshot: A
+        kind: file
+        mode_bits: 0o0666
+        size_bytes: 14236
+        sha256: ababec4de0a9bed158d42d5ba06598aa5a7f7aa81e22147ebe196d864b39d838
+      current:
+        kind: file
+        mode_bits: 0o0666
+        size_bytes: 15729
+        sha256: 9f2afc6ac5144887c50e0f09c9ac7612680524f8d18c7b89eb9e17f5d5b82c8f
+      authorized_scope: F8_status_text_and_lineage_gap_exception_re_attestation_only
+    excluded_path_comparison:
+      scope: 274 excluded_snapshot_A_production_code_config_records
+      file_records_checked: 240
+      file_hash_drift_count: 0
+      missing_ignored_runtime_cache_records:
+        count: 2
+        paths:
+          - src/pada3dacb/evaluation/__pycache__/tables.cpython-311.pyc
+          - src/pada3dacb/evaluation/concepts/__pycache__/report.cpython-311.pyc
+      directory_metadata_differences_observed: 2
+      difference_identity_sha256: bfb7e83ce0e3942779b07a0c2e51322236419701d7338caeb9225479604e5003
+      final_candidate_comparison: BLOCKED_NOT_AUTHORIZED
+      interpretation: The observed ignored-cache and directory-metadata differences are recorded rather than waived; this detached attestation cannot authorize F9, a final candidate, or a native receipt.
+  outcome:
+    current_f8_admission_against_snapshot_a: RECORDED
+    lineage_gap_exception_scope_only: true
+    f9: BLOCKED
+    f10: INELIGIBLE
+    f11: INELIGIBLE
+    final_candidate_authorization: BLOCKED
+    native_receipt_authorization: BLOCKED
+    historical_r3_to_r4_preservation_claim: false
+
+next_recommended: Resolve the full-suite and Ruff blockers, then rerun F9 evidence validation. Do not create a final-candidate manifest or claim F9/F10/F11 pass before those blockers are resolved.

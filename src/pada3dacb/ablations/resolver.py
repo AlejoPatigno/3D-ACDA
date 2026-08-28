@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .registry import alias_target, get_ablation_spec, is_unresolved_name, registry_hash
 from .schemas import (
@@ -62,6 +62,10 @@ class ResolvedAblationConfig:
     target_adaptation_assignment_hash: str
     target_evaluation_assignment_hash: str
     precomputed_artifacts_hash: str
+    adaptation_method: str = "mmd"
+    adaptation_weight: float = 1.0
+    adaptation_configuration: dict[str, object] = field(default_factory=dict)
+    adaptation_configuration_hash: str = ""
     alias_mapping: str | None = None
 
     def __post_init__(self) -> None:
@@ -69,6 +73,12 @@ class ResolvedAblationConfig:
             raise ValueError("exact requests cannot carry an alias mapping")
         if self.candidate_classification is not CandidateClassification.CANONICAL_DEFINED_NOT_EXECUTED:
             raise ValueError("only approved canonical candidates can be resolved")
+        if self.adaptation_method != "mmd":
+            raise ValueError("Phase 18G ablations must use the MMD adaptation method")
+        if self.adaptation_weight < 0:
+            raise ValueError("adaptation_weight must be non-negative")
+        if not self.adaptation_configuration or not self.adaptation_configuration_hash:
+            raise ValueError("resolved MMD adaptation configuration is required")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -93,6 +103,10 @@ class ResolvedAblationConfig:
             "target_adaptation_assignment_hash": self.target_adaptation_assignment_hash,
             "target_evaluation_assignment_hash": self.target_evaluation_assignment_hash,
             "precomputed_artifacts_hash": self.precomputed_artifacts_hash,
+            "adaptation_method": self.adaptation_method,
+            "adaptation_weight": self.adaptation_weight,
+            "adaptation": self.adaptation_configuration,
+            "adaptation_configuration_hash": self.adaptation_configuration_hash,
             "hash_algorithm": "sha256",
             "canonicalization_version": "phase17.canonical-json.v1",
         }
@@ -103,6 +117,37 @@ class ResolvedAblationConfig:
 
 def _error(reason: str, message: str, candidate: str | None, *, field: str | None = None, remediation: str | None = None) -> AblationResolutionError:
     return AblationResolutionError(reason, message, candidate=candidate, field=field, remediation=remediation)
+
+
+_MMD_BASELINE_BANDWIDTHS = (0.5, 1.0, 2.0)
+
+
+def _mmd_adaptation_configuration(data: AblationBaseConfig | Mapping[str, object], candidate: str) -> tuple[dict[str, object], float]:
+    """Return the protected Phase 18G MMD configuration without runtime overrides."""
+    payload = data if isinstance(data, Mapping) else {}
+    raw = payload.get("adaptation") if isinstance(payload, Mapping) else None
+    if raw is not None and (not isinstance(raw, Mapping) or raw):
+        raise _error(
+            "unapproved_override",
+            "runtime MMD configuration overrides are not approved",
+            candidate,
+            field="adaptation",
+        )
+    configuration = {
+        "name": "mmd",
+        "feature": "z",
+        "weight": 0.0 if candidate == "no_da" else 1.0,
+        "active_during_warmup": False,
+        "kernel": {
+            "name": "gaussian_rbf_mixture",
+            "bandwidths": list(_MMD_BASELINE_BANDWIDTHS),
+            "aggregation": "mean",
+        },
+        "estimator": "biased",
+        "include_diagonal": True,
+        "compute_dtype": "float32",
+    }
+    return configuration, float(configuration["weight"])
 
 
 def _validate_target_batch_mapping(batch: object, candidate: str | None) -> tuple[str, ...]:
@@ -371,6 +416,7 @@ def resolve_ablation_config(
         raise _error(reason, spec.blocked_reasons[0], requested_name, remediation="retain the blocked disposition until independently reviewed evidence exists")
     raw_mapping = base_config if isinstance(base_config, Mapping) else None
     base = _coerce_base_config(base_config, requested_name)
+    adaptation_configuration, adaptation_weight = _mmd_adaptation_configuration(base_config, requested_name)
     if not base.approval.is_approved:
         raise _error("candidate_not_approved", "candidate requires explicit approved maintainer record", requested_name)
     if base.approval.scope != "synthetic_only":
@@ -384,7 +430,7 @@ def resolve_ablation_config(
         raise _error("unsupported_candidate", "candidate has no runnable intervention", requested_name)
 
     losses = base.losses
-    if spec.intervention.kind.value == "loss_override":
+    if spec.intervention.kind.value == "loss_override" and spec.intervention.parameter != "lambda_MMD":
         values = losses.to_dict()
         values[spec.intervention.parameter] = float(spec.intervention.new_value)
         losses = LossCoefficients.from_mapping(values)
@@ -405,6 +451,7 @@ def resolve_ablation_config(
         "matrix": base.matrix.to_dict(),
         "assignments": base.assignments.to_dict(),
         "precomputed_artifacts_hash": artifacts_hash,
+        "adaptation": adaptation_configuration,
     }
     resolved_digest = sha256_payload(resolved_payload)
     model_digest = sha256_payload(model_variant.to_dict())
@@ -430,6 +477,10 @@ def resolve_ablation_config(
         target_adaptation_assignment_hash=target_adaptation_hash,
         target_evaluation_assignment_hash=target_evaluation_hash,
         precomputed_artifacts_hash=artifacts_hash,
+        adaptation_method="mmd",
+        adaptation_weight=adaptation_weight,
+        adaptation_configuration=adaptation_configuration,
+        adaptation_configuration_hash=sha256_payload(adaptation_configuration),
         alias_mapping=alias_mapping,
     )
 

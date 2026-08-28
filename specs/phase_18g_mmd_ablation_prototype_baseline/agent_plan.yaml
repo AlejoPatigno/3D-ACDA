@@ -1,0 +1,57 @@
+status: approved_for_implementation
+implementation: unblocked_after_independent_review
+implementation_authorization:
+  source: latest_user_prompt
+  state: explicit_authorization_after_independent_review
+  does_not_bypass_review: true
+independent_review:
+  status: pass
+  evidence: independent_read_only_review_2026-08-24
+scope:
+  public_framework_display_name: 3DACDA
+  python_namespace: pada3dacb
+  mmd: protected_primary_adaptation_mechanism
+  canonical_mean_pool_key: mean_pool
+  mean_pooling: alias_only
+  no_da: existing_framework_with_lambda_MMD_0_not_source_only
+confirmed_registry_apis:
+  - list_ablations
+  - get_ablation_spec
+  - registry_hash
+  - alias_target
+  - is_unresolved_name
+  - registry_specs
+confirmed_resolver_apis:
+  - AblationResolutionError
+  - ResolvedAblationConfig
+  - resolve_ablation_config
+  - validate_target_adaptation_batch
+confirmed_experiment_symbols:
+  - APPROVED_ABLATIONS
+  - AblationExperimentConfig
+  - load_ablation_config
+  - build_equivalence_reference
+  - planned_run_path
+confirmed_mean_pool_symbols:
+  - MeanPoolAggregator
+  - MeanPoolPADA3DACB
+  - build_mean_pool_model
+  - mean_pool_model_variant_hash
+apply_ownership:
+  - src/pada3dacb/ablations/registry.py
+  - src/pada3dacb/ablations/resolver.py
+  - src/pada3dacb/ablations/schemas.py
+  - src/pada3dacb/experiments/ablations.py
+  - evaluation_display_or_report_mapping_if_confirmed
+  - tests/phase_18g/test_*.py
+read_only_evidence:
+  - src/pada3dacb/adaptation/mmd.py
+  - phase_17_tests_immutable_regression_evidence
+  - existing_historical_tests
+test_command: python -m pytest -q
+gates:
+  - independent_review
+  - protected_mmd_equivalence_evidence
+  - ownership_confirmation
+  - strict_tdd_red_before_green
+validation_claim: implementation_authorized; verification_pending
