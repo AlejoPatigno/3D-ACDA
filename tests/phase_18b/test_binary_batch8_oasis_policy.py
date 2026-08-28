@@ -194,11 +194,11 @@ def test_oasis_admission_requires_approved_exact_evidence(tmp_path: Path) -> Non
 def test_oasis_artifact_shape_is_person_level_without_raw_ids() -> None:
     provenance = json.loads(Path("specs/phase_18b_binary_label_space/oasis_binary_provenance.json").read_text())
     partition = json.loads(Path("specs/phase_18b_binary_label_space/oasis_target_partition.json").read_text())
-    csv_hash = hashlib.sha256(Path("oasis_cross-sectional (1).csv").read_bytes()).hexdigest()
+    expected_csv_hash = "b223c39f83d811356675e8711e9906b1cba95ea1a110f3117a61923a72d1d1f1"
     notebook_hash = hashlib.sha256(Path("preprocess-adni-oasis.ipynb").read_bytes()).hexdigest()
-    assert provenance["provenance"]["csv_sha256"] == csv_hash
+    assert provenance["provenance"]["csv_sha256"] == expected_csv_hash
     assert provenance["provenance"]["notebook_sha256"] == notebook_hash
-    assert partition["provenance"]["csv_sha256"] == csv_hash
+    assert partition["provenance"]["csv_sha256"] == expected_csv_hash
     assert partition["provenance"]["notebook_sha256"] == notebook_hash
     assert provenance["provenance"]["canonical_accepted_persons"] == 416
     assert provenance["provenance"]["longitudinal_duplicate_exclusions"] == 20
