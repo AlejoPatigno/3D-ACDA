@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the archived Zenodo release indicated by the DOI badge in the repository README."
+title: "3D-ACDA"
+type: software
+authors:
+  - given-names: "Alejandro"
+    family-names: "Patiño Bedoya"
+repository-code: "https://github.com/AlejoPatigno/3D-ACDA"
+url: "https://github.com/AlejoPatigno/3D-ACDA"
+license: MIT
