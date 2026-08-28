@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.statistics import (
+from acda3d.evaluation.concepts.statistics import (
     CONCEPT_COMPARATOR_METHODS,
     adjust_holm,
     bootstrap_metric,
@@ -13,7 +13,7 @@ from pada3dacb.evaluation.concepts.statistics import (
     exact_mcnemar,
     paired_bootstrap_diff,
 )
-from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId, ValueStatus
+from acda3d.evaluation.schemas import CheckpointPolicy, Direction, MethodId, ValueStatus
 
 
 def test_subject_bootstrap_is_deterministic() -> None:
@@ -71,7 +71,7 @@ def test_paired_bootstrap_uses_subject_pairs_and_centered_p_value() -> None:
 
 
 def test_paired_bootstrap_rejects_non_concept_baseline() -> None:
-    with pytest.raises(ValueError, match="four PADA-3DACB comparators"):
+    with pytest.raises(ValueError, match="four 3D-ACDA comparators"):
         paired_bootstrap_diff(
             np.array([0.1, 0.2]),
             np.array([0.2, 0.1]),
@@ -95,7 +95,7 @@ def test_stratified_bootstrap_preserves_diagnosis_support() -> None:
     assert result.ci_low == result.ci_high == 5.0
 
 
-def test_holm_uses_only_the_four_pada_comparators() -> None:
+def test_holm_uses_only_the_four_acda_comparators() -> None:
     raw = [0.01, 0.04, 0.03, 0.2]
 
     rows = adjust_holm(raw, metric="concept_mae")
@@ -109,7 +109,7 @@ def test_holm_uses_only_the_four_pada_comparators() -> None:
 
 
 def test_concept_bootstrap_reuses_phase15_subject_sampler(monkeypatch) -> None:
-    import pada3dacb.evaluation.bootstrap as phase15_bootstrap
+    import acda3d.evaluation.bootstrap as phase15_bootstrap
 
     calls = []
     sampler = phase15_bootstrap._draw_indices
@@ -133,8 +133,8 @@ def test_concept_bootstrap_reuses_phase15_subject_sampler(monkeypatch) -> None:
 
 
 def test_paired_method_comparisons_use_four_slots_per_metric() -> None:
-    from pada3dacb.evaluation.concepts.statistics import compute_paired_method_comparisons
-    from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction
+    from acda3d.evaluation.concepts.statistics import compute_paired_method_comparisons
+    from acda3d.evaluation.schemas import CheckpointPolicy, Direction
 
     subject_ids = ("subject-0", "subject-1", "subject-2", "subject-3", "subject-4", "subject-5")
     labels = dict(zip(subject_ids, [0, 0, 1, 1, 2, 2], strict=True))

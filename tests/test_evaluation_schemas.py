@@ -7,7 +7,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AGGREGATE_METRIC_NAMES,
     ANALYSIS_CLASS_INDICES,
     ANALYSIS_CLASS_LABELS,
@@ -53,7 +53,7 @@ from pada3dacb.evaluation.schemas import (
 
 
 def test_fixed_public_inventory_and_versions() -> None:
-    import pada3dacb.evaluation as public_api
+    import acda3d.evaluation as public_api
 
     assert public_api.MethodId is MethodId
     assert public_api.SCHEMA_VERSION == SCHEMA_VERSION
@@ -182,7 +182,7 @@ def test_canonical_serialization_rejects_non_finite_values() -> None:
 
 
 def test_schema_module_has_no_io_or_training_imports() -> None:
-    import pada3dacb.evaluation.schemas as schemas
+    import acda3d.evaluation.schemas as schemas
 
     imports = {node.names[0].name.split(".")[0] for node in ast.walk(ast.parse(inspect.getsource(schemas))) if isinstance(node, ast.Import)}
     assert imports <= {"hashlib", "json", "math"}

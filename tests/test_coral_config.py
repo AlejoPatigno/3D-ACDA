@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.experiments import load_coral_config, stable_weight_directory
+from acda3d.exceptions import ConfigurationError
+from acda3d.experiments import load_coral_config, stable_weight_directory
 from tests.phase10_helpers import make_coral_environment
 
 

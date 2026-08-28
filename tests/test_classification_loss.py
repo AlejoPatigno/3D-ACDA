@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch.nn import functional as functional
 
-from pada3dacb.exceptions import LossContractError
-from pada3dacb.losses import ClassificationLoss
+from acda3d.exceptions import LossContractError
+from acda3d.losses import ClassificationLoss
 
 
 def test_classification_matches_cross_entropy_and_has_finite_gradient():

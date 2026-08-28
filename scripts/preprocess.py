@@ -7,10 +7,10 @@ import logging
 import sys
 from pathlib import Path
 
-from pada3dacb.data.preprocessing import load_preprocessing_config, run_preprocessing
-from pada3dacb.exceptions import PADA3DACBError
-from pada3dacb.training.experiment_logging import setup_experiment_logger
-from pada3dacb.training.reproducibility import seed_everything
+from acda3d.data.preprocessing import load_preprocessing_config, run_preprocessing
+from acda3d.exceptions import ACDA3DError
+from acda3d.training.experiment_logging import setup_experiment_logger
+from acda3d.training.reproducibility import seed_everything
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    logger = setup_experiment_logger("pada3dacb.preprocess", level=logging.INFO)
+    logger = setup_experiment_logger("acda3d.preprocess", level=logging.INFO)
     try:
         cfg = load_preprocessing_config(args.config)
         if args.cohort:
@@ -67,7 +67,7 @@ def main() -> int:
         if failures and cfg.preprocessing.fail_on_subject_failure:
             return 2
         return 0
-    except (PADA3DACBError, OSError, ValueError) as exc:
+    except (ACDA3DError, OSError, ValueError) as exc:
         logger.error("%s", exc)
         return 1
 

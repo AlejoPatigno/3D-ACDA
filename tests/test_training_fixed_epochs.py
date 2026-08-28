@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from torch.utils.data import DataLoader
 
-from pada3dacb.exceptions import TrainingRuntimeError
+from acda3d.exceptions import TrainingRuntimeError
 from tests.phase8_helpers import make_loader, make_trainer
 
 

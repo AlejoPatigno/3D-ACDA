@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.experiments import load_mmd_config
-from pada3dacb.experiments.coral import prepare_coral_fold_inputs
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.experiments import load_mmd_config
+from acda3d.experiments.coral import prepare_coral_fold_inputs
 from tests.phase8_helpers import make_loader
 from tests.phase11_helpers import (
     make_mmd_environment,

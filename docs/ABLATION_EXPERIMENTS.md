@@ -28,18 +28,18 @@ These are the only approved Phase 17 candidate IDs. Each candidate has one inter
 
 | Exact ID | Sole intervention | Model variant |
 |---|---|---|
-| `no_proto` | Set `lambda_proto = 0.0` | `PADA-3DACB` |
-| `no_pl` | Set `lambda_pl = 0.0` | `PADA-3DACB` |
-| `no_cons` | Set `lambda_cons = 0.0` | `PADA-3DACB` |
-| `no_concept` | Set `lambda_cbm = 0.0` | `PADA-3DACB` |
-| `no_anat` | Set `lambda_anat = 0.0` | `PADA-3DACB` |
-| `mean_pool` | Replace only the retained attention aggregation with `z = U.mean(dim=1)` and uniform `alpha = 1/K` | `PADA-3DACB+MeanPoolAggregator` |
+| `no_proto` | Set `lambda_proto = 0.0` | `3D-ACDA` |
+| `no_pl` | Set `lambda_pl = 0.0` | `3D-ACDA` |
+| `no_cons` | Set `lambda_cons = 0.0` | `3D-ACDA` |
+| `no_concept` | Set `lambda_cbm = 0.0` | `3D-ACDA` |
+| `no_anat` | Set `lambda_anat = 0.0` | `3D-ACDA` |
+| `mean_pool` | Replace only the retained attention aggregation with `z = U.mean(dim=1)` and uniform `alpha = 1/K` | `3D-ACDA+MeanPoolAggregator` |
 
 `mean_pool` is an explicit aggregator composition, not a Full/Lite switch, contextual model, or patched checkpoint. Loss-only candidates preserve the base model-variant hash; `mean_pool` has a distinct model-variant hash.
 
 ## Inherited scientific settings
 
-The five loss candidates inherit every setting not named by their intervention: the PADA-3DACB architecture, class order, source and target assignments, folds, seed, optimizer, schedule, explicit epoch inputs, thresholds, margins, smoothing, immutable concept/Jacobian artifacts, diagnostics, checkpoint rules, and output identity rules.
+The five loss candidates inherit every setting not named by their intervention: the 3D-ACDA architecture, class order, source and target assignments, folds, seed, optimizer, schedule, explicit epoch inputs, thresholds, margins, smoothing, immutable concept/Jacobian artifacts, diagnostics, checkpoint rules, and output identity rules.
 
 The canonical primary coefficient values are:
 
@@ -147,7 +147,7 @@ python scripts/run_ablations.py \
 
 ### Synthetic lifecycle and resume
 
-The deterministic lifecycle API is implemented in `pada3dacb.experiments.ablations`:
+The deterministic lifecycle API is implemented in `acda3d.experiments.ablations`:
 
 - `run_synthetic_lifecycle(...)` runs a synthetic warm/full lifecycle and writes atomic artifacts;
 - `resume_synthetic_lifecycle(...)` continues only a matching interrupted identity;
@@ -196,8 +196,8 @@ The registry keeps rejected requests visible and fail-closed:
 | Request or item | Classification/disposition | Rule |
 |---|---|---|
 | `no_domain_adaptation` | `BLOCKED_NOT_PROVEN` | Zeroing prototype and pseudo-label terms does not prove a Source-Only loader, forward, gradient, method identity, or output contract. |
-| `full` | `INVALID_AFTER_ARCHITECTURE_REVISION` | The former contextual Full architecture is not the current PADA-3DACB control. |
-| `no_ctx_encoder` | Equivalent to existing no-context behavior; invalid as a patch | Current PADA-3DACB is already explicit no-context. Do not patch a Full model. |
+| `full` | `INVALID_AFTER_ARCHITECTURE_REVISION` | The former contextual Full architecture is not the current 3D-ACDA control. |
+| `no_ctx_encoder` | Equivalent to existing no-context behavior; invalid as a patch | Current 3D-ACDA is already explicit no-context. Do not patch a Full model. |
 | `identity_ctx` | `HELPER_ONLY` | Implementation helper, not a method or runtime switch. |
 | `no_prototype`, `no_pseudo_label`, `no_head_consistency`, `no_concept_supervision`, `no_anatomical_consistency`, `mean_pooling`, `source_only` | `UNSUPPORTED_ALIAS` | Use the exact approved registry ID; no alias is silently accepted. |
 | `lambda_proto=0.2` | `UNRESOLVED_CONFIGURATION` | The later helper value is not equivalent to the canonical primary `1.0`. |

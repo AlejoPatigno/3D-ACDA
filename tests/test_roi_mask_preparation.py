@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch.nn import functional as functional
 
-from pada3dacb.exceptions import ModelContractError
-from pada3dacb.models import (
+from acda3d.exceptions import ModelContractError
+from acda3d.models import (
     ROIMaskPreparationConfig,
     prepare_feature_grid_roi_masks,
     roi_mask_cache_key,

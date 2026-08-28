@@ -9,10 +9,10 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from pada3dacb.adaptation.cdan import conditional_outer_product, expected_conditional_dimension
-from pada3dacb.adaptation.prototype import build_source_prototypes
-from pada3dacb.adaptation.pseudo_label import pseudo_label_cross_entropy
-from pada3dacb.binary import (
+from acda3d.adaptation.cdan import conditional_outer_product, expected_conditional_dimension
+from acda3d.adaptation.prototype import build_source_prototypes
+from acda3d.adaptation.pseudo_label import pseudo_label_cross_entropy
+from acda3d.binary import (
     BINARY_CLASS_ORDER,
     BINARY_CLASS_TO_INDEX,
     BINARY_MAPPING_CONTRACT,
@@ -27,10 +27,10 @@ from pada3dacb.binary import (
     validate_binary_prediction,
     validate_target_adaptation_batch,
 )
-from pada3dacb.evaluation.concepts.class_profiles import compute_binary_class_profiles
-from pada3dacb.exceptions import CheckpointMigrationError
-from pada3dacb.models import build_pada3dacb
-from pada3dacb.models.checkpoint_migration import load_binary_checkpoint
+from acda3d.evaluation.concepts.class_profiles import compute_binary_class_profiles
+from acda3d.exceptions import CheckpointMigrationError
+from acda3d.models import build_acda3d
+from acda3d.models.checkpoint_migration import load_binary_checkpoint
 
 TEST_SUBJECT_HASH_KEY = b"phase18b-test-subject-hmac-key!!"
 
@@ -191,7 +191,7 @@ def test_binary_identities_reject_historical_three_class_collisions() -> None:
 
 
 def test_binary_model_and_checkpoint_fail_closed() -> None:
-    model = build_pada3dacb({"name": "PADA-3DACB", "num_classes": 2, "num_rois": 2,
+    model = build_acda3d({"name": "3D-ACDA", "num_classes": 2, "num_rois": 2,
                              "encoder": {"base_channels": 2, "output_channels": 4},
                              "tokenizer": {"feature_dim": 4, "token_dim": 4},
                              "concept_bottleneck": {"hidden_dim": 4}})
@@ -318,7 +318,7 @@ def test_oasis_row_content_hash_is_deterministic_and_covers_complete_row(tmp_pat
 
 
 def test_phase18b_config_is_task_source_and_model_contract() -> None:
-    from pada3dacb.config import load_config
+    from acda3d.config import load_config
 
     config = load_config("configs/publication/phase18b_binary.yaml")
     assert config.task_id == "cn_vs_impaired"
@@ -329,7 +329,7 @@ def test_phase18b_config_is_task_source_and_model_contract() -> None:
 
 
 def test_binary_metrics_and_selection_ignore_target_metrics() -> None:
-    from pada3dacb.binary import (
+    from acda3d.binary import (
         BINARY_METRIC_NAMES,
         select_best_checkpoint_by_source_validation_macro_f1,
     )
@@ -347,10 +347,10 @@ def test_binary_metrics_and_selection_ignore_target_metrics() -> None:
 
 
 def test_binary_model_and_confusion_are_production_shapes() -> None:
-    from pada3dacb.binary import build_binary_model
-    from pada3dacb.evaluation.confusion_matrices import compute_binary_confusion
+    from acda3d.binary import build_binary_model
+    from acda3d.evaluation.confusion_matrices import compute_binary_confusion
 
-    model = build_binary_model("source_only", {"name": "PADA-3DACB", "num_rois": 2, "encoder": {"base_channels": 2, "output_channels": 4}, "tokenizer": {"feature_dim": 4, "token_dim": 4}, "concept_bottleneck": {"hidden_dim": 4}})
+    model = build_binary_model("source_only", {"name": "3D-ACDA", "num_rois": 2, "encoder": {"base_channels": 2, "output_channels": 4}, "tokenizer": {"feature_dim": 4, "token_dim": 4}, "concept_bottleneck": {"hidden_dim": 4}})
     output = model(torch.randn(2, 1, 16, 16, 16), torch.ones(2, 2, 2, 2))
     assert output.latent_logits.shape == (2, 2)
     assert output.concepts.shape == (2, 2)
@@ -362,7 +362,7 @@ def test_binary_model_and_confusion_are_production_shapes() -> None:
 
 
 def test_all_six_binary_ablations_are_declared() -> None:
-    from pada3dacb.binary import BINARY_ABLATIONS, binary_experiment_matrix
+    from acda3d.binary import BINARY_ABLATIONS, binary_experiment_matrix
 
     matrix = binary_experiment_matrix()
     assert tuple(matrix["ablations"]) == BINARY_ABLATIONS

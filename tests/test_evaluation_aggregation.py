@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.evaluation.aggregation import (
+from acda3d.evaluation.aggregation import (
     AggregationError,
     aggregate_source_oof,
     aggregate_target_ensemble,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     CanonicalPrediction,
     CheckpointPolicy,
     Direction,

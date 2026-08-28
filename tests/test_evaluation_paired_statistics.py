@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from scipy.stats import binomtest
 
-from pada3dacb.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
+from acda3d.evaluation.schemas import (
     CheckpointPolicy,
     Direction,
     McNemarResult,

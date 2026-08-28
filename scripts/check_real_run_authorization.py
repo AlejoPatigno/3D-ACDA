@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import yaml  # noqa: E402
 
-from pada3dacb.publication.authorization import check_authorization, format_blockers  # noqa: E402
+from acda3d.publication.authorization import check_authorization, format_blockers  # noqa: E402
 
 DEFAULT_CONFIG = Path("configs/publication/real_run_authorization.yaml")
 

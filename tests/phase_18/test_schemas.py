@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from pada3dacb.publication.canonical_json import identity_sha256
-from pada3dacb.publication.freeze import freeze_payload_hash as freeze_module_payload_hash
-from pada3dacb.publication.schemas import (
+from acda3d.publication.canonical_json import identity_sha256
+from acda3d.publication.freeze import freeze_payload_hash as freeze_module_payload_hash
+from acda3d.publication.schemas import (
     BlockerCode,
     BlockerRecord,
     FreezePayload,
@@ -19,7 +19,7 @@ from pada3dacb.publication.schemas import (
     validate_freeze_payload,
     validate_matrix_row,
 )
-from pada3dacb.publication.schemas import freeze_payload_hash as schema_payload_hash
+from acda3d.publication.schemas import freeze_payload_hash as schema_payload_hash
 
 
 def test_value_classification_requires_explicit_class_and_evidence() -> None:
@@ -104,7 +104,7 @@ def _training_row() -> MatrixRow:
         parent_training_id=None,
         training_invocation=True,
         method_id="source_only",
-        public_method_name="PADA-3DACB Source-Only",
+        public_method_name="3D-ACDA Source-Only",
         direction="adni_to_oasis",
         source_cohort="ADNI",
         target_cohort="OASIS",
@@ -146,7 +146,7 @@ def test_matrix_row_requires_kind_specific_parent_and_invocation() -> None:
         parent_training_id=None,
         training_invocation=True,
         method_id="source_only",
-        public_method_name="PADA-3DACB Source-Only",
+        public_method_name="3D-ACDA Source-Only",
         direction="adni_to_oasis",
         source_cohort="ADNI",
         target_cohort="OASIS",

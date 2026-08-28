@@ -4,18 +4,18 @@ import sys
 
 import pytest
 
-from pada3dacb.binary import (
+from acda3d.binary import (
     BinaryLabelError,
     BinaryPrediction,
     evaluate_binary_predictions,
     select_best_checkpoint_by_source_validation_macro_f1,
 )
-from pada3dacb.evaluation.aggregation import aggregate_binary_target_ensemble
-from pada3dacb.evaluation.confusion_matrices import compute_binary_confusion
-from pada3dacb.evaluation.discovery import BinaryDiscoveryConfig, discover_binary_candidates
-from pada3dacb.evaluation.report import build_binary_report, load_binary_report
-from pada3dacb.exceptions import ExperimentValidationError
-from pada3dacb.experiments.prediction_export import validate_task_scoped_binary_prediction_records
+from acda3d.evaluation.aggregation import aggregate_binary_target_ensemble
+from acda3d.evaluation.confusion_matrices import compute_binary_confusion
+from acda3d.evaluation.discovery import BinaryDiscoveryConfig, discover_binary_candidates
+from acda3d.evaluation.report import build_binary_report, load_binary_report
+from acda3d.exceptions import ExperimentValidationError
+from acda3d.experiments.prediction_export import validate_task_scoped_binary_prediction_records
 
 
 def rows():

@@ -6,8 +6,8 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from pada3dacb.binary import build_binary_ablation
-from pada3dacb.experiments.mmd_ablations import (
+from acda3d.binary import build_binary_ablation
+from acda3d.experiments.mmd_ablations import (
     binary_mmd_ablation_identity,
     binary_mmd_ablation_output_path,
     compose_binary_mmd_ablation,
@@ -153,4 +153,4 @@ def test_mmd_mean_pool_build_keeps_binary_heads_and_changes_only_aggregator() ->
     assert tuple(output.concept_logits.shape) == (2, 2)
     assert model.binary_metadata["base_method"] == "mmd"
     assert model.binary_metadata["candidate_id"] == "mean_pool"
-    assert model.binary_metadata["architecture_identity"] == "PADA-3DACB+MeanPoolAggregator"
+    assert model.binary_metadata["architecture_identity"] == "3D-ACDA+MeanPoolAggregator"

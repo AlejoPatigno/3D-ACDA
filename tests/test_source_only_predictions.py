@@ -4,12 +4,12 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from pada3dacb.experiments.prediction_export import (
+from acda3d.experiments.prediction_export import (
     PREDICTION_COLUMNS,
     collect_predictions,
     export_predictions,
 )
-from tests.phase8_helpers import TinyPADA3DACB
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_prediction_export_schema_uniqueness_and_probabilities(tmp_path: Path):
@@ -19,7 +19,7 @@ def test_prediction_export_schema_uniqueness_and_probabilities(tmp_path: Path):
         for index in range(3)
     ]
     frame = collect_predictions(
-        TinyPADA3DACB(), DataLoader(rows, batch_size=2), torch.ones(2, 1, 1, 1),
+        TinyACDA3D(), DataLoader(rows, batch_size=2), torch.ones(2, 1, 1, 1),
         torch.device("cpu"), direction="ADNI_to_OASIS", fold=0, seed=42,
         checkpoint_name="last", checkpoint_epoch=2, split="source_validation",
         experiment_hash="experiment",

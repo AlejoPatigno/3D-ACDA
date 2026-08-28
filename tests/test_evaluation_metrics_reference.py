@@ -18,9 +18,9 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from pada3dacb.evaluation.confusion_matrices import compute_confusion
-from pada3dacb.evaluation.metrics import compute_metrics
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.confusion_matrices import compute_confusion
+from acda3d.evaluation.metrics import compute_metrics
+from acda3d.evaluation.schemas import (
     AGGREGATE_METRIC_NAMES,
     CheckpointPolicy,
     Direction,

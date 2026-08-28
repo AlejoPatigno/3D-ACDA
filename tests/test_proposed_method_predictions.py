@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 import torch
 
-from pada3dacb.experiments.prediction_export import collect_predictions, export_predictions
-from pada3dacb.experiments.prototype_pseudo import PROTOTYPE_PSEUDO_DISPLAY_NAME
+from acda3d.experiments.prediction_export import collect_predictions, export_predictions
+from acda3d.experiments.prototype_pseudo import PROTOTYPE_PSEUDO_DISPLAY_NAME
 from tests.phase13_helpers import (
     FORBIDDEN_PREDICTION_EXPORT_FIELDS,
     assert_phase13_prediction_frame,

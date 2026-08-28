@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
 
-from pada3dacb.experiments.prototype_pseudo import (
+from acda3d.experiments.prototype_pseudo import (
     PrototypePseudoExperimentRunner,
     load_prototype_pseudo_config,
     run_prototype_pseudo_both_directions,
 )
-from pada3dacb.experiments.run_manifest import atomic_json
+from acda3d.experiments.run_manifest import atomic_json
 from tests.test_proposed_method_config import make_proposed_environment
 
 

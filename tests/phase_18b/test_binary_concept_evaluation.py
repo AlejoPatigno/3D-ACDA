@@ -5,11 +5,11 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.aggregation import aggregate_binary_concept_records
-from pada3dacb.evaluation.concepts.inference import validate_binary_concept_inference_shapes
-from pada3dacb.evaluation.concepts.provenance import validate_binary_concept_compatibility
-from pada3dacb.evaluation.concepts.report import evaluate_binary_concept_records
-from pada3dacb.evaluation.concepts.schemas import BINARY_CONCEPT_CLASS_ORDER
+from acda3d.evaluation.concepts.aggregation import aggregate_binary_concept_records
+from acda3d.evaluation.concepts.inference import validate_binary_concept_inference_shapes
+from acda3d.evaluation.concepts.provenance import validate_binary_concept_compatibility
+from acda3d.evaluation.concepts.report import evaluate_binary_concept_records
+from acda3d.evaluation.concepts.schemas import BINARY_CONCEPT_CLASS_ORDER
 
 HASHES = {name: f"{index:064x}" for index, name in enumerate(("atlas", "normalizer", "targets", "anatomy"), 1)}
 

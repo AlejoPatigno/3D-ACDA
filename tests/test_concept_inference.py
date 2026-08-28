@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.evaluation.concepts.inference import (
+from acda3d.evaluation.concepts.inference import (
     CheckpointBundle,
     load_checkpoint,
     load_concept_normalizer_from_checkpoint,
@@ -21,8 +21,8 @@ from pada3dacb.evaluation.concepts.inference import (
     run_real_evaluation,
     run_subject_inference,
 )
-from pada3dacb.evaluation.concepts.provenance import VerifiedEvaluationInputs
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.provenance import VerifiedEvaluationInputs
+from acda3d.evaluation.concepts.schemas import (
     AtlasROIOrderHash,
     CheckpointPolicy,
     ConceptCandidate,
@@ -36,14 +36,14 @@ from pada3dacb.evaluation.concepts.schemas import (
     issue_real_evaluation_capability,
     verify_fixture_manifest,
 )
-from pada3dacb.evaluation.schemas import AnalysisMode, AuthorizationGateError
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.models.pada3dacb import PADA3DACB
+from acda3d.evaluation.schemas import AnalysisMode, AuthorizationGateError
+from acda3d.exceptions import ConfigurationError
+from acda3d.models.acda3d import ACDA3D
 
 
 class TestCheckpointBundle:
     def test_bundle_creation(self):
-        model = MagicMock(spec=PADA3DACB)
+        model = MagicMock(spec=ACDA3D)
         bundle = CheckpointBundle(
             model=model,
             experiment_hash="exp123",
@@ -76,9 +76,9 @@ class TestLoadCheckpoint:
         }
         torch.save(ckpt, self.checkpoint_path)
 
-        with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as mock_pada3dacb_class:
-            mock_model = MagicMock(spec=PADA3DACB)
-            mock_pada3dacb_class.return_value = mock_model
+        with patch("acda3d.evaluation.concepts.inference.ACDA3D") as mock_acda3d_class:
+            mock_model = MagicMock(spec=ACDA3D)
+            mock_acda3d_class.return_value = mock_model
             mock_model.load_state_dict = MagicMock()
             mock_model.to = MagicMock(return_value=mock_model)
             mock_model.eval = MagicMock()
@@ -90,7 +90,7 @@ class TestLoadCheckpoint:
             assert bundle.training_hash == "trn123"
             assert bundle.epoch == 50
             assert bundle.logical_checkpoint == "best_source_f1"
-            mock_pada3dacb_class.assert_called_once()
+            mock_acda3d_class.assert_called_once()
             mock_model.load_state_dict.assert_called_once_with({}, strict=True)
 
     def test_load_checkpoint_uses_safe_weights_only_loader(self, monkeypatch):
@@ -110,8 +110,8 @@ class TestLoadCheckpoint:
             return original_load(*args, **kwargs)
 
         monkeypatch.setattr(torch, "load", traced_load)
-        with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as model_class:
-            model = MagicMock(spec=PADA3DACB)
+        with patch("acda3d.evaluation.concepts.inference.ACDA3D") as model_class:
+            model = MagicMock(spec=ACDA3D)
             model_class.return_value = model
             load_checkpoint(self.checkpoint_path, "cpu")
 
@@ -168,9 +168,9 @@ class TestLoadCheckpoint:
         }
         torch.save(ckpt, self.checkpoint_path)
 
-        with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as mock_pada3dacb_class:
-            mock_model = MagicMock(spec=PADA3DACB)
-            mock_pada3dacb_class.return_value = mock_model
+        with patch("acda3d.evaluation.concepts.inference.ACDA3D") as mock_acda3d_class:
+            mock_model = MagicMock(spec=ACDA3D)
+            mock_acda3d_class.return_value = mock_model
             mock_model.load_state_dict.side_effect = RuntimeError("missing keys")
 
             with pytest.raises(ConfigurationError, match="incompatible model state"):
@@ -197,7 +197,7 @@ class TestLoadConceptNormalizerFromCheckpoint:
         checkpoint_path.parent.mkdir(parents=True)
         torch.save({}, checkpoint_path)
 
-        with patch("pada3dacb.evaluation.concepts.inference.ConceptNormalizer.load") as mock_load:
+        with patch("acda3d.evaluation.concepts.inference.ConceptNormalizer.load") as mock_load:
             mock_normalizer = MagicMock()
             mock_load.return_value = mock_normalizer
 
@@ -223,7 +223,7 @@ class TestLoadConceptNormalizerFromCheckpoint:
         artifacts_root = self.tmpdir / "artifacts"
         artifacts_root.mkdir()
 
-        with patch("pada3dacb.evaluation.concepts.inference.ConceptNormalizer.load") as mock_load:
+        with patch("acda3d.evaluation.concepts.inference.ConceptNormalizer.load") as mock_load:
             mock_normalizer = MagicMock()
             mock_load.return_value = mock_normalizer
 
@@ -249,7 +249,7 @@ class TestRunSubjectInference:
         self.device = "cpu"
 
         # Mock model
-        self.model = MagicMock(spec=PADA3DACB)
+        self.model = MagicMock(spec=ACDA3D)
         self.model.eval = MagicMock()
 
         # Mock normalizer
@@ -666,7 +666,7 @@ class TestRunInferenceOnCandidates:
             self.tmpdir,
         )
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
     def test_fixture_boolean_without_verified_manifest_fails_before_checkpoint_load(self, mock_load_checkpoint):
         with pytest.raises(AuthorizationGateError, match="verified fixture manifest"):
             run_inference_on_candidates(
@@ -686,7 +686,7 @@ class TestRunInferenceOnCandidates:
         )
         dataloader_factory = MagicMock()
         with patch(
-            "pada3dacb.evaluation.concepts.inference.load_checkpoint"
+            "acda3d.evaluation.concepts.inference.load_checkpoint"
         ) as load_checkpoint, pytest.raises(ConfigurationError, match="normalizer hash"):
             run_inference_on_candidates(
                 candidates=[candidate],
@@ -708,7 +708,7 @@ class TestRunInferenceOnCandidates:
             self.fixture_manifest.files,
         )
         with (
-            patch("pada3dacb.evaluation.concepts.inference.load_checkpoint") as load,
+            patch("acda3d.evaluation.concepts.inference.load_checkpoint") as load,
             pytest.raises(AuthorizationGateError, match="verified fixture manifest"),
         ):
             run_inference_on_candidates(
@@ -748,7 +748,7 @@ class TestRunInferenceOnCandidates:
         valid = self._write_fixture_manifest([self.candidate.checkpoint_path])
         self.candidate.checkpoint_path.write_bytes(b"stale-fixture")
         with (
-            patch("pada3dacb.evaluation.concepts.inference.load_checkpoint") as load,
+            patch("acda3d.evaluation.concepts.inference.load_checkpoint") as load,
             pytest.raises(ConfigurationError, match="stale|hash"),
         ):
             run_inference_on_candidates(
@@ -762,11 +762,11 @@ class TestRunInferenceOnCandidates:
                 )
         load.assert_not_called()
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
-    @patch("pada3dacb.evaluation.concepts.inference.run_subject_inference")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.run_subject_inference")
     def test_run_inference_on_candidates(self, mock_run_inference, mock_load_checkpoint):
         # Mock checkpoint loading
-        mock_model = MagicMock(spec=PADA3DACB)
+        mock_model = MagicMock(spec=ACDA3D)
         mock_bundle = CheckpointBundle(
             model=mock_model,
             experiment_hash="exp123",
@@ -782,7 +782,7 @@ class TestRunInferenceOnCandidates:
         # Mock inference results
         subject_record = SubjectConceptRecord(
             method_id=MethodId.SOURCE_ONLY,
-            model="PADA-3DACB",
+            model="3D-ACDA",
             direction=Direction.ADNI_TO_OASIS,
             source_domain="ADNI",
             target_domain="OASIS",
@@ -846,7 +846,7 @@ class TestRunInferenceOnCandidates:
         assert call.kwargs["normalizer_hash"] == ConceptNormalizerHash("b" * 64)
         assert len(call.kwargs["concept_config_hash"]) == 64
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
     def test_direct_real_candidate_inference_requires_capability_before_load(self, mock_load_checkpoint):
         with pytest.raises(AuthorizationGateError, match="capability"):
             run_inference_on_candidates(
@@ -861,7 +861,7 @@ class TestRunInferenceOnCandidates:
             )
         mock_load_checkpoint.assert_not_called()
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
     def test_real_mode_cannot_opt_into_fixture_boundary(self, mock_load_checkpoint):
         with pytest.raises(AuthorizationGateError, match="capability"):
             run_inference_on_candidates(
@@ -875,7 +875,7 @@ class TestRunInferenceOnCandidates:
             )
         mock_load_checkpoint.assert_not_called()
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
     def test_run_inference_rejects_candidate_with_provenance_issues(self, mock_load_checkpoint):
         self.candidate.issues.append("roi_order_hash_mismatch")
 
@@ -891,10 +891,10 @@ class TestRunInferenceOnCandidates:
             )
         mock_load_checkpoint.assert_not_called()
 
-    @patch("pada3dacb.evaluation.concepts.inference.load_checkpoint")
-    @patch("pada3dacb.evaluation.concepts.inference.run_subject_inference")
+    @patch("acda3d.evaluation.concepts.inference.load_checkpoint")
+    @patch("acda3d.evaluation.concepts.inference.run_subject_inference")
     def test_run_inference_multiple_candidates(self, mock_run_inference, mock_load_checkpoint):
-        mock_model = MagicMock(spec=PADA3DACB)
+        mock_model = MagicMock(spec=ACDA3D)
         mock_bundle = CheckpointBundle(
             model=mock_model,
             experiment_hash="exp123",
@@ -909,7 +909,7 @@ class TestRunInferenceOnCandidates:
 
         subject_record = SubjectConceptRecord(
             method_id=MethodId.SOURCE_ONLY,
-            model="PADA-3DACB",
+            model="3D-ACDA",
             direction=Direction.ADNI_TO_OASIS,
             source_domain="ADNI",
             target_domain="OASIS",
@@ -1134,7 +1134,7 @@ class TestRealEvaluationBoundary:
         dataloader_factory = MagicMock()
 
         with (
-            patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as model_class,
+            patch("acda3d.evaluation.concepts.inference.ACDA3D") as model_class,
             pytest.raises(ConfigurationError, match=message),
         ):
             run_real_evaluation(
@@ -1163,10 +1163,10 @@ class TestRealEvaluationBoundary:
             kwargs["_event_hook"]("forward")
             return []
 
-        with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as model_class:
+        with patch("acda3d.evaluation.concepts.inference.ACDA3D") as model_class:
             model_class.return_value = MagicMock()
             with patch(
-                "pada3dacb.evaluation.concepts.inference.run_subject_inference",
+                "acda3d.evaluation.concepts.inference.run_subject_inference",
                 side_effect=fake_inference,
             ):
                 result = run_real_evaluation(
@@ -1203,10 +1203,10 @@ class TestRealEvaluationBoundary:
         return
         events = []
 
-        with patch("pada3dacb.evaluation.concepts.inference.PADA3DACB") as model_class:
+        with patch("acda3d.evaluation.concepts.inference.ACDA3D") as model_class:
             model_class.return_value = MagicMock()
             with patch(
-                "pada3dacb.evaluation.concepts.inference.run_subject_inference",
+                "acda3d.evaluation.concepts.inference.run_subject_inference",
                 return_value=[],
             ):
                 run_real_evaluation(

@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.exceptions import ConfigurationError, PhaseNotImplementedError
-from pada3dacb.experiments.prototype_pseudo import (
+from acda3d.exceptions import ConfigurationError, PhaseNotImplementedError
+from acda3d.experiments.prototype_pseudo import (
     PROTOTYPE_PSEUDO_DISPLAY_NAME,
     load_prototype_pseudo_config,
 )
@@ -17,7 +17,7 @@ def make_proposed_environment(tmp_path: Path) -> Path:
     payload["experiment"].update(
         {
             "name": "synthetic_prototype_pseudo",
-            "display_name": "PADA-3DACB",
+            "display_name": "3D-ACDA",
             "method": "prototype_pseudo",
         }
     )
@@ -45,7 +45,7 @@ def test_prototype_pseudo_config_loads_canonical_values(tmp_path: Path):
     config = load_prototype_pseudo_config(make_proposed_environment(tmp_path))
 
     assert config.method == "prototype_pseudo"
-    assert config.display_name == PROTOTYPE_PSEUDO_DISPLAY_NAME == "PADA-3DACB"
+    assert config.display_name == PROTOTYPE_PSEUDO_DISPLAY_NAME == "3D-ACDA"
     assert config.training.warmup_epochs == 5
     assert config.training.full_epochs == 50
     assert config.training.learning_rate == 1e-4
@@ -83,7 +83,7 @@ def test_prototype_pseudo_real_run_rejects_unresolved_scientific_values(tmp_path
 @pytest.mark.parametrize(
     "mutation,expected_error",
     [
-        (lambda payload: payload["experiment"].__setitem__("display_name", "PADA-3DACB + Prototype"), ConfigurationError),
+        (lambda payload: payload["experiment"].__setitem__("display_name", "3D-ACDA + Prototype"), ConfigurationError),
         (lambda payload: payload["adaptation"].__setitem__("name", "coral"), PhaseNotImplementedError),
         (lambda payload: payload["adaptation"].__setitem__("feature", "z"), ConfigurationError),
         (lambda payload: payload["adaptation"].__setitem__("active_during_warmup", True), ConfigurationError),

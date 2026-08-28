@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pada3dacb.experiments import (
+from acda3d.experiments import (
     MMDExperimentRunner,
     load_mmd_config,
     run_mmd_both_directions,

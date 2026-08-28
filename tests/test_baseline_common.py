@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.models.baselines.common import (
+from acda3d.models.baselines.common import (
     BaselineSpec,
     Small3DBackbone,
     parameter_metadata,

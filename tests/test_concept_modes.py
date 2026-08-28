@@ -485,7 +485,7 @@ def test_synthetic_cli_reports_one_truthful_status_for_selected_baseline(tmp_pat
         rows = list(csv.DictReader(handle))
     aagn_rows = [row for row in rows if row["method"] == "aagn"]
     assert len(aagn_rows) == 1
-    assert aagn_rows[0]["status"] == "not_applicable_no_pada3dacb_concept_head"
+    assert aagn_rows[0]["status"] == "not_applicable_no_acda3d_concept_head"
     assert all(row["status"] != "included" for row in aagn_rows)
 
 
@@ -507,7 +507,7 @@ def test_real_dry_run_reports_not_applicable_without_failure(tmp_path, capsys) -
     )
 
     assert code == ExitCode.SUCCESS
-    assert "aagn: not_applicable_no_pada3dacb_concept_head" in capsys.readouterr().out
+    assert "aagn: not_applicable_no_acda3d_concept_head" in capsys.readouterr().out
 
 
 def test_real_validate_only_is_gate_blocked(tmp_path) -> None:

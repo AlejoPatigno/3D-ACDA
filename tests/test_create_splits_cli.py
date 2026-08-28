@@ -50,6 +50,6 @@ def test_cli_directions_all_and_dry_run(tmp_path):
 def test_no_forbidden_phase_seven_behavior():
     from pathlib import Path
 
-    text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/pada3dacb/data").glob("*.py"))
+    text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/acda3d/data").glob("*.py"))
     for forbidden in ("Encoder3D", "CORAL", "MMD", "CDAN", "pseudo-label", "fit_concept_normalizer", "ensure_artifact_cache"):
         assert forbidden not in text

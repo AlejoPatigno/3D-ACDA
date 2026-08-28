@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from pada3dacb.publication.freeze import read_freeze
+from acda3d.publication.freeze import read_freeze
 
 ROOT = Path(__file__).resolve().parents[2]
 PREPARE = ROOT / "scripts" / "prepare_publication_run.py"
@@ -124,7 +124,7 @@ def test_prepare_cli_rejects_non_cpu_validation_without_real_execution() -> None
 
 def test_phase_19_has_no_production_files_or_open_authorization_fields() -> None:
     production_paths = (
-        ROOT / "src" / "pada3dacb" / "publication",
+        ROOT / "src" / "acda3d" / "publication",
         ROOT / "scripts",
         ROOT / "configs" / "publication",
     )

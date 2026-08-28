@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import SimpleITK as sitk
 
-from pada3dacb.artifacts.jacobians import (
+from acda3d.artifacts.jacobians import (
     apply_psi,
     jacobian_determinant_from_displacement,
     normalize_regional_deformation,

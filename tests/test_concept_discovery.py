@@ -10,13 +10,13 @@ import pytest
 import torch
 import yaml
 
-from pada3dacb.evaluation.concepts.discovery import (
+from acda3d.evaluation.concepts.discovery import (
     DiscoveryConfig,
     discover_candidates,
-    filter_pada_candidates,
+    filter_acda_candidates,
     validate_candidate_hashes,
 )
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     CheckpointPolicy,
     Direction,
     MethodId,
@@ -260,7 +260,7 @@ class TestDiscoverCandidates:
 
         assert candidates == []
         assert issues == [
-            "not_applicable:faster_snn:not_applicable_no_pada3dacb_concept_head"
+            "not_applicable:faster_snn:not_applicable_no_acda3d_concept_head"
         ]
 
     def test_discover_hash_mismatch(self):
@@ -281,8 +281,8 @@ class TestDiscoverCandidates:
         assert any("concept_normalizer_hash_mismatch" in issue for issue in issues)
         assert any("concept_normalizer_hash_mismatch" in issue for issue in candidates[0].issues)
 
-    def test_filter_pada_candidates(self):
-        from pada3dacb.evaluation.concepts.schemas import ConceptCandidate
+    def test_filter_acda_candidates(self):
+        from acda3d.evaluation.concepts.schemas import ConceptCandidate
 
         candidates = [
             ConceptCandidate(
@@ -323,12 +323,12 @@ class TestDiscoverCandidates:
             ),
         ]
 
-        filtered = filter_pada_candidates(candidates)
+        filtered = filter_acda_candidates(candidates)
         assert len(filtered) == 1
         assert filtered[0].method_id == MethodId.SOURCE_ONLY
 
     def test_validate_candidate_hashes(self):
-        from pada3dacb.evaluation.concepts.schemas import ConceptCandidate
+        from acda3d.evaluation.concepts.schemas import ConceptCandidate
 
         candidate = ConceptCandidate(
             method_id=MethodId.SOURCE_ONLY,
@@ -418,7 +418,7 @@ class TestDiscoverCandidates:
         }
         path = tmp_path / "config.yaml"
         path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-        from pada3dacb.evaluation.concepts.schemas import (
+        from acda3d.evaluation.concepts.schemas import (
             ConceptEvaluationConfig,
             ConfigurationError,
         )
@@ -426,8 +426,8 @@ class TestDiscoverCandidates:
             ConceptEvaluationConfig.from_yaml(path)
 
     def test_strict_config_rejects_real_path_types_and_input_output_overlap(self, tmp_path):
-        from pada3dacb.evaluation.concepts.provenance import compute_sha256_file
-        from pada3dacb.evaluation.concepts.schemas import (
+        from acda3d.evaluation.concepts.provenance import compute_sha256_file
+        from acda3d.evaluation.concepts.schemas import (
             ConceptEvaluationConfig,
             ConfigurationError,
             canonical_roi_order_hash,
@@ -480,8 +480,8 @@ class TestDiscoverCandidates:
 
 
     def test_strict_discovery_accepts_exact_manifest_assignment(self, tmp_path):
-        from pada3dacb.evaluation.concepts.provenance import compute_sha256_file
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import compute_sha256_file
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         root = tmp_path
         atlas = root / "atlas.bin"

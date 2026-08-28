@@ -8,8 +8,8 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.ablations import resolve_ablation_config
-from pada3dacb.ablations.schemas import (
+from acda3d.ablations import resolve_ablation_config
+from acda3d.ablations.schemas import (
     AblationBaseConfig,
     ApprovalRecord,
     ApprovalStatus,
@@ -18,12 +18,12 @@ from pada3dacb.ablations.schemas import (
     ModelVariant,
     RunMatrix,
 )
-from pada3dacb.adaptation.prototype_pseudo import PrototypePseudoAdaptationLoss
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.models.ablations import MeanPoolAggregator, build_mean_pool_model
-from pada3dacb.models.pada3dacb import PADA3DACBOutput
-from pada3dacb.training import trainer as trainer_module
-from pada3dacb.training.uda_trainer import ComposedCoreLoss, UDATrainer
+from acda3d.adaptation.prototype_pseudo import PrototypePseudoAdaptationLoss
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.models.ablations import MeanPoolAggregator, build_mean_pool_model
+from acda3d.models.acda3d import ACDA3DOutput
+from acda3d.training import trainer as trainer_module
+from acda3d.training.uda_trainer import ComposedCoreLoss, UDATrainer
 
 _LOSSES = LossCoefficients(
     lambda_z=1.0,
@@ -47,9 +47,9 @@ _LOSSES = LossCoefficients(
 
 def _base_config() -> AblationBaseConfig:
     return AblationBaseConfig(
-        base_method="PADA-3DACB",
+        base_method="3D-ACDA",
         losses=_LOSSES,
-        model=ModelVariant(name="PADA-3DACB", aggregator="AttentionAggregator"),
+        model=ModelVariant(name="3D-ACDA", aggregator="AttentionAggregator"),
         approval=ApprovalRecord("phase17-math", ApprovalStatus.APPROVED),
         epochs_warm=1,
         epochs_full=2,
@@ -63,7 +63,7 @@ def _resolved(candidate: str):
     return resolve_ablation_config(_base_config(), candidate)
 
 
-def _output() -> PADA3DACBOutput:
+def _output() -> ACDA3DOutput:
     latent = torch.tensor(
         [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]], requires_grad=True
     )
@@ -73,7 +73,7 @@ def _output() -> PADA3DACBOutput:
     concepts = torch.tensor(
         [[0.2, 0.4], [0.3, 0.5], [0.6, 0.1]], requires_grad=True
     )
-    return PADA3DACBOutput(
+    return ACDA3DOutput(
         F=torch.zeros(3, 1),
         T=torch.zeros(3, 2, 2),
         U=torch.zeros(3, 2, 2),
@@ -103,7 +103,7 @@ def test_warm_reference_excludes_adaptation_and_logs_zero() -> None:
     labels = torch.tensor([0, 1, 2])
     concept_targets = torch.zeros(3, 2)
     g_bar = torch.zeros(3, 2)
-    core = CorePADA3DACBLoss(num_rois=2, label_smoothing=0.1)
+    core = CoreACDA3DLoss(num_rois=2, label_smoothing=0.1)
     warm = core(output, labels, concept_targets, g_bar, stage="warm")
     expected = (
         0.1 * warm.classification
@@ -177,10 +177,10 @@ def test_full_core_reference_disables_exactly_one_weighted_term(
     labels = torch.tensor([0, 1, 2])
     concept_targets = torch.zeros(3, 2)
     g_bar = torch.zeros(3, 2)
-    baseline = CorePADA3DACBLoss(num_rois=2, label_smoothing=0.1)(
+    baseline = CoreACDA3DLoss(num_rois=2, label_smoothing=0.1)(
         output, labels, concept_targets, g_bar, stage="full"
     )
-    result = ComposedCoreLoss(CorePADA3DACBLoss(num_rois=2), _resolved(candidate))(
+    result = ComposedCoreLoss(CoreACDA3DLoss(num_rois=2), _resolved(candidate))(
         output, labels, concept_targets, g_bar, stage="full"
     )
     expected = baseline.total - coefficient * getattr(baseline, field)
@@ -200,7 +200,7 @@ def test_full_core_reference_disables_exactly_one_weighted_term(
     ],
 )
 def test_disabled_core_component_is_not_computed(candidate: str, attribute: str) -> None:
-    base = CorePADA3DACBLoss(num_rois=2)
+    base = CoreACDA3DLoss(num_rois=2)
 
     class ExplodingLoss(nn.Module):
         def forward(self, *_args: object, **_kwargs: object) -> None:

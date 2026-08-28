@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-import pada3dacb.publication.authorization as authorization_module
-from pada3dacb.publication.authorization import check_authorization
-from pada3dacb.publication.canonical_json import identity_sha256
-from pada3dacb.publication.experiment_matrix import generate_matrix
-from pada3dacb.publication.provenance import ManifestValidation, ProvenanceStatus
+import acda3d.publication.authorization as authorization_module
+from acda3d.publication.authorization import check_authorization
+from acda3d.publication.canonical_json import identity_sha256
+from acda3d.publication.experiment_matrix import generate_matrix
+from acda3d.publication.provenance import ManifestValidation, ProvenanceStatus
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "configs" / "publication" / "real_run_authorization.yaml"
@@ -281,7 +281,7 @@ def test_fabricated_sha256_hashes_are_not_authorization_evidence() -> None:
 
 
 def test_degenerate_matrix_is_rejected_even_with_a_matching_matrix_hash() -> None:
-    from pada3dacb.publication.experiment_matrix import generate_matrix, matrix_content_hash
+    from acda3d.publication.experiment_matrix import generate_matrix, matrix_content_hash
 
     matrix = generate_matrix(seeds=[42]).to_mapping()
     matrix["rows"] = matrix["rows"][:1]
@@ -295,7 +295,7 @@ def test_degenerate_matrix_is_rejected_even_with_a_matching_matrix_hash() -> Non
 
 
 def test_explicit_resolved_seed_cardinality_is_not_rejected_as_140_rows() -> None:
-    from pada3dacb.publication.experiment_matrix import generate_matrix, matrix_content_hash
+    from acda3d.publication.experiment_matrix import generate_matrix, matrix_content_hash
 
     matrix = generate_matrix(
         seeds=[7, 42],
@@ -455,7 +455,7 @@ def test_publication_seed_policy_rejects_arbitrary_resolved_seed_sets() -> None:
 
 
 def test_top_level_seed_policy_must_match_matrix_seed_set() -> None:
-    from pada3dacb.publication.experiment_matrix import matrix_content_hash
+    from acda3d.publication.experiment_matrix import matrix_content_hash
 
     matrix = generate_matrix(
         seeds=[7, 42],

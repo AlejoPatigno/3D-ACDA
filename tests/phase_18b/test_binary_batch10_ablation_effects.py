@@ -6,14 +6,14 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from pada3dacb.binary import (
+from acda3d.binary import (
     BINARY_ABLATIONS,
     apply_binary_ablation_loss_plan,
     binary_ablation_plan,
     build_binary_ablation,
 )
-from pada3dacb.publication.binary_runtime import BinaryPublicationRuntime
-from pada3dacb.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod
+from acda3d.publication.binary_runtime import BinaryPublicationRuntime
+from acda3d.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod
 
 CONFIG_PATH = Path("configs/publication/phase18b_binary.yaml")
 CANONICAL_COMPONENTS = {

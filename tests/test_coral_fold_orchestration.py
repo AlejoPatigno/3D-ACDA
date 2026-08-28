@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pada3dacb.experiments import (
+from acda3d.experiments import (
     CORALExperimentRunner,
     load_coral_config,
     run_coral_both_directions,

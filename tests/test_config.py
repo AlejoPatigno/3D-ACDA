@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.config import ProjectConfig, load_config
-from pada3dacb.exceptions import ConfigurationError, UnsupportedExperimentError
+from acda3d.config import ProjectConfig, load_config
+from acda3d.exceptions import ConfigurationError, UnsupportedExperimentError
 
 
 def _valid_dict():
@@ -21,7 +21,7 @@ def _valid_dict():
             "fold": 0,
         },
         "model": {
-            "name": "PADA-3DACB",
+            "name": "3D-ACDA",
             "contextual_encoder": False,
             "num_classes": 3,
             "num_rois": 102,
@@ -59,7 +59,7 @@ def test_data_and_model_configs_load_without_path_requirements():
         Path("configs/data/paths.example.yaml"),
         Path("configs/data/adni.yaml"),
         Path("configs/data/oasis.yaml"),
-        Path("configs/model/pada3dacb.yaml"),
+        Path("configs/model/acda3d.yaml"),
     ]:
         config = load_config(path)
         config.validate()
@@ -70,7 +70,7 @@ def test_data_and_model_configs_load_without_path_requirements():
     [
         (lambda d: d["model"].update({"contextual_encoder": True}), ConfigurationError),
         (lambda d: d["training"].update({"early_stopping": True}), ConfigurationError),
-        (lambda d: d["model"].update({"name": "PADA-3DACB-Full"}), ConfigurationError),
+        (lambda d: d["model"].update({"name": "3D-ACDA-Full"}), ConfigurationError),
         (lambda d: d["experiment"].update({"method": "unknown"}), UnsupportedExperimentError),
         (lambda d: d["experiment"].update({"source_domain": "ADNI", "target_domain": "ADNI"}), ConfigurationError),
         (lambda d: d["training"].update({"full_epochs": 0}), ConfigurationError),
@@ -113,4 +113,4 @@ def test_save_resolved_config(tmp_path):
     config = ProjectConfig.from_dict(_valid_dict())
     target = config.save_resolved(tmp_path / "config_resolved.yaml")
     assert target.exists()
-    assert "PADA-3DACB" in target.read_text(encoding="utf-8")
+    assert "3D-ACDA" in target.read_text(encoding="utf-8")

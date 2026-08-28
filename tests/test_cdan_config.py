@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.exceptions import ConfigurationError, PhaseNotImplementedError
-from pada3dacb.experiments import load_cdan_config
+from acda3d.exceptions import ConfigurationError, PhaseNotImplementedError
+from acda3d.experiments import load_cdan_config
 from tests.phase12_helpers import make_cdan_environment
 
 

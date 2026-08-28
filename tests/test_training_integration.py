@@ -2,10 +2,10 @@ from pathlib import Path
 
 import torch
 
-from pada3dacb.data.datasets import LabeledSourceDataset
-from pada3dacb.data.records import SubjectRecord
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.models import PADA3DACB, prepare_feature_grid_roi_masks
+from acda3d.data.datasets import LabeledSourceDataset
+from acda3d.data.records import SubjectRecord
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.models import ACDA3D, prepare_feature_grid_roi_masks
 
 
 def test_phase6_phase7_phase8_forward_loss_backward(tmp_path: Path):
@@ -27,9 +27,9 @@ def test_phase6_phase7_phase8_forward_loss_backward(tmp_path: Path):
     atlas_masks[0, :8] = 1
     atlas_masks[1, 8:] = 1
     feature_masks = prepare_feature_grid_roi_masks(atlas_masks, (2, 2, 2))
-    model = PADA3DACB(2, 8, 6, base_channels=4, concept_hidden_dim=4)
+    model = ACDA3D(2, 8, 6, base_channels=4, concept_hidden_dim=4)
     output = model(batch["x"].unsqueeze(0), feature_masks)
-    result = CorePADA3DACBLoss(2)(
+    result = CoreACDA3DLoss(2)(
         output,
         batch["y"].unsqueeze(0),
         batch["c_target"].unsqueeze(0),

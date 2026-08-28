@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pada3dacb.artifacts.cache import PrecomputeRunConfig, ensure_artifact_cache
+from acda3d.artifacts.cache import PrecomputeRunConfig, ensure_artifact_cache
 
 
 def setup_case(tmp_path):
@@ -76,7 +76,7 @@ def test_failure_isolation_and_branch_specific_hash(tmp_path, monkeypatch):
     def fake_g_bar(*args, **kwargs):
         return torch.tensor([0.25, 0.75], dtype=torch.float32)
 
-    monkeypatch.setattr("pada3dacb.artifacts.cache.compute_g_bar_from_template_and_subject", fake_g_bar)
+    monkeypatch.setattr("acda3d.artifacts.cache.compute_g_bar_from_template_and_subject", fake_g_bar)
     combined = ensure_artifact_cache(cfg)
     valid = combined[combined.subject_id.isin(["s1", "s2"])]
     assert set(valid.concept_status) == {"SKIPPED_VALID"}

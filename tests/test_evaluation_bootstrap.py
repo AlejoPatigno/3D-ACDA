@@ -5,8 +5,8 @@ import math
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.bootstrap import bootstrap_metrics
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.bootstrap import bootstrap_metrics
+from acda3d.evaluation.schemas import (
     BootstrapInterval,
     CheckpointPolicy,
     Direction,

@@ -1,4 +1,4 @@
-# PADA-3DACB Project Context
+# 3D-ACDA Project Context
 
 ## Initialization scope
 
@@ -28,7 +28,7 @@
 
 - Artifact store mode: `both`.
 - File-backed project context: this file.
-- Engram persistence was attempted for topic `sdd-init/PADA-3DACB-3d-acda-mmd` but the local Engram service was unavailable (`127.0.0.1:7437`). No Engram artifact is claimed.
+- Engram persistence was attempted for topic `sdd-init/3D-ACDA-3d-acda-mmd` but the local Engram service was unavailable (`127.0.0.1:7437`). No Engram artifact is claimed.
 
 ## Guardrails for Phase 18e
 

@@ -3,15 +3,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.exceptions import ConfigurationError, PhaseNotImplementedError
-from pada3dacb.experiments import load_source_only_config
+from acda3d.exceptions import ConfigurationError, PhaseNotImplementedError
+from acda3d.experiments import load_source_only_config
 from tests.phase9_helpers import make_source_only_environment
 
 
 def test_source_only_config_composes_approved_phase8_values(tmp_path: Path):
     config = load_source_only_config(make_source_only_environment(tmp_path))
     assert config.method == "source_only"
-    assert config.display_name == "PADA-3DACB Source-Only"
+    assert config.display_name == "3D-ACDA Source-Only"
     assert config.training.total_epochs == 2
     assert config.loss_weights.effective("warm") == {
         "classification": 0.1, "concept_classification": 1.0,

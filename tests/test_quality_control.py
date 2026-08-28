@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from pada3dacb.data.derivative_verification import (
+from acda3d.data.derivative_verification import (
     GeometryComparison,
     ImageMetadata,
     VerificationResult,
     VerificationStatus,
     select_overlay_sample,
 )
-from pada3dacb.data.quality_control import generate_subject_overlays
+from acda3d.data.quality_control import generate_subject_overlays
 
 
 def _result(subject_hash="abc", cohort="ADNI", label="CN"):

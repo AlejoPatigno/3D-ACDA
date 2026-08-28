@@ -29,7 +29,7 @@ def test_prototype_pseudo_cli_exposes_method_and_routes_to_runner(monkeypatch, t
     train.run_prototype_pseudo(args)
 
     assert calls == [{"method": "prototype_pseudo", "dry_run": True, "validate_only": False, "resume_from": None}]
-    assert json.loads(capsys.readouterr().out) == [{"fold": 0, "method": "prototype_pseudo", "display_name": "PADA-3DACB"}]
+    assert json.loads(capsys.readouterr().out) == [{"fold": 0, "method": "prototype_pseudo", "display_name": "3D-ACDA"}]
 
 
 def test_prototype_pseudo_cli_dry_run_all_five_folds(tmp_path: Path):
@@ -99,7 +99,7 @@ def test_prototype_pseudo_cli_rejects_resume_with_multiple_fold_or_direction(tmp
 def test_no_unapproved_phase15_or_evaluation_modules_created():
     root = Path(__file__).resolve().parents[1]
     forbidden = [
-        root / "src" / "pada3dacb" / "experiments" / "phase14.py",
-        root / "src" / "pada3dacb" / "evaluation" / "statistics.py",
+        root / "src" / "acda3d" / "experiments" / "phase14.py",
+        root / "src" / "acda3d" / "evaluation" / "statistics.py",
     ]
     assert not any(path.exists() for path in forbidden)

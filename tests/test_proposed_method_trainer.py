@@ -3,9 +3,9 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
+from tests.phase8_helpers import TinyACDA3D
 from tests.test_cdan_trainer import _BatchLoader, _DisabledScaler, _LossOutput, _source_batch
 
 
@@ -26,7 +26,7 @@ def proposed_target_batch(value=2.0, **extra):
 
 
 def make_proposed_epoch_trainer():
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     optimizer = _CountingAdamW(model.parameters())
     trainer = UDATrainer.__new__(UDATrainer)
     trainer.model = model

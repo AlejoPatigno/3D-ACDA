@@ -1,6 +1,6 @@
 import torch
 
-from pada3dacb.adaptation.prototype import PrototypeLoss
+from acda3d.adaptation.prototype import PrototypeLoss
 
 
 def test_prototype_loss_backpropagates_through_selected_source_and_target_embeddings():

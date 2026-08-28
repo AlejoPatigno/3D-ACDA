@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.experiments.ablations import (
+from acda3d.experiments.ablations import (
     build_parser,
     load_ablation_config,
     planned_run_path,

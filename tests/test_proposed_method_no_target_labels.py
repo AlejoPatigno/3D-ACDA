@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 import torch
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.experiments.prototype_pseudo import PrototypePseudoExperimentRunner
-from pada3dacb.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.experiments.prototype_pseudo import PrototypePseudoExperimentRunner
+from acda3d.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
 from tests.phase13_helpers import make_phase13_config, proposed_outputs_for_adaptation
 from tests.test_cdan_trainer import _BatchLoader, _source_batch
 from tests.test_proposed_method_trainer import make_proposed_epoch_trainer, proposed_target_batch

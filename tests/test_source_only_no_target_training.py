@@ -1,8 +1,8 @@
 import inspect
 from pathlib import Path
 
-from pada3dacb.experiments import SourceOnlyExperimentRunner, load_source_only_config
-from pada3dacb.training import SourceOnlyTrainer
+from acda3d.experiments import SourceOnlyExperimentRunner, load_source_only_config
+from acda3d.training import SourceOnlyTrainer
 from tests.phase9_helpers import make_source_only_environment
 
 

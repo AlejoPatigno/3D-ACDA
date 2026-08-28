@@ -10,8 +10,8 @@ import pytest
 import torch
 from torch import nn
 
-import pada3dacb.binary as binary
-from pada3dacb.binary import (
+import acda3d.binary as binary
+from acda3d.binary import (
     BINARY_MAPPING_CONTRACT,
     OASIS_POLICY_HASH,
     BinarySubjectRecord,
@@ -20,13 +20,13 @@ from pada3dacb.binary import (
     oasis_evidence_hash,
     validate_oasis_semantic_approval,
 )
-from pada3dacb.data.records import SubjectRecord, binary_record_from_subject_record
-from pada3dacb.data.splits import (
+from acda3d.data.records import SubjectRecord, binary_record_from_subject_record
+from acda3d.data.splits import (
     generate_binary_source_folds_for_records,
     generate_binary_target_partition_for_records,
     validate_binary_split_manifest,
 )
-from pada3dacb.exceptions import (
+from acda3d.exceptions import (
     CheckpointMigrationError,
     DatasetContractError,
     SplitValidationError,
@@ -67,7 +67,7 @@ def test_oasis_hash_loading_requires_explicit_or_documented_external_key(tmp_pat
     csv_path.write_text("ID,CDR\nsynthetic-visit-1,0\n", encoding="utf-8")
     notebook = tmp_path / "preprocess.ipynb"
     _notebook(notebook)
-    monkeypatch.delenv("PADA3DACB_OASIS_SUBJECT_HASH_KEY_FILE", raising=False)
+    monkeypatch.delenv("ACDA3D_OASIS_SUBJECT_HASH_KEY_FILE", raising=False)
     with pytest.raises(binary.BinaryLabelError, match="subject hash key"):
         load_verified_oasis_metadata(csv_path, notebook)
     evidence = load_verified_oasis_metadata(csv_path, notebook, subject_hash_key=TEST_SUBJECT_HASH_KEY)

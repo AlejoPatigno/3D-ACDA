@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from pada3dacb.ablations.resolver import resolve_ablation_config
-from pada3dacb.ablations.schemas import (
+from acda3d.ablations.resolver import resolve_ablation_config
+from acda3d.ablations.schemas import (
     AblationBaseConfig,
     ApprovalRecord,
     ApprovalStatus,
@@ -15,10 +15,10 @@ from pada3dacb.ablations.schemas import (
     ModelVariant,
     RunMatrix,
 )
-from pada3dacb.adaptation.prototype_pseudo import PrototypePseudoAdaptationLoss
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.models.pada3dacb import PADA3DACBOutput
-from pada3dacb.training.uda_trainer import ComposedCoreLoss
+from acda3d.adaptation.prototype_pseudo import PrototypePseudoAdaptationLoss
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.models.acda3d import ACDA3DOutput
+from acda3d.training.uda_trainer import ComposedCoreLoss
 
 _LOSSES = LossCoefficients(
     lambda_z=1.0,
@@ -43,9 +43,9 @@ _LOSSES = LossCoefficients(
 def _resolved(name: str):
     return resolve_ablation_config(
         AblationBaseConfig(
-            base_method="PADA-3DACB",
+            base_method="3D-ACDA",
             losses=_LOSSES,
-            model=ModelVariant(name="PADA-3DACB", aggregator="AttentionAggregator"),
+            model=ModelVariant(name="3D-ACDA", aggregator="AttentionAggregator"),
             approval=ApprovalRecord("phase17-test", ApprovalStatus.APPROVED),
             epochs_warm=1,
             epochs_full=1,
@@ -100,7 +100,7 @@ def test_warm_adaptation_is_inactive_and_full_has_component_diagnostics(candidat
 
     output = _synthetic_output()
     core = ComposedCoreLoss(
-        CorePADA3DACBLoss(num_rois=2, label_smoothing=0.1), contract
+        CoreACDA3DLoss(num_rois=2, label_smoothing=0.1), contract
     )
     source_y = torch.tensor([0, 1, 2])
     concept_targets = torch.zeros(3, 2)
@@ -117,11 +117,11 @@ def test_warm_adaptation_is_inactive_and_full_has_component_diagnostics(candidat
         assert full.component_diagnostics[f"{disabled}_active"] is False
 
 
-def _synthetic_output() -> PADA3DACBOutput:
+def _synthetic_output() -> ACDA3DOutput:
     latent = torch.tensor([[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]], requires_grad=True)
     concept_logits = latent.clone().requires_grad_()
     concepts = torch.tensor([[0.2, 0.4], [0.3, 0.5], [0.6, 0.1]], requires_grad=True)
-    return PADA3DACBOutput(
+    return ACDA3DOutput(
         F=torch.zeros(3, 1),
         T=torch.zeros(3, 2, 2),
         U=torch.zeros(3, 2, 2),
@@ -164,7 +164,7 @@ def test_core_objective_is_exact_base_minus_one_component(
     candidate: str, field: str, coefficient: float
 ) -> None:
     output = _synthetic_output()
-    base = CorePADA3DACBLoss(num_rois=2, label_smoothing=0.1)
+    base = CoreACDA3DLoss(num_rois=2, label_smoothing=0.1)
     labels = torch.tensor([0, 1, 2])
     concept_targets = torch.zeros(3, 2)
     g_bar = torch.zeros(3, 2)
@@ -191,7 +191,7 @@ def test_one_optimizer_step_receives_adaptation_gradient() -> None:
 
 
 def test_target_adaptation_accepts_exact_metadata_contract() -> None:
-    from pada3dacb.training.uda_trainer import UDATrainer
+    from acda3d.training.uda_trainer import UDATrainer
 
     UDATrainer._validate_target_batch(
         {
@@ -217,7 +217,7 @@ def test_target_adaptation_accepts_exact_metadata_contract() -> None:
     ],
 )
 def test_target_adaptation_rejects_forbidden_fields(forbidden_key: str) -> None:
-    from pada3dacb.training.uda_trainer import UDATrainer
+    from acda3d.training.uda_trainer import UDATrainer
 
     with pytest.raises(Exception, match="forbidden|unsupported"):
         UDATrainer._validate_target_batch(
@@ -234,7 +234,7 @@ def test_target_adaptation_rejects_forbidden_fields(forbidden_key: str) -> None:
 
 @pytest.mark.parametrize("missing_key", ["subject_id", "subject_hash", "cohort"])
 def test_strict_target_adaptation_requires_all_metadata(missing_key: str) -> None:
-    from pada3dacb.training.uda_trainer import UDATrainer
+    from acda3d.training.uda_trainer import UDATrainer
 
     batch = {
         "x": torch.zeros(2, 1),
@@ -249,7 +249,7 @@ def test_strict_target_adaptation_requires_all_metadata(missing_key: str) -> Non
 
 
 def test_strict_target_adaptation_rejects_any_extra_field() -> None:
-    from pada3dacb.training.uda_trainer import UDATrainer
+    from acda3d.training.uda_trainer import UDATrainer
 
     with pytest.raises(Exception, match="unsupported"):
         UDATrainer._validate_target_batch(
@@ -266,6 +266,6 @@ def test_strict_target_adaptation_rejects_any_extra_field() -> None:
 
 
 def test_non_ablation_target_adaptation_keeps_x_only_compatibility() -> None:
-    from pada3dacb.training.uda_trainer import UDATrainer
+    from acda3d.training.uda_trainer import UDATrainer
 
     UDATrainer._validate_target_batch({"x": torch.zeros(2, 1)}, strict=False)

@@ -2,7 +2,7 @@ data:
   oasis:
     # The MRI root remains external and is intentionally not committed.
     root: null
-    metadata_csv: ${PADA3DACB_OASIS_METADATA_CSV}
-    provenance_notebook: ${PADA3DACB_OASIS_PROVENANCE_NOTEBOOK}
+    metadata_csv: ${ACDA3D_OASIS_METADATA_CSV}
+    provenance_notebook: ${ACDA3D_OASIS_PROVENANCE_NOTEBOOK}
     metadata_policy: oasis_cdr_v1
-    subject_hash_key_file: ${PADA3DACB_OASIS_SUBJECT_HASH_KEY_FILE}
+    subject_hash_key_file: ${ACDA3D_OASIS_SUBJECT_HASH_KEY_FILE}

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pada3dacb.data.derivative_verification import (
+from acda3d.data.derivative_verification import (
     VerificationConfig,
     VerificationStatus,
     extract_image_metadata,
@@ -42,7 +42,7 @@ def test_plain_pt_tensor_has_insufficient_physical_metadata(tmp_path):
     cfg = VerificationConfig(expected_num_rois=1)
     meta, _ = extract_image_metadata(tensor_path, cfg)
     atlas_meta, _ = validate_atlas(atlas_path, cfg)
-    from pada3dacb.data.derivative_verification import compare_geometry
+    from acda3d.data.derivative_verification import compare_geometry
 
     comp = compare_geometry(meta, atlas_meta, cfg)
     assert meta.tensor_contract_status == VerificationStatus.PASSED

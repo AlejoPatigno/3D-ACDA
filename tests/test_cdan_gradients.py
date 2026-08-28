@@ -1,15 +1,15 @@
 import torch
 
-from pada3dacb.adaptation import (
+from acda3d.adaptation import (
     CDANAdaptationMethod,
     DomainDiscriminator,
     DomainDiscriminatorConfig,
 )
-from tests.phase8_helpers import TinyPADA3DACB
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_cdan_domain_loss_reaches_encoder_and_latent_classifier():
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     masks = torch.ones(2, 1, 1, 1)
     source, target = model(torch.ones(2, 1, 2, 2, 2), masks), model(torch.zeros(2, 1, 2, 2, 2), masks)
     method = CDANAdaptationMethod(DomainDiscriminator(DomainDiscriminatorConfig(12, (4,), "relu", 0.0)), 1.0)

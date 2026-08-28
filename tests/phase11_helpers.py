@@ -4,10 +4,10 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from pada3dacb.adaptation import MMDAdaptationMethod
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.training import FixedEpochTrainingConfig, UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.adaptation import MMDAdaptationMethod
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.training import FixedEpochTrainingConfig, UDATrainer
+from tests.phase8_helpers import TinyACDA3D
 from tests.phase10_helpers import make_coral_environment
 
 SYNTHETIC_BANDWIDTHS = [0.5, 1.0, 2.0]
@@ -24,7 +24,7 @@ def make_mmd_environment(
     payload["experiment"].update(
         {
             "name": "synthetic_mmd",
-            "display_name": "PADA-3DACB + MMD",
+            "display_name": "3D-ACDA + MMD",
             "method": "mmd",
         }
     )
@@ -86,7 +86,7 @@ def make_mmd_trainer(
 ) -> UDATrainer:
     selected = list(bandwidths or SYNTHETIC_BANDWIDTHS)
     torch.manual_seed(seed)
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     config = FixedEpochTrainingConfig(
         warmup_epochs=warmup_epochs,
         full_epochs=full_epochs,
@@ -113,7 +113,7 @@ def make_mmd_trainer(
     }
     return UDATrainer(
         model,
-        CorePADA3DACBLoss(2),
+        CoreACDA3DLoss(2),
         torch.ones(2, 1, 1, 1),
         run_dir,
         config=config,

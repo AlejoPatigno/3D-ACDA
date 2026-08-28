@@ -2,14 +2,14 @@ from types import SimpleNamespace
 
 import torch
 
-from pada3dacb.adaptation import (
+from acda3d.adaptation import (
     CDANAdaptationMethod,
     DomainDiscriminator,
     DomainDiscriminatorConfig,
 )
-from pada3dacb.training.trainer import BaseFixedEpochTrainer
-from pada3dacb.training.uda_trainer import _SUPPORTED_METHODS, UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.training.trainer import BaseFixedEpochTrainer
+from acda3d.training.uda_trainer import _SUPPORTED_METHODS, UDATrainer
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_uda_trainer_accepts_only_approved_cdan_extension():
@@ -64,7 +64,7 @@ class _BatchLoader(list):
 
 
 def _make_full_stage_trainer():
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     discriminator = DomainDiscriminator(DomainDiscriminatorConfig(12, (5,), "relu", 0.0))
     method = CDANAdaptationMethod(discriminator, grl_coefficient=1.0)
     optimizer = _CountingAdamW([
@@ -97,7 +97,7 @@ def test_cdan_trainer_builds_one_adamw_with_model_and_discriminator_groups(monke
         self.resolved_configuration = {}
 
     monkeypatch.setattr(BaseFixedEpochTrainer, "__init__", fake_base_init)
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     discriminator = DomainDiscriminator(DomainDiscriminatorConfig(12, (5,), "relu", 0.0))
 
     trainer = UDATrainer(

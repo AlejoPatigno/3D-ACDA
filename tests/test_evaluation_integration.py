@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from pada3dacb.evaluation.discovery import (
+from acda3d.evaluation.discovery import (
     ADAPTER_REGISTRY,
     BaselineCombinedAdapter,
     discover_candidates,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CheckpointPolicy,
     Direction,

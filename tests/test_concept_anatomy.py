@@ -5,11 +5,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.anatomy import (
+from acda3d.evaluation.concepts.anatomy import (
     compute_global_anatomy,
     compute_weighted_anatomy_score,
 )
-from pada3dacb.evaluation.schemas import ValueStatus
+from acda3d.evaluation.schemas import ValueStatus
 
 
 def test_global_anatomy_matches_direct_reference() -> None:
@@ -52,7 +52,7 @@ def test_weighted_anatomy_is_explicitly_unavailable_without_weights() -> None:
 
 
 def test_anatomy_correlation_prioritizes_insufficient_samples() -> None:
-    from pada3dacb.evaluation.concepts.anatomy import compute_per_roi_anatomy
+    from acda3d.evaluation.concepts.anatomy import compute_per_roi_anatomy
 
     results = compute_per_roi_anatomy(
         np.array([[0.0, 1.0]]),
@@ -66,7 +66,7 @@ def test_anatomy_correlation_prioritizes_insufficient_samples() -> None:
 
 
 def test_per_roi_anatomy_reports_constant_roi_as_unavailable() -> None:
-    from pada3dacb.evaluation.concepts.anatomy import compute_per_roi_anatomy
+    from acda3d.evaluation.concepts.anatomy import compute_per_roi_anatomy
 
     results = compute_per_roi_anatomy(
         np.array([[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]]),

@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation.cdan import conditional_outer_product, expected_conditional_dimension
-from pada3dacb.exceptions import LossContractError
+from acda3d.adaptation.cdan import conditional_outer_product, expected_conditional_dimension
+from acda3d.exceptions import LossContractError
 
 
 def test_conditional_outer_product_uses_row_major_feature_by_class_flattening_without_detach():

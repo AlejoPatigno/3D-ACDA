@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId
+from acda3d.evaluation.schemas import CheckpointPolicy, Direction, MethodId
 
 
 @dataclass(frozen=True)

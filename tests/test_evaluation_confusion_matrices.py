@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.evaluation.confusion_matrices import compute_confusion
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.confusion_matrices import compute_confusion
+from acda3d.evaluation.schemas import (
     CheckpointPolicy,
     Direction,
     MethodId,

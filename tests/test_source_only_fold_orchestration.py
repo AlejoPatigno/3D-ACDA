@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pada3dacb.experiments import (
+from acda3d.experiments import (
     SourceOnlyExperimentRunner,
     load_source_only_config,
     run_both_directions,

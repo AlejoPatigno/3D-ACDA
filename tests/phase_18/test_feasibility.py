@@ -4,8 +4,8 @@ import inspect
 
 import pytest
 
-from pada3dacb.publication.canonical_json import identity_sha256
-from pada3dacb.publication.feasibility import (
+from acda3d.publication.canonical_json import identity_sha256
+from acda3d.publication.feasibility import (
     EVIDENCE_TYPES,
     EvidenceType,
     ProductionShapeMetadata,
@@ -190,10 +190,10 @@ def test_non_boolean_backward_result_does_not_establish_production_fit() -> None
 
 
 def test_no_training_or_real_data_imports_are_used() -> None:
-    import pada3dacb.publication.feasibility as feasibility
+    import acda3d.publication.feasibility as feasibility
 
     source = inspect.getsource(feasibility)
-    assert "pada3dacb.training" not in source
+    assert "acda3d.training" not in source
     assert "train.py" not in source
     assert "ADNI" not in source
     assert "OASIS" not in source

@@ -1,6 +1,6 @@
 import torch
 
-from pada3dacb.adaptation import (
+from acda3d.adaptation import (
     gaussian_rbf_kernel_matrix,
     pairwise_squared_distances,
 )

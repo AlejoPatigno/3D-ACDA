@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.ablations import AblationResolutionError
-from pada3dacb.experiments.ablations import (
+from acda3d.ablations import AblationResolutionError
+from acda3d.experiments.ablations import (
     APPROVED_ABLATIONS,
     AblationCLIError,
     build_parser,
@@ -118,7 +118,7 @@ def test_real_mode_and_publication_evaluation_are_blocked_without_output(tmp_pat
     if result.returncode == 0:
         pytest.xfail(
             "CLI currently ignores publication_metrics=true; source ownership required: "
-            "src/pada3dacb/experiments/ablations.py preflight must reject publication requests."
+            "src/acda3d/experiments/ablations.py preflight must reject publication requests."
         )
     error = json.loads(result.stderr)
     assert error["reason"] == "real_run_not_authorized"

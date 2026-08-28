@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.models.baselines import (
+from acda3d.models.baselines import (
     build_baseline,
     get_baseline_spec,
     list_baselines,
@@ -59,7 +59,7 @@ def test_only_explicit_aliases_resolve(name: str, expected: str) -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["AAGN", "aag", "vit", "longformer", "AlzheimerSupervisedMRIModel", "pada-3dacb"],
+    ["AAGN", "aag", "vit", "longformer", "AlzheimerSupervisedMRIModel", "3d-acda"],
 )
 def test_unknown_blocked_fuzzy_and_proposed_names_fail(name: str) -> None:
     with pytest.raises(KeyError, match="Unknown or unapproved baseline"):
@@ -67,7 +67,7 @@ def test_unknown_blocked_fuzzy_and_proposed_names_fail(name: str) -> None:
 
 
 def test_build_is_lazy_validated_and_records_deterministic_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
-    module_name = "pada3dacb.models.baselines.faster_snn"
+    module_name = "acda3d.models.baselines.faster_snn"
     _install_fake_model(monkeypatch, module_name, "FasterSNNBaseline")
 
     first = build_baseline("faster_snn", {"base_ch": 8})

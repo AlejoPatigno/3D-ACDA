@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.statistics import adjust_holm, bootstrap_metric
+from acda3d.evaluation.concepts.statistics import adjust_holm, bootstrap_metric
 
 
 def test_diagnosis_stratification_keeps_fixed_class_mix() -> None:

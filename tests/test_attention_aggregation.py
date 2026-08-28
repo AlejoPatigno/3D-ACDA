@@ -1,6 +1,6 @@
 import torch
 
-from pada3dacb.models import AttentionAggregator, ClassificationHead
+from acda3d.models import AttentionAggregator, ClassificationHead
 
 
 def test_attention_contract_determinism_and_gradient_flow():

@@ -7,8 +7,8 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from pada3dacb.data.inventories import SelectedScan
-from pada3dacb.data.preprocessing import (
+from acda3d.data.inventories import SelectedScan
+from acda3d.data.preprocessing import (
     PreprocessingRunConfig,
     apply_mri_transforms,
     center_crop_or_pad_3d,

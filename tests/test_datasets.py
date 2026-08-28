@@ -1,7 +1,7 @@
 import torch
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.data.datasets import (
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.data.datasets import (
     LabeledSourceDataset,
     LabeledTargetDataset,
     SupervisedMRIDataset,

@@ -4,8 +4,8 @@ from pathlib import Path
 import torch
 import yaml
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.data.splits import Direction, SplitConfig, create_direction_splits
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.data.splits import Direction, SplitConfig, create_direction_splits
 from tests.phase6_helpers import make_artifact_index
 
 
@@ -34,7 +34,7 @@ def make_source_only_environment(tmp_path: Path) -> Path:
         yaml.safe_dump(
             {
                 "model": {
-                    "name": "PADA-3DACB",
+                    "name": "3D-ACDA",
                     "contextual_encoder": False,
                     "input_channels": 1,
                     "num_classes": 3,
@@ -87,7 +87,7 @@ def make_source_only_environment(tmp_path: Path) -> Path:
             {
                 "experiment": {
                     "name": "synthetic_source_only",
-                    "display_name": "PADA-3DACB Source-Only",
+                    "display_name": "3D-ACDA Source-Only",
                     "method": "source_only",
                     "source_domain": "ADNI",
                     "target_domain": "OASIS",
@@ -102,7 +102,7 @@ def make_source_only_environment(tmp_path: Path) -> Path:
                     "roi_masks": str(atlas_root / "roi_masks.pt"),
                     "output_root": str(tmp_path / "outputs"),
                 },
-                "model": {"config": str(model_path), "name": "PADA-3DACB", "contextual_encoder": False, "num_classes": 3, "num_rois": 2},
+                "model": {"config": str(model_path), "name": "3D-ACDA", "contextual_encoder": False, "num_classes": 3, "num_rois": 2},
                 "training": {"config": str(training_path), "early_stopping": False, "resume": True},
                 "data_loader": {"batch_size": 12, "num_workers": 0, "pin_memory": False, "drop_last_train": True, "drop_last_eval": False},
                 "evaluation": {"source_validation": True, "target_monitoring": True, "target_monitoring_label": "MONITORING ONLY — NOT A TRAINING LOSS", "export_checkpoints": ["best_source_f1", "last"]},

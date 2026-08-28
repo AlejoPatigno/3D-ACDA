@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.publication.binary_runtime import (
+from acda3d.exceptions import ConfigurationError
+from acda3d.publication.binary_runtime import (
     BINARY_PUBLICATION_METHODS,
     BinaryPublicationRuntime,
     load_binary_publication_config,
@@ -35,7 +35,7 @@ def test_historical_three_class_config_is_rejected_by_binary_entry_point(tmp_pat
 experiment:
   method: source_only
 model:
-  name: PADA-3DACB
+  name: 3D-ACDA
   num_classes: 3
 """,
         encoding="utf-8",

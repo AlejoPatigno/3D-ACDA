@@ -1,4 +1,4 @@
-﻿\# AGENTS.md
+\# AGENTS.md
 
 
 
@@ -6,7 +6,7 @@
 
 
 
-This repository implements the research code for \*\*PADA-3DACB\*\*, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimerâ€™s disease diagnosis from 3D MRI.
+This repository implements the research code for \*\*3D-ACDA\*\*, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimerâ€™s disease diagnosis from 3D MRI.
 
 
 
@@ -28,7 +28,7 @@ The codebase is derived from four canonical notebooks:
 
 
 
-These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/pada3dacb/`.
+These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/acda3d/`.
 
 
 
@@ -340,7 +340,7 @@ The only proposed production architecture is:
 
 ```text
 
-PADA-3DACB
+3D-ACDA
 
 ```
 
@@ -354,9 +354,9 @@ The following are forbidden in production:
 
 
 
-\- `PADA-3DACB-Full`
+\- `3D-ACDA-Full`
 
-\- `PADA-3DACB-Lite` as a public model name
+\- `3D-ACDA-Lite` as a public model name
 
 \- `ContextualROIEncoder`
 
@@ -448,11 +448,11 @@ The following methods are already approved and regression-protected:
 
 
 
-\- `PADA-3DACB Source-Only`
+\- `3D-ACDA Source-Only`
 
-\- `PADA-3DACB + CORAL`
+\- `3D-ACDA + CORAL`
 
-\- `PADA-3DACB + MMD`
+\- `3D-ACDA + MMD`
 
 
 
@@ -614,7 +614,7 @@ Responsibilities:
 
 
 
-\- latest PADA-3DACB components;
+\- latest 3D-ACDA components;
 
 \- core losses;
 
@@ -670,7 +670,7 @@ Expected main layout:
 
 ```text
 
-src/pada3dacb/
+src/acda3d/
 
 â”œâ”€â”€ adaptation/
 
@@ -784,7 +784,7 @@ for generated outputs, subject to the existing project conventions.
 
 \- Avoid unnecessary tensor clones and `repeat()`.
 
-\- Use one shared PADA-3DACB model for source and target adaptation passes.
+\- Use one shared 3D-ACDA model for source and target adaptation passes.
 
 \- Never detach features or probabilities unless the approved specification explicitly requires it.
 
@@ -998,7 +998,7 @@ At the end of every phase run:
 
 python -m pip install -e .
 
-python -c "import pada3dacb; print(pada3dacb.\_\_version\_\_)"
+python -c "import acda3d; print(acda3d.\_\_version\_\_)"
 
 python -m pytest -q
 

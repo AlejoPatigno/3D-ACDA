@@ -1,10 +1,10 @@
 # Synthetic-only candidate overlay; inherit canonical values from the experiment config.
-experiment: {method: ablation, base_method: PADA-3DACB, source_domain: ADNI, target_domain: OASIS, directions: [ADNI_to_OASIS, OASIS_to_ADNI], folds: [0, 1, 2, 3, 4], seeds: [42], synthetic_only: true, real_data_authorized: false, publication_metrics: false}
+experiment: {method: ablation, base_method: 3D-ACDA, source_domain: ADNI, target_domain: OASIS, directions: [ADNI_to_OASIS, OASIS_to_ADNI], folds: [0, 1, 2, 3, 4], seeds: [42], synthetic_only: true, real_data_authorized: false, publication_metrics: false}
 ablation_id: mean_pool
 approval: {approval_id: maintainer-phase17-synthetic, status: approved, scope: synthetic_only, approved_by: maintainer}
 epochs: {warm: 5, full: 50}
 losses: {lambda_z: 1.0, lambda_c: 1.0, lambda_cons: 0.1, lambda_cbm: 0.5, lambda_anat: 0.2, lambda_proto: 1.0, lambda_pl: 0.1, tau_p: 0.95, proto_margin: 1.0, lambda_sep: 0.1, label_smoothing: 0.1, warm_lambda_z: 0.1, warm_lambda_c: 1.0, warm_lambda_cbm: 1.0, warm_lambda_anat: 1.0, warm_lambda_cons: 0.0}
-model: {name: PADA-3DACB, contextual_encoder: false, input_channels: 1, num_classes: 3, num_rois: 3, encoder: {base_channels: 2, output_channels: 8}, tokenizer: {feature_dim: 8, token_dim: 6}, token_processing: {dropout: 0.0}, concept_bottleneck: {hidden_dim: 4, dropout: 0.0}}
+model: {name: 3D-ACDA, contextual_encoder: false, input_channels: 1, num_classes: 3, num_rois: 3, encoder: {base_channels: 2, output_channels: 8}, tokenizer: {feature_dim: 8, token_dim: 6}, token_processing: {dropout: 0.0}, concept_bottleneck: {hidden_dim: 4, dropout: 0.0}}
 matrix: {directions: [ADNI_to_OASIS, OASIS_to_ADNI], folds: [0, 1, 2, 3, 4], seeds: [42]}
 assignments: {source: [synthetic-source-assignment], target_adaptation: [synthetic-target-adaptation-assignment], target_evaluation: [synthetic-target-evaluation-assignment]}
 precomputed_artifacts: {concepts: synthetic-concept-artifact-v1, jacobians: synthetic-jacobian-artifact-v1}

@@ -1,6 +1,6 @@
 import numpy as np
 
-from pada3dacb.data.inventories import (
+from acda3d.data.inventories import (
     choose_oasis_scan,
     discover_and_select,
     extract_adni_subject_id,

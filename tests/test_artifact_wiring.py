@@ -3,8 +3,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.exceptions import DatasetContractError
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.exceptions import DatasetContractError
 from tests.phase6_helpers import make_artifact_index
 
 

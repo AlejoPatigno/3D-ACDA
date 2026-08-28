@@ -3,8 +3,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-PUBLICATION_RUNTIME = Path("src/pada3dacb/publication/binary_runtime.py")
-FORBIDDEN_IMPORTS = {"torch", "nibabel", "pada3dacb.data", "pada3dacb.training"}
+PUBLICATION_RUNTIME = Path("src/acda3d/publication/binary_runtime.py")
+FORBIDDEN_IMPORTS = {"torch", "nibabel", "acda3d.data", "acda3d.training"}
 
 
 def test_publication_binary_runtime_is_a_thin_dependency_free_facade() -> None:
@@ -21,13 +21,13 @@ def test_publication_binary_runtime_is_a_thin_dependency_free_facade() -> None:
         for alias in node.names
     )
     assert not any(
-        module in FORBIDDEN_IMPORTS or module.startswith("pada3dacb.training")
+        module in FORBIDDEN_IMPORTS or module.startswith("acda3d.training")
         for module in imported
     )
 
 
 def test_publication_binary_runtime_preserves_public_symbols() -> None:
-    from pada3dacb.publication.binary_runtime import (
+    from acda3d.publication.binary_runtime import (
         BINARY_PUBLICATION_METHODS,
         BinaryPublicationRuntime,
         load_binary_publication_config,

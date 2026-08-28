@@ -5,13 +5,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.fidelity import (
+from acda3d.evaluation.concepts.fidelity import (
     compute_all_fidelity,
     compute_global_fidelity,
     compute_per_roi_fidelity,
     compute_per_subject_fidelity,
 )
-from pada3dacb.evaluation.concepts.schemas import ConceptFidelityGlobal, ValueStatus
+from acda3d.evaluation.concepts.schemas import ConceptFidelityGlobal, ValueStatus
 
 
 class TestConceptFidelity:
@@ -87,26 +87,26 @@ class TestAnatomyConsistency:
         self.g_bar = np.random.uniform(0, 1, (self.N, self.K)).astype(np.float32)
 
     def test_compute_global_anatomy(self):
-        from pada3dacb.evaluation.concepts.anatomy import compute_global_anatomy
+        from acda3d.evaluation.concepts.anatomy import compute_global_anatomy
         result = compute_global_anatomy(self.c_hat, self.g_bar)
         assert 0 <= result.mae <= 1
         assert result.rmse >= result.mae
         assert -1 <= result.bias <= 1
 
     def test_compute_per_roi_anatomy(self):
-        from pada3dacb.evaluation.concepts.anatomy import compute_per_roi_anatomy
+        from acda3d.evaluation.concepts.anatomy import compute_per_roi_anatomy
         results = compute_per_roi_anatomy(self.c_hat, self.g_bar)
         assert len(results) == self.K
 
     def test_compute_weighted_anatomy_score(self):
-        from pada3dacb.evaluation.concepts.anatomy import compute_weighted_anatomy_score
+        from acda3d.evaluation.concepts.anatomy import compute_weighted_anatomy_score
         weights = np.ones(self.K) / self.K
         result = compute_weighted_anatomy_score(self.c_hat, self.g_bar, weights)
         assert result.status == "available"
         assert result.weighted_mae >= 0
 
     def test_compute_weighted_anatomy_score_no_weights(self):
-        from pada3dacb.evaluation.concepts.anatomy import compute_weighted_anatomy_score
+        from acda3d.evaluation.concepts.anatomy import compute_weighted_anatomy_score
         result = compute_weighted_anatomy_score(self.c_hat, self.g_bar, None)
         assert result.status == "unavailable"
         assert result.reason == "weights_unavailable"
@@ -121,30 +121,30 @@ class TestHeadAgreement:
         self.true_labels = np.random.randint(0, 3, self.N)
 
     def test_compute_head_predictive_metrics(self):
-        from pada3dacb.evaluation.concepts.agreement import compute_head_predictive_metrics
+        from acda3d.evaluation.concepts.agreement import compute_head_predictive_metrics
         metrics = compute_head_predictive_metrics(self.latent_probs, self.concept_probs, self.true_labels)
         assert "latent_accuracy" in metrics
         assert "concept_accuracy" in metrics
         assert 0 <= metrics["latent_accuracy"] <= 1
 
     def test_compute_top1_agreement(self):
-        from pada3dacb.evaluation.concepts.agreement import compute_top1_agreement
+        from acda3d.evaluation.concepts.agreement import compute_top1_agreement
         agreement, disagreement = compute_top1_agreement(self.latent_probs, self.concept_probs)
         assert 0 <= agreement <= 1
         assert disagreement == 1 - agreement
 
     def test_compute_js_divergence(self):
-        from pada3dacb.evaluation.concepts.agreement import compute_js_divergence
+        from acda3d.evaluation.concepts.agreement import compute_js_divergence
         js = compute_js_divergence(self.latent_probs, self.concept_probs)
         assert js >= 0
 
     def test_compute_js_divergence_identical(self):
-        from pada3dacb.evaluation.concepts.agreement import compute_js_divergence
+        from acda3d.evaluation.concepts.agreement import compute_js_divergence
         js = compute_js_divergence(self.latent_probs, self.latent_probs)
         assert js == 0.0
 
     def test_compute_per_class_disagreement(self):
-        from pada3dacb.evaluation.concepts.agreement import compute_per_class_disagreement
+        from acda3d.evaluation.concepts.agreement import compute_per_class_disagreement
         latent_pred = np.argmax(self.latent_probs, axis=1)
         concept_pred = np.argmax(self.concept_probs, axis=1)
         results = compute_per_class_disagreement(latent_pred, concept_pred, self.true_labels)
@@ -162,13 +162,13 @@ class TestROIStability:
         self.alpha = np.random.dirichlet([1]*self.K, self.M).astype(np.float32)
 
     def test_compute_pairwise_spearman(self):
-        from pada3dacb.evaluation.concepts.stability import compute_pairwise_spearman
+        from acda3d.evaluation.concepts.stability import compute_pairwise_spearman
         rho = compute_pairwise_spearman(self.fidelity)
         assert rho.shape == (self.M, self.M)
         assert np.allclose(np.diag(rho), 1.0)
 
     def test_compute_mean_pairwise_rho(self):
-        from pada3dacb.evaluation.concepts.stability import (
+        from acda3d.evaluation.concepts.stability import (
             compute_mean_pairwise_rho,
             compute_pairwise_spearman,
         )
@@ -178,26 +178,26 @@ class TestROIStability:
         assert -1 <= mean_rho <= 1
 
     def test_compute_instance_std(self):
-        from pada3dacb.evaluation.concepts.stability import compute_instance_std
+        from acda3d.evaluation.concepts.stability import compute_instance_std
         std = compute_instance_std(self.fidelity)
         assert std.shape == (self.K,)
         assert np.all(std >= 0)
 
     def test_compute_top_k_indices(self):
-        from pada3dacb.evaluation.concepts.stability import compute_top_k_indices
+        from acda3d.evaluation.concepts.stability import compute_top_k_indices
         top_k = compute_top_k_indices(self.fidelity, k=2, ascending=True)
         assert len(top_k) == self.M
         assert all(len(indices) == 2 for indices in top_k)
 
     def test_compute_jaccard_overlap(self):
-        from pada3dacb.evaluation.concepts.stability import compute_jaccard_overlap
+        from acda3d.evaluation.concepts.stability import compute_jaccard_overlap
         a = np.array([0, 1, 2])
         b = np.array([1, 2, 3])
         jaccard = compute_jaccard_overlap(a, b)
         assert jaccard == 0.5  # intersection {1,2} / union {0,1,2,3} = 2/4
 
     def test_compute_all_stability(self):
-        from pada3dacb.evaluation.concepts.stability import compute_all_stability
+        from acda3d.evaluation.concepts.stability import compute_all_stability
         result = compute_all_stability(
             self.fidelity, self.anatomy, self.concept, self.alpha,
             k_values=[2, 3]

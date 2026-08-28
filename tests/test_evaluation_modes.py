@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from pada3dacb.evaluation.report import (
+from acda3d.evaluation.report import (
     ReportState,
     build_completion_manifest,
     build_output_plan,
@@ -16,7 +16,7 @@ from pada3dacb.evaluation.report import (
     orchestrate_report,
     verify_reuse,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CheckpointPolicy,
     Direction,

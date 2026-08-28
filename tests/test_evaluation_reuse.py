@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.evaluation.report import (
+from acda3d.evaluation.report import (
     ReportState,
     build_artifact_index,
     build_completion_manifest,
@@ -12,7 +12,7 @@ from pada3dacb.evaluation.report import (
     commit_output,
     verify_reuse,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CheckpointPolicy,
     Direction,

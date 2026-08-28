@@ -1,8 +1,8 @@
 import torch
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.data.datasets import LabeledSourceDataset, TargetAdaptationDataset
-from pada3dacb.data.loaders import (
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.data.datasets import LabeledSourceDataset, TargetAdaptationDataset
+from acda3d.data.loaders import (
     DataLoaderConfig,
     build_source_train_loader,
     build_source_validation_loader,

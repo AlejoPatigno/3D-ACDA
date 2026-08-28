@@ -50,7 +50,7 @@ def create_bundle(root: Path) -> None:
     (root / "subject_artifacts.jsonl").write_text(json.dumps({
         "subject_hash": subject_hash,
         "hmac_algorithm": "HMAC-SHA256",
-        "hmac_key_id": "pada3dacb-subject-id",
+        "hmac_key_id": "acda3d-subject-id",
         "hmac_key_version": "v1",
         "model_ready_relative_path": "artifacts/person.pt",
         "model_ready_sha256": artifact_hash,
@@ -74,7 +74,7 @@ def create_bundle(root: Path) -> None:
     })
     write_json(root, "privacy_report.json", {
         "hmac_algorithm": "HMAC-SHA256",
-        "hmac_key_id": "pada3dacb-subject-id",
+        "hmac_key_id": "acda3d-subject-id",
         "hmac_key_version": "v1",
         "raw_ids_emitted": False,
         "secrets_emitted": False,

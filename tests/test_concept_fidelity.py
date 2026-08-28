@@ -5,12 +5,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.fidelity import (
+from acda3d.evaluation.concepts.fidelity import (
     compute_global_fidelity,
     compute_per_roi_fidelity,
     compute_per_subject_fidelity,
 )
-from pada3dacb.evaluation.schemas import ValueStatus
+from acda3d.evaluation.schemas import ValueStatus
 
 
 def test_global_and_per_subject_fidelity_match_direct_reference() -> None:

@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from pada3dacb.publication.canonical_json import identity_sha256
-from pada3dacb.publication.freeze import (
+from acda3d.publication.canonical_json import identity_sha256
+from acda3d.publication.freeze import (
     FreezeValidationError,
     build_freeze_payload,
     freeze_payload_hash,
@@ -13,7 +13,7 @@ from pada3dacb.publication.freeze import (
     verify_freeze_hash,
     write_freeze,
 )
-from pada3dacb.publication.schemas import FreezePayload
+from acda3d.publication.schemas import FreezePayload
 
 
 def _payload() -> dict[str, object]:

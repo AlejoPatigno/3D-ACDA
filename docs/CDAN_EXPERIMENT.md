@@ -1,14 +1,14 @@
 # Phase 12 CDAN Experiment Contract
 
-Phase 12 declares exactly one new method: `PADA-3DACB + CDAN`. It reuses the existing PADA-3DACB subject-level model and the established UDA experiment flow for ADNI/OASIS only. The implementation is intended for synthetic/focused wiring validation until the unresolved real-run hyperparameters are supplied explicitly.
+Phase 12 declares exactly one new method: `3D-ACDA + CDAN`. It reuses the existing 3D-ACDA subject-level model and the established UDA experiment flow for ADNI/OASIS only. The implementation is intended for synthetic/focused wiring validation until the unresolved real-run hyperparameters are supplied explicitly.
 
 ## Declared variant
 
 | Area | Contract |
 |---|---|
 | Method id | `cdan` |
-| Display name | `PADA-3DACB + CDAN` |
-| Base model | Existing PADA-3DACB Lite/no-contextual-encoder architecture |
+| Display name | `3D-ACDA + CDAN` |
+| Base model | Existing 3D-ACDA Lite/no-contextual-encoder architecture |
 | Cohorts | ADNI and OASIS only |
 | Directions | `ADNI -> OASIS` and `OASIS -> ADNI` only |
 | Conditioning | Exact outer product of subject embedding and current latent class probabilities |
@@ -63,7 +63,7 @@ Warm-up remains source-only. It must not consume target-adaptation batches, cons
 
 ### Full stage
 
-Each paired source/target step uses one shared PADA-3DACB model, one shared discriminator, one AdamW optimizer with explicit model and discriminator parameter groups, one combined loss, one backward pass, and one optimizer step:
+Each paired source/target step uses one shared 3D-ACDA model, one shared discriminator, one AdamW optimizer with explicit model and discriminator parameter groups, one combined loss, one backward pass, and one optimizer step:
 
 ```text
 total_loss = source_objective + cdan_weight * domain_bce
@@ -77,7 +77,7 @@ Prediction exports may include source-validation and target-monitoring records w
 
 ```text
 method = cdan
-model = PADA-3DACB + CDAN
+model = 3D-ACDA + CDAN
 ```
 
 Target-adaptation predictions and internal domain labels are not exported.

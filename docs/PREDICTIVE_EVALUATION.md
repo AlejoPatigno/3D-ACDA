@@ -1,4 +1,4 @@
-﻿# Phase 15 Predictive Evaluation
+# Phase 15 Predictive Evaluation
 
 ## Safety first
 
@@ -34,7 +34,7 @@ Approved methods are:
 - `coral`
 - `mmd`
 - `cdan`
-- `prototype_pseudo` (the PADA-3DACB method)
+- `prototype_pseudo` (the 3D-ACDA method)
 - `aagn`
 - `faster_snn`
 
@@ -44,7 +44,7 @@ The primary policy is `best_source_f1`, selected only from source-validation mac
 
 The evaluator accepts the two configured schema families:
 
-- shared exports for Source-Only, CORAL, MMD, CDAN, and PADA-3DACB;
+- shared exports for Source-Only, CORAL, MMD, CDAN, and 3D-ACDA;
 - combined baseline exports for AAGN and Faster-SNN.
 
 Every included candidate must prove method, direction, cohorts, seed, fold, logical checkpoint, checkpoint epoch, experiment/model/training hashes, split and partition hashes, atlas/ROI ordering when applicable, and fixed class order `(CN,MCI,AD)=(0,1,2)`. Missing or conflicting provenance excludes the affected candidate. Source-Only must prove target-evaluation membership.
@@ -57,7 +57,7 @@ Target ensembles average folds within each configured seed and then average all 
 
 The statistical unit is the subject. Computation uses NumPy `float64` and fixed labels `[0,1,2]`. The evaluator emits 12 aggregate metrics and eight named per-class rows (seven distinct quantities because recall and sensitivity are aliases).
 
-Uncertainty uses deterministic class-stratified subject bootstrap with `PCG64`; default `B=10000`, explicit seed, no redraw of invalid replicates, and a 95% successful-replicate threshold. Pairwise comparisons use PADA-3DACB as the predeclared reference, exact two-sided McNemar, paired stratified bootstrap differences oriented `prototype_pseudo-comparator`, and separate six-slot Holm families. Undefined values are explicit nulls with stable reasons, never zero-filled.
+Uncertainty uses deterministic class-stratified subject bootstrap with `PCG64`; default `B=10000`, explicit seed, no redraw of invalid replicates, and a 95% successful-replicate threshold. Pairwise comparisons use 3D-ACDA as the predeclared reference, exact two-sided McNemar, paired stratified bootstrap differences oriented `prototype_pseudo-comparator`, and separate six-slot Holm families. Undefined values are explicit nulls with stable reasons, never zero-filled.
 
 See `specs/phase_15_predictive_evaluation/statistical_protocol.md` for normative equations.
 

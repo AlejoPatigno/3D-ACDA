@@ -2,7 +2,7 @@ from pathlib import Path
 
 import torch
 
-from pada3dacb.training.monitoring import TARGET_MONITORING_LABEL, evaluate_labeled_loader
+from acda3d.training.monitoring import TARGET_MONITORING_LABEL, evaluate_labeled_loader
 from tests.phase8_helpers import make_loader, make_trainer
 
 

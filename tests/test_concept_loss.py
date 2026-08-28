@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch.nn import functional as functional
 
-from pada3dacb.exceptions import LossContractError
-from pada3dacb.losses import ConceptSupervisionLoss
+from acda3d.exceptions import LossContractError
+from acda3d.losses import ConceptSupervisionLoss
 
 
 def test_concept_loss_is_mean_mse_for_constant_targets():

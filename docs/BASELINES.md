@@ -1,6 +1,6 @@
 # Architectural baselines
 
-Phase 14 migrates only the two baseline architectures that the canonical notebook actually executes: **AAGN** and **FasterSNN**. All other discovered architectures remain blocked because they are active-but-not-executed, obsolete, helper-only, post-hoc, or a prohibited copy of PADA-3DACB.
+Phase 14 migrates only the two baseline architectures that the canonical notebook actually executes: **AAGN** and **FasterSNN**. All other discovered architectures remain blocked because they are active-but-not-executed, obsolete, helper-only, post-hoc, or a prohibited copy of 3D-ACDA.
 
 ## Supported registry
 
@@ -9,10 +9,10 @@ Phase 14 migrates only the two baseline architectures that the canonical noteboo
 | `aagn` | AAGN / ROI-aware gating | `ROIAwareGatingBaseline` | MRI `[B,1,D,H,W]` plus static ROI masks `[K,D,H,W]` | 3,866,596 with three default ROI masks |
 | `faster_snn` | FasterSNN | `FasterSNNBaseline` | MRI `[B,1,D,H,W]` | 291,603 |
 
-Registry order is deterministic. Aliases are explicit. Unknown, fuzzy, blocked, copied-model, and PADA names fail without fallback.
+Registry order is deterministic. Aliases are explicit. Unknown, fuzzy, blocked, copied-model, and 3D-ACDA method names fail without fallback.
 
 ```python
-from pada3dacb.models.baselines import build_baseline, get_baseline_spec, list_baselines
+from acda3d.models.baselines import build_baseline, get_baseline_spec, list_baselines
 
 assert list_baselines() == ("aagn", "faster_snn")
 model = build_baseline("faster_snn", {})
@@ -109,7 +109,7 @@ Manifests include baseline identity/configuration/provenance, assignment hashes,
 
 The following notebook classes are `active_not_executed` and have no Phase 14 production module: `CNNDesignForADBaseline`, `DenseNetCNNBaseline`, `ViTBaseline`, `LongFormerBaseline`, `JointTransformerBaseline`, `BiFPN3DViTBaseline`, and `DAViT3DBaseline`.
 
-`AlzheimerSupervisedMRIModel` is a prohibited proposed-model copy. Its scientific role is already represented by PADA-3DACB Source-Only.
+`AlzheimerSupervisedMRIModel` is a prohibited proposed-model copy. Its scientific role is already represented by 3D-ACDA Source-Only.
 
 ## Computational limitations
 

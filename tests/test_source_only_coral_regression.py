@@ -2,8 +2,8 @@ from pathlib import Path
 
 import torch
 
-from pada3dacb.adaptation import coral_loss
-from pada3dacb.experiments import (
+from acda3d.adaptation import coral_loss
+from acda3d.experiments import (
     CORALExperimentRunner,
     SourceOnlyExperimentRunner,
     load_coral_config,
@@ -25,8 +25,8 @@ def test_source_only_and_coral_identities_and_boundaries_remain_stable(tmp_path:
     assert coral_runner.uses_target_adaptation is True
     assert source.method == "source_only"
     assert coral_runner.method_name == "coral"
-    assert source.display_name == "PADA-3DACB Source-Only"
-    assert coral.display_name == "PADA-3DACB + CORAL"
+    assert source.display_name == "3D-ACDA Source-Only"
+    assert coral.display_name == "3D-ACDA + CORAL"
 
     features = torch.tensor([[1.0, 2.0], [2.0, 4.0], [4.0, 1.0]])
     torch.testing.assert_close(coral_loss(features, features + 10), torch.tensor(0.0))

@@ -1,7 +1,7 @@
 
 import yaml
 
-from pada3dacb.experiments import CDANExperimentRunner, load_cdan_config, run_cdan_both_directions
+from acda3d.experiments import CDANExperimentRunner, load_cdan_config, run_cdan_both_directions
 from tests.phase12_helpers import make_cdan_environment
 
 
@@ -47,7 +47,7 @@ def test_cdan_both_directions_orchestrates_approved_direction_pair(monkeypatch, 
             calls.append((self.config.source_domain, self.config.target_domain, dry_run, validate_only))
             return []
 
-    monkeypatch.setattr("pada3dacb.experiments.cdan.CDANExperimentRunner", FakeRunner)
+    monkeypatch.setattr("acda3d.experiments.cdan.CDANExperimentRunner", FakeRunner)
 
     results = run_cdan_both_directions(config, dry_run=True, validate_only=True)
 

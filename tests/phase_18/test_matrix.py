@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from pada3dacb.publication.experiment_matrix import (
+from acda3d.publication.experiment_matrix import (
     DIRECTIONS,
     METHODS,
     MatrixValidationError,
@@ -14,7 +14,7 @@ from pada3dacb.publication.experiment_matrix import (
     matrix_content_hash,
     validate_matrix,
 )
-from pada3dacb.publication.validation import validate_matrix_input
+from acda3d.publication.validation import validate_matrix_input
 
 
 def test_matrix_has_deterministic_complete_cardinality_and_counts() -> None:
@@ -84,7 +84,7 @@ def test_resolved_publication_seed_policy_materializes_three_seeds() -> None:
 
 
 def test_ablation_classification_is_separate_from_core_matrix() -> None:
-    from pada3dacb.publication.experiment_matrix import build_ablation_plan
+    from acda3d.publication.experiment_matrix import build_ablation_plan
 
     plan = build_ablation_plan(
         seeds=[42, 43, 44],

@@ -1,14 +1,12 @@
 import torch
-from torch.nn import functional as F
 
-from pada3dacb.adaptation.prototype import (
+from acda3d.adaptation.prototype import (
     PrototypeLoss,
     build_source_prototypes,
     build_target_prototypes,
     prototype_alignment_loss,
     prototype_separation_loss,
 )
-
 
 # ---------------------------------------------------------------------------
 # Existing tests updated for the new normalized math
@@ -195,7 +193,7 @@ def test_separation_zero_margin_returns_zero_stable():
 
 def test_concept_loss_independent_of_roi_count():
     """§7.7: ConceptSupervisionLoss is K-independent via MSE mean."""
-    from pada3dacb.losses import ConceptSupervisionLoss
+    from acda3d.losses import ConceptSupervisionLoss
 
     loss_fn = ConceptSupervisionLoss()
     for K in [2, 5, 10, 50]:
@@ -208,7 +206,7 @@ def test_concept_loss_independent_of_roi_count():
 
 def test_anatomical_loss_weighted_mse_no_extra_division_by_K():
     """§7.8: L_anat = sum(w_k * r^2) / (B * sum(w))."""
-    from pada3dacb.losses import AnatomicalConsistencyLoss
+    from acda3d.losses import AnatomicalConsistencyLoss
 
     for K in [2, 5, 10]:
         weights = torch.ones(K) / K
@@ -224,7 +222,7 @@ def test_anatomical_loss_weighted_mse_no_extra_division_by_K():
 
 def test_anatomical_uniform_weights_equals_batch_mean_of_roi_means():
     """§7.9: with uniform w=1/K, L_anat = (1/B) * mean over batch of mean over ROIs of squared errors."""
-    from pada3dacb.losses import AnatomicalConsistencyLoss
+    from acda3d.losses import AnatomicalConsistencyLoss
 
     K = 5
     weights = torch.ones(K) / K

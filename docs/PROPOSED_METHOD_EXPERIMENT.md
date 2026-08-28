@@ -1,19 +1,19 @@
 # Phase 13 Proposed Method Experiment
 
-Phase 13 implements the canonical PADA-3DACB proposed method: current-batch prototype alignment plus confidence-gated pseudo-label adaptation. This document gives reviewers the quickest path to verify method identity, equations, runtime contracts, and remaining real-run blockers without relying on unverified performance claims.
+Phase 13 implements the canonical 3D-ACDA proposed method: current-batch prototype alignment plus confidence-gated pseudo-label adaptation. This document gives reviewers the quickest path to verify method identity, equations, runtime contracts, and remaining real-run blockers without relying on unverified performance claims.
 
 ## Review path
 
 1. Confirm the scientific source in `specs/phase_13_prototype_pseudo/notebook_extraction.md`.
-2. Verify the implementation contracts in `src/pada3dacb/adaptation/prototype.py`, `pseudo_label.py`, and `prototype_pseudo.py`.
-3. Verify trainer and CLI wiring in `src/pada3dacb/training/uda_trainer.py`, `src/pada3dacb/experiments/prototype_pseudo.py`, `configs/experiments/prototype_pseudo.yaml`, and `scripts/train.py`.
+2. Verify the implementation contracts in `src/acda3d/adaptation/prototype.py`, `pseudo_label.py`, and `prototype_pseudo.py`.
+3. Verify trainer and CLI wiring in `src/acda3d/training/uda_trainer.py`, `src/acda3d/experiments/prototype_pseudo.py`, `configs/experiments/prototype_pseudo.yaml`, and `scripts/train.py`.
 4. Read the evidence and limitations before interpreting any experiment output.
 
 ## Method identity
 
 | Field | Phase 13 value |
 |---|---|
-| Public model/method display | `PADA-3DACB` |
+| Public model/method display | `3D-ACDA` |
 | CLI/config method id | `prototype_pseudo` |
 | Canonical source | `notebooks/archive/training_original.ipynb`, primary domain-adaptation path |
 | Probability source for pseudo labels | Target concept-head logits (`concept_logits`) |

@@ -1,4 +1,4 @@
-from pada3dacb.adaptation import DomainDiscriminatorConfig
+from acda3d.adaptation import DomainDiscriminatorConfig
 
 
 def test_cdan_discriminator_provenance_is_stable_and_normalized():

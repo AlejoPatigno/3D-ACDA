@@ -9,9 +9,9 @@ import torch
 import yaml
 from torch import nn
 
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.experiments import baselines as baseline_module
-from pada3dacb.experiments.baselines import (
+from acda3d.exceptions import ConfigurationError
+from acda3d.experiments import baselines as baseline_module
+from acda3d.experiments.baselines import (
     load_baseline_config,
     plan_baseline_fold,
     summarize_baseline_cv_results,
@@ -168,7 +168,7 @@ def test_interruption_and_exact_resume_complete_same_fold(
 
 
 def test_all_folds_baselines_and_both_directions_dry_run(tmp_path: Path) -> None:
-    from pada3dacb.experiments.baselines import run_baseline_both_directions
+    from acda3d.experiments.baselines import run_baseline_both_directions
 
     config = load_baseline_config(make_baseline_environment(tmp_path))
     results = run_baseline_both_directions(config, dry_run=True)

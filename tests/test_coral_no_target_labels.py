@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.experiments import load_coral_config, prepare_coral_fold_inputs
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.experiments import load_coral_config, prepare_coral_fold_inputs
 from tests.phase8_helpers import make_loader
 from tests.phase10_helpers import make_coral_environment, make_coral_trainer, make_target_loader
 

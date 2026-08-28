@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import hashlib
 
-from pada3dacb.evaluation.bootstrap import bootstrap_metrics
-from pada3dacb.evaluation.confusion_matrices import compute_confusion
-from pada3dacb.evaluation.metrics import compute_metrics
-from pada3dacb.evaluation.multiple_testing import adjust_holm
-from pada3dacb.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.bootstrap import bootstrap_metrics
+from acda3d.evaluation.confusion_matrices import compute_confusion
+from acda3d.evaluation.metrics import compute_metrics
+from acda3d.evaluation.multiple_testing import adjust_holm
+from acda3d.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
+from acda3d.evaluation.schemas import (
     COMPARATOR_METHODS,
     CheckpointPolicy,
     Direction,
@@ -17,7 +17,7 @@ from pada3dacb.evaluation.schemas import (
     ValueStatus,
     canonical_json,
 )
-from pada3dacb.evaluation.tables import bind_subject_table_hash
+from acda3d.evaluation.tables import bind_subject_table_hash
 
 TRUTHS = (0, 0, 1, 1, 2, 2)
 

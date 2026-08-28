@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pada3dacb.evaluation.schemas import REQUIRED_PROVENANCE_FIELDS
+from acda3d.evaluation.schemas import REQUIRED_PROVENANCE_FIELDS
 
 
 def write_input(root: Path, relative_path: str = "fold/predictions.csv") -> Path:

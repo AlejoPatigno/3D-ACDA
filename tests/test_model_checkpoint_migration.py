@@ -1,16 +1,16 @@
 import pytest
 import torch
 
-from pada3dacb.exceptions import CheckpointMigrationError
-from pada3dacb.models import (
-    PADA3DACB,
+from acda3d.exceptions import CheckpointMigrationError
+from acda3d.models import (
+    ACDA3D,
     load_migrated_legacy_checkpoint,
     migrate_legacy_lite_state_dict,
 )
 
 
 def model():
-    return PADA3DACB(2, 8, 6, base_channels=4, concept_hidden_dim=4)
+    return ACDA3D(2, 8, 6, base_channels=4, concept_hidden_dim=4)
 
 
 def test_full_only_keys_are_dropped_and_retained_weights_load():

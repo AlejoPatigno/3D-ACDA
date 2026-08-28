@@ -2,17 +2,17 @@ from pathlib import Path
 
 import torch
 
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.training.trainer import FixedEpochTrainingConfig
-from pada3dacb.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB, make_loader
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.training.trainer import FixedEpochTrainingConfig
+from acda3d.training.uda_trainer import ProposedPrototypePseudoAdaptationMethod, UDATrainer
+from tests.phase8_helpers import TinyACDA3D, make_loader
 from tests.test_cdan_trainer import _BatchLoader
 from tests.test_proposed_method_trainer import proposed_target_batch
 
 
 def make_fit_trainer(run_dir: Path, *, warmup_epochs=0, full_epochs=2, method=None):
     torch.manual_seed(123)
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     config = FixedEpochTrainingConfig(
         warmup_epochs=warmup_epochs,
         full_epochs=full_epochs,
@@ -24,7 +24,7 @@ def make_fit_trainer(run_dir: Path, *, warmup_epochs=0, full_epochs=2, method=No
     )
     return UDATrainer(
         model,
-        CorePADA3DACBLoss(2),
+        CoreACDA3DLoss(2),
         torch.ones(2, 1, 1, 1),
         run_dir,
         config=config,
@@ -49,7 +49,7 @@ def test_proposed_best_checkpoint_is_selected_only_by_source_macro_f1(monkeypatc
             return {"source_validation/macro_f1": next(source_scores)}
         return {"target_monitoring/macro_f1": next(target_scores), "target_monitoring/label": "monitoring only"}
 
-    monkeypatch.setattr("pada3dacb.training.trainer.evaluate_labeled_loader", fake_evaluate)
+    monkeypatch.setattr("acda3d.training.trainer.evaluate_labeled_loader", fake_evaluate)
     trainer = make_fit_trainer(tmp_path)
     trainer.fit(
         make_loader(),

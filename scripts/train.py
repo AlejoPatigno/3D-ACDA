@@ -1,4 +1,4 @@
-"""Fixed-epoch experiment entry point for approved PADA-3DACB methods."""
+"""Fixed-epoch experiment entry point for approved 3D-ACDA methods."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from pada3dacb.exceptions import PhaseNotImplementedError
-from pada3dacb.experiments import (
+from acda3d.exceptions import PhaseNotImplementedError
+from acda3d.experiments import (
     CDANExperimentRunner,
     CORALExperimentRunner,
     MMDExperimentRunner,
@@ -30,16 +30,16 @@ from pada3dacb.experiments import (
     run_mmd_both_directions,
     train_baseline_cv_fold,
 )
-from pada3dacb.experiments.prototype_pseudo import (
+from acda3d.experiments.prototype_pseudo import (
     PrototypePseudoExperimentRunner,
     load_prototype_pseudo_config,
     run_prototype_pseudo_both_directions,
 )
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.models import PADA3DACB, prepare_feature_grid_roi_masks
-from pada3dacb.models.baselines import list_baselines
-from pada3dacb.training import FixedEpochTrainingConfig, SourceOnlyTrainer
-from pada3dacb.training.reproducibility import seed_everything
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.models import ACDA3D, prepare_feature_grid_roi_masks
+from acda3d.models.baselines import list_baselines
+from acda3d.training import FixedEpochTrainingConfig, SourceOnlyTrainer
+from acda3d.training.reproducibility import seed_everything
 
 
 def _loader(*, target_monitoring: bool = False) -> DataLoader:
@@ -58,7 +58,7 @@ def _loader(*, target_monitoring: bool = False) -> DataLoader:
 
 def run_synthetic_smoke(args: argparse.Namespace) -> None:
     seed_everything(args.seed)
-    model = PADA3DACB(2, 8, 6, base_channels=4, concept_hidden_dim=4)
+    model = ACDA3D(2, 8, 6, base_channels=4, concept_hidden_dim=4)
     atlas_masks = torch.zeros(2, 16, 16, 16)
     atlas_masks[0, :8] = 1
     atlas_masks[1, 8:] = 1
@@ -73,7 +73,7 @@ def run_synthetic_smoke(args: argparse.Namespace) -> None:
     )
     trainer = SourceOnlyTrainer(
         model,
-        CorePADA3DACBLoss(2),
+        CoreACDA3DLoss(2),
         feature_masks,
         args.run_dir,
         config=config,

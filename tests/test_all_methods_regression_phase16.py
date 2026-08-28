@@ -6,10 +6,10 @@ import csv
 import io
 import json
 
-from pada3dacb.evaluation.concepts.report import build_synthetic_fixture_bundle
-from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId
+from acda3d.evaluation.concepts.report import build_synthetic_fixture_bundle
+from acda3d.evaluation.schemas import CheckpointPolicy, Direction, MethodId
 
-PADA_METHODS = (
+ACDA_METHODS = (
     MethodId.SOURCE_ONLY,
     MethodId.CORAL,
     MethodId.MMD,
@@ -21,7 +21,7 @@ PADA_METHODS = (
 def test_all_methods_directions_and_policies_have_complete_fixture_outputs() -> None:
     plan, artifacts = build_synthetic_fixture_bundle(
         evaluation_identity="e" * 64,
-        methods=PADA_METHODS,
+        methods=ACDA_METHODS,
         directions=(Direction.ADNI_TO_OASIS, Direction.OASIS_TO_ADNI),
         checkpoint_policies=(
             CheckpointPolicy.PRIMARY_BEST_SOURCE_F1,
@@ -48,7 +48,7 @@ def test_all_methods_directions_and_policies_have_complete_fixture_outputs() -> 
 
     assert set(plan.intended_relative_paths) == set(artifacts)
     manifest = json.loads(artifacts["evaluation_manifest.json"])
-    assert manifest["methods"] == [method.value for method in PADA_METHODS]
+    assert manifest["methods"] == [method.value for method in ACDA_METHODS]
     rows = list(csv.DictReader(io.StringIO(artifacts["method_status.csv"].decode())))
     assert sum(row["status"] == "included" for row in rows) == 20
     assert sum(row["status"].startswith("not_applicable") for row in rows) == 8

@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as functional
 
-from pada3dacb.losses import PredictionConsistencyLoss
+from acda3d.losses import PredictionConsistencyLoss
 
 
 def test_asymmetric_kl_exact_parity_and_both_branch_gradients():

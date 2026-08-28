@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.evaluation.discovery import (
+from acda3d.evaluation.discovery import (
     ADAPTER_REGISTRY,
     BaselineCombinedAdapter,
     CandidateFiles,
     SharedMethodAdapter,
     discover_candidates,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CandidateStatus,
     CheckpointPolicy,
@@ -45,11 +45,11 @@ def _request(*methods: MethodId) -> EvaluationRequest:
 
 
 def test_shared_registry_is_literal_and_public_names_are_fixed() -> None:
-    assert ADAPTER_REGISTRY[MethodId.SOURCE_ONLY].public_name == "PADA-3DACB Source-Only"
-    assert ADAPTER_REGISTRY[MethodId.CORAL].public_name == "PADA-3DACB + CORAL"
-    assert ADAPTER_REGISTRY[MethodId.MMD].public_name == "PADA-3DACB + MMD"
-    assert ADAPTER_REGISTRY[MethodId.CDAN].public_name == "PADA-3DACB + CDAN"
-    assert ADAPTER_REGISTRY[MethodId.PROTOTYPE_PSEUDO].public_name == "PADA-3DACB"
+    assert ADAPTER_REGISTRY[MethodId.SOURCE_ONLY].public_name == "3D-ACDA Source-Only"
+    assert ADAPTER_REGISTRY[MethodId.CORAL].public_name == "3D-ACDA + CORAL"
+    assert ADAPTER_REGISTRY[MethodId.MMD].public_name == "3D-ACDA + MMD"
+    assert ADAPTER_REGISTRY[MethodId.CDAN].public_name == "3D-ACDA + CDAN"
+    assert ADAPTER_REGISTRY[MethodId.PROTOTYPE_PSEUDO].public_name == "3D-ACDA"
     shared = set(MethodId) - {MethodId.AAGN, MethodId.FASTER_SNN}
     assert all(ADAPTER_REGISTRY[method].schema_family == "shared_method" for method in shared)
 
@@ -176,8 +176,8 @@ def test_baseline_requires_exact_target_evaluation_membership(tmp_path: Path) ->
 
 
 def test_discovery_has_no_training_or_model_registry_imports() -> None:
-    import pada3dacb.evaluation.discovery as discovery
+    import acda3d.evaluation.discovery as discovery
 
     tree = ast.parse(inspect.getsource(discovery))
     imported = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
-    assert not any(name.startswith(("pada3dacb.training", "pada3dacb.models", "pada3dacb.experiments")) for name in imported)
+    assert not any(name.startswith(("acda3d.training", "acda3d.models", "acda3d.experiments")) for name in imported)

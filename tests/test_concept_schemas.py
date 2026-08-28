@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     AtlasROIOrderHash,
     CheckpointPolicy,
     ConceptNormalizerHash,
@@ -17,14 +17,14 @@ from pada3dacb.evaluation.concepts.schemas import (
     validate_finite_array,
     validate_roi_order,
 )
-from pada3dacb.evaluation.schemas import ConfigurationError
+from acda3d.evaluation.schemas import ConfigurationError
 
 
 def _make_record(**overrides: object) -> ConceptSubjectRecord:
     k = 5
     values: dict[str, object] = {
         "method_id": MethodId.SOURCE_ONLY,
-        "model": "PADA-3DACB",
+        "model": "3D-ACDA",
         "direction": Direction.ADNI_TO_OASIS,
         "source_domain": "ADNI",
         "target_domain": "OASIS",
@@ -81,7 +81,7 @@ class TestConceptSubjectRecord:
             concept_probabilities=(0.7, 0.2, 0.1),
             latent_prediction=0,
             concept_prediction=0,
-            model="PADA-3DACB",
+            model="3D-ACDA",
             source_domain="ADNI",
             target_domain="OASIS",
             K=K,
@@ -117,7 +117,7 @@ class TestConceptSubjectRecord:
                 concept_probabilities=(0.7, 0.2, 0.1),
                 latent_prediction=0,
                 concept_prediction=0,
-                model="PADA-3DACB",
+                model="3D-ACDA",
                 source_domain="ADNI",
                 target_domain="OASIS",
                 K=K,
@@ -151,7 +151,7 @@ class TestConceptSubjectRecord:
                 concept_probabilities=(0.7, 0.2, 0.1),
                 latent_prediction=3,  # Invalid
                 concept_prediction=0,
-                model="PADA-3DACB",
+                model="3D-ACDA",
                 source_domain="ADNI",
                 target_domain="OASIS",
                 K=K,

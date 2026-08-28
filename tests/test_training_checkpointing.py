@@ -2,7 +2,7 @@ from pathlib import Path
 
 import torch
 
-from pada3dacb.training.checkpointing import load_training_checkpoint
+from acda3d.training.checkpointing import load_training_checkpoint
 from tests.phase8_helpers import make_loader, make_trainer
 
 

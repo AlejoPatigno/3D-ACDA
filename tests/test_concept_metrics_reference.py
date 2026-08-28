@@ -9,22 +9,22 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.evaluation.concepts.aggregation import aggregate_target_evaluation
-from pada3dacb.evaluation.concepts.agreement import compute_js_divergence
-from pada3dacb.evaluation.concepts.anatomy import compute_weighted_anatomy_score
-from pada3dacb.evaluation.concepts.fidelity import (
+from acda3d.evaluation.concepts.aggregation import aggregate_target_evaluation
+from acda3d.evaluation.concepts.agreement import compute_js_divergence
+from acda3d.evaluation.concepts.anatomy import compute_weighted_anatomy_score
+from acda3d.evaluation.concepts.fidelity import (
     compute_global_fidelity,
     compute_per_roi_fidelity,
 )
-from pada3dacb.evaluation.concepts.inference import run_subject_inference
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.inference import run_subject_inference
+from acda3d.evaluation.concepts.schemas import (
     CheckpointPolicy,
     ConceptSubjectRecord,
     Direction,
     MethodId,
 )
-from pada3dacb.evaluation.concepts.statistics import adjust_holm, bootstrap_metric
-from pada3dacb.evaluation.schemas import ValueStatus
+from acda3d.evaluation.concepts.statistics import adjust_holm, bootstrap_metric
+from acda3d.evaluation.schemas import ValueStatus
 
 
 def _pearson(x: np.ndarray, y: np.ndarray) -> float:
@@ -94,7 +94,7 @@ def test_js_divergence_matches_direct_kl_to_mixture_reference() -> None:
 def _record(seed: int, fold: int, offset: float) -> ConceptSubjectRecord:
     return ConceptSubjectRecord(
         method_id=MethodId.SOURCE_ONLY,
-        model="PADA-3DACB",
+        model="3D-ACDA",
         direction=Direction.ADNI_TO_OASIS,
         source_domain="ADNI",
         target_domain="OASIS",
@@ -228,7 +228,7 @@ def test_synthetic_inference_is_no_grad_and_does_not_regenerate_targets() -> Non
     assert model.seen_roi_masks.shape == (2, 1, 1, 1)
     assert torch.equal(model.weight, before)
     assert model.weight.grad is None
-    source = Path("src/pada3dacb/evaluation/concepts/inference.py").read_text(encoding="utf-8")
+    source = Path("src/acda3d/evaluation/concepts/inference.py").read_text(encoding="utf-8")
     assert "@torch.no_grad()" in source
     assert "build_subject_concept_target" not in source
     assert "optimizer" not in inspect.getsource(run_subject_inference)

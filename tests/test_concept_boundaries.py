@@ -5,11 +5,11 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-PHASE16_ROOT = Path("src/pada3dacb/evaluation/concepts")
+PHASE16_ROOT = Path("src/acda3d/evaluation/concepts")
 
 
 def test_phase16_has_no_training_or_experiment_dependencies() -> None:
-    forbidden = ("pada3dacb.training", "pada3dacb.experiments")
+    forbidden = ("acda3d.training", "acda3d.experiments")
     violations = []
     for path in PHASE16_ROOT.glob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -42,7 +42,7 @@ def test_inference_loads_precomputed_targets_without_regeneration() -> None:
 def test_phase16_concept_modules_remain_independent_of_phase17() -> None:
     assert Path("specs/phase_17_ablations").is_dir()
     source = "\n".join(path.read_text(encoding="utf-8") for path in PHASE16_ROOT.glob("*.py"))
-    forbidden = ("pada3dacb.ablations", "target_adaptation", "phase_17")
+    forbidden = ("acda3d.ablations", "target_adaptation", "phase_17")
     assert [token for token in forbidden if token in source.lower()] == []
 
 

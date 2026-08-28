@@ -30,7 +30,7 @@ def test_required_notebooks_are_valid_json() -> None:
         path = NOTEBOOK_ROOT / name
         assert path.is_file(), name
         source = notebook_source(path)
-        assert "PADA3DACB_SUBJECT_HMAC_KEY" in source
+        assert "ACDA3D_SUBJECT_HMAC_KEY" in source
         assert "/kaggle/input" in source
         if name.startswith("02_"):
             assert "KAGGLE_READINESS_EVIDENCE_PRODUCED" in source

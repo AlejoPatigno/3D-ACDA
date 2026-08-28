@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch.nn import functional as F
 
-from pada3dacb.adaptation.pseudo_label import PseudoLabelLoss, pseudo_label_cross_entropy
-from pada3dacb.exceptions import LossContractError
+from acda3d.adaptation.pseudo_label import PseudoLabelLoss, pseudo_label_cross_entropy
+from acda3d.exceptions import LossContractError
 
 
 def test_pseudo_label_loss_cross_entropy_matches_reference_for_one_accepted_sample():

@@ -10,8 +10,8 @@ import pytest
 import torch
 from torch import nn
 
-import pada3dacb.binary as binary
-from pada3dacb.binary import (
+import acda3d.binary as binary
+from acda3d.binary import (
     BINARY_MAPPING_CONTRACT,
     OASIS_POLICY_HASH,
     OASIS_SEMANTIC_AUTHORITY_MARKER,
@@ -19,22 +19,22 @@ from pada3dacb.binary import (
     oasis_evidence_hash,
     validate_oasis_semantic_approval,
 )
-from pada3dacb.data.records import SubjectRecord, binary_record_from_subject_record
-from pada3dacb.exceptions import (
+from acda3d.data.records import SubjectRecord, binary_record_from_subject_record
+from acda3d.exceptions import (
     CheckpointMigrationError,
     DatasetContractError,
     TrainingRuntimeError,
 )
-from pada3dacb.experiments.prediction_export import (
+from acda3d.experiments.prediction_export import (
     binary_prediction_metrics,
     collect_binary_predictions,
     validate_task_scoped_binary_prediction_records,
 )
-from pada3dacb.label_space import BINARY_CLASS_ORDER, BinaryPrediction
-from pada3dacb.models.checkpoint_migration import (
+from acda3d.label_space import BINARY_CLASS_ORDER, BinaryPrediction
+from acda3d.models.checkpoint_migration import (
     load_binary_checkpoint as load_migrated_binary_checkpoint,
 )
-from pada3dacb.training.checkpointing import load_binary_training_checkpoint
+from acda3d.training.checkpointing import load_binary_training_checkpoint
 
 
 class _BinaryModel(nn.Module):
@@ -202,7 +202,7 @@ def test_oasis_adapter_requires_hash_bound_structured_evidence_and_preserves_adn
 
 
 def test_label_space_exports_explicit_stable_api() -> None:
-    import pada3dacb.label_space as label_space
+    import acda3d.label_space as label_space
 
     assert label_space.__all__
     assert "BinaryPrediction" in label_space.__all__

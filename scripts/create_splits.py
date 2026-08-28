@@ -5,10 +5,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.data.splits import Direction, create_direction_splits, load_split_config
-from pada3dacb.training.experiment_logging import setup_experiment_logger
-from pada3dacb.training.reproducibility import seed_everything
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.data.splits import Direction, create_direction_splits, load_split_config
+from acda3d.training.experiment_logging import setup_experiment_logger
+from acda3d.training.reproducibility import seed_everything
 
 
 def parser() -> argparse.ArgumentParser:
@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     config.directions = directions
     config.validate()
     assert config.artifact_index is not None and config.split_root is not None
-    setup_experiment_logger("pada3dacb.splits")
+    setup_experiment_logger("acda3d.splits")
     seed_everything(config.splits.seed)
     loaded = load_artifact_index(config.artifact_index, artifact_root=config.artifact_root, profile="classification_only")
     for direction in directions:

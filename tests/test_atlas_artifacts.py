@@ -3,14 +3,14 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.artifacts.atlas import (
+from acda3d.artifacts.atlas import (
     AtlasConfig,
     AtlasROIManager,
     infer_label_values,
     load_label_atlas,
     validate_atlas_grid,
 )
-from pada3dacb.exceptions import ArtifactValidationError
+from acda3d.exceptions import ArtifactValidationError
 
 
 def save_atlas(tmp_path, values):

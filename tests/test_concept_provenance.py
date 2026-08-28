@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.evaluation.concepts.provenance import (
+from acda3d.evaluation.concepts.provenance import (
     ArtifactHashes,
     build_provenance_report,
     compute_artifact_hashes,
@@ -22,7 +22,7 @@ from pada3dacb.evaluation.concepts.provenance import (
     validate_normalizer_hash,
     validate_roi_order_hash,
 )
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     AtlasROIOrderHash,
     CheckpointPolicy,
     ConceptCandidate,
@@ -344,7 +344,7 @@ class TestProvenanceReport:
         assert report["validation_issues"][0]["issues"] == ["roi_order_hash_mismatch"]
 
     def test_strict_manifest_rejects_unsafe_path_and_uppercase_hash(self, tmp_path):
-        from pada3dacb.evaluation.concepts.schemas import (
+        from acda3d.evaluation.concepts.schemas import (
             ProvenanceManifest,
             canonical_roi_order_hash,
         )
@@ -364,18 +364,18 @@ class TestProvenanceReport:
             ProvenanceManifest.from_mapping(payload, tmp_path)
 
     def test_canonical_roi_order_hash_preserves_order(self):
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         assert canonical_roi_order_hash([2, 4]) != canonical_roi_order_hash([4, 2])
 
     def test_safe_relative_path_rejects_single_backslash(self):
-        from pada3dacb.evaluation.concepts.schemas import validate_safe_relative_path
+        from acda3d.evaluation.concepts.schemas import validate_safe_relative_path
 
         with pytest.raises(ValueError, match="safe POSIX-relative"):
             validate_safe_relative_path("atlas\\labels.nii.gz")
 
     def test_manifest_rejects_duplicate_candidate_keys_and_missing_files(self, tmp_path):
-        from pada3dacb.evaluation.concepts.schemas import (
+        from acda3d.evaluation.concepts.schemas import (
             ProvenanceManifest,
             canonical_roi_order_hash,
         )
@@ -400,8 +400,8 @@ class TestProvenanceReport:
             ProvenanceManifest.from_mapping(payload, tmp_path)
 
     def test_verified_manifest_requires_actual_atlas_labels_and_identity(self, tmp_path):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -426,8 +426,8 @@ class TestProvenanceReport:
             verify_provenance_manifest(payload, tmp_path)
 
     def test_verified_manifest_rejects_reordered_atlas_labels(self, tmp_path):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -443,8 +443,8 @@ class TestProvenanceReport:
             verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)
 
     def test_verified_manifest_rejects_atlas_file_hash_mismatch(self, tmp_path, monkeypatch):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -471,7 +471,7 @@ class TestProvenanceReport:
         }
         checkpoint_loads = []
         monkeypatch.setattr(
-            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            "acda3d.evaluation.concepts.provenance._safe_checkpoint_metadata",
             lambda path: checkpoint_loads.append(path),
         )
 
@@ -485,8 +485,8 @@ class TestProvenanceReport:
         assert checkpoint_loads == []
 
     def test_verified_manifest_rejects_normalizer_file_hash_mismatch(self, tmp_path, monkeypatch):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -514,7 +514,7 @@ class TestProvenanceReport:
         manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": atlas_hash})()
         checkpoint_loads = []
         monkeypatch.setattr(
-            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            "acda3d.evaluation.concepts.provenance._safe_checkpoint_metadata",
             lambda path: checkpoint_loads.append(path),
         )
 
@@ -529,8 +529,8 @@ class TestProvenanceReport:
         assert checkpoint_loads == []
 
     def test_verified_manifest_rejects_checkpoint_file_hash_mismatch(self, tmp_path, monkeypatch):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -558,7 +558,7 @@ class TestProvenanceReport:
         manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": atlas_hash})()
         checkpoint_loads = []
         monkeypatch.setattr(
-            "pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata",
+            "acda3d.evaluation.concepts.provenance._safe_checkpoint_metadata",
             lambda path: checkpoint_loads.append(path),
         )
 
@@ -573,8 +573,8 @@ class TestProvenanceReport:
         assert checkpoint_loads == []
 
     def test_verified_manifest_hashes_files_before_checkpoint_inspection(self, tmp_path, monkeypatch):
-        from pada3dacb.evaluation.concepts.provenance import verify_provenance_manifest
-        from pada3dacb.evaluation.concepts.schemas import canonical_roi_order_hash
+        from acda3d.evaluation.concepts.provenance import verify_provenance_manifest
+        from acda3d.evaluation.concepts.schemas import canonical_roi_order_hash
 
         atlas = tmp_path / "atlas.bin"
         normalizer = tmp_path / "normalizer.json"
@@ -598,8 +598,8 @@ class TestProvenanceReport:
             }],
         }
         events = []
-        monkeypatch.setattr("pada3dacb.evaluation.concepts.provenance.compute_sha256_file", lambda path: events.append("hash") or digest(path))
-        monkeypatch.setattr("pada3dacb.evaluation.concepts.provenance._safe_checkpoint_metadata", lambda path: events.append("parse") or {})
+        monkeypatch.setattr("acda3d.evaluation.concepts.provenance.compute_sha256_file", lambda path: events.append("hash") or digest(path))
+        monkeypatch.setattr("acda3d.evaluation.concepts.provenance._safe_checkpoint_metadata", lambda path: events.append("parse") or {})
         manager = type("Atlas", (), {"label_values": [2, 4], "atlas_hash": digest(atlas)})()
         with pytest.raises(ValueError, match="checkpoint metadata"):
             verify_provenance_manifest(payload, tmp_path, atlas_manager=manager)

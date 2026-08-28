@@ -10,8 +10,8 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from pada3dacb.evaluation.metrics import compute_count_metrics, compute_metrics
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.metrics import compute_count_metrics, compute_metrics
+from acda3d.evaluation.schemas import (
     CheckpointPolicy,
     Direction,
     MethodId,

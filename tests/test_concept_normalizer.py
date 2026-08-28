@@ -1,6 +1,6 @@
 import numpy as np
 
-from pada3dacb.artifacts.concepts import ConceptNormalizer, fit_concept_normalizer
+from acda3d.artifacts.concepts import ConceptNormalizer, fit_concept_normalizer
 
 
 def test_normalizer_parity_provenance_and_roundtrip(tmp_path):

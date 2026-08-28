@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from pada3dacb.evaluation.schemas import Direction, MethodId
+from acda3d.evaluation.schemas import Direction, MethodId
 from tests.phase15_discovery_fixtures import (
     add_identity_population_controls,
     write_baseline_candidate,

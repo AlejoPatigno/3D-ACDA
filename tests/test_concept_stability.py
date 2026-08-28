@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.stability import (
+from acda3d.evaluation.concepts.stability import (
     compute_all_stability,
     compute_mean_jaccard,
     compute_mean_pairwise_rho,
@@ -71,14 +71,14 @@ def test_stability_rejects_shape_drift_and_invalid_k() -> None:
 
 
 def test_rank_dispersion_validates_attention_and_concept_profiles() -> None:
-    from pada3dacb.evaluation.concepts.stability import compute_roi_rank_dispersion
+    from acda3d.evaluation.concepts.stability import compute_roi_rank_dispersion
 
     with pytest.raises(ValueError, match="ROI profiles"):
         compute_roi_rank_dispersion(np.ones(3))
 
 
 def test_stability_exposes_non_causal_profile_terminology() -> None:
-    from pada3dacb.evaluation.concepts import stability
+    from acda3d.evaluation.concepts import stability
 
     assert {"attention profile", "concept profile", "ROI stability"}.issubset(
         stability.STABILITY_TERMINOLOGY

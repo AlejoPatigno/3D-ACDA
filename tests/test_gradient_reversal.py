@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation.gradient_reversal import GradientReversal, gradient_reverse
-from pada3dacb.exceptions import LossContractError
+from acda3d.adaptation.gradient_reversal import GradientReversal, gradient_reverse
+from acda3d.exceptions import LossContractError
 
 
 def test_gradient_reversal_keeps_forward_values_and_negates_scaled_gradient():

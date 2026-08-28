@@ -7,11 +7,11 @@ from dataclasses import replace
 
 import pytest
 
-from pada3dacb.evaluation.concepts.aggregation import (
+from acda3d.evaluation.concepts.aggregation import (
     aggregate_source_oof,
     aggregate_target_evaluation,
 )
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     CheckpointPolicy,
     ConceptSubjectRecord,
     Direction,
@@ -33,7 +33,7 @@ def _record(
 ) -> ConceptSubjectRecord:
     return ConceptSubjectRecord(
         method_id=MethodId.SOURCE_ONLY,
-        model="PADA-3DACB",
+        model="3D-ACDA",
         direction=Direction.ADNI_TO_OASIS,
         source_domain="ADNI",
         target_domain="OASIS",

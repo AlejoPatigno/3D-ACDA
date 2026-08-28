@@ -8,8 +8,8 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.experiments import baselines as baseline_module
-from pada3dacb.experiments.baselines import load_baseline_config, train_baseline_cv_fold
+from acda3d.experiments import baselines as baseline_module
+from acda3d.experiments.baselines import load_baseline_config, train_baseline_cv_fold
 from tests.phase14_helpers import make_baseline_environment
 
 

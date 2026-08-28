@@ -5,15 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.ablations import AblationResolutionError
-from pada3dacb.ablations.registry import (
+from acda3d.ablations import AblationResolutionError
+from acda3d.ablations.registry import (
     alias_target,
     get_ablation_spec,
     list_ablations,
     registry_specs,
 )
-from pada3dacb.ablations.resolver import resolve_ablation_config
-from pada3dacb.experiments.ablations import (
+from acda3d.ablations.resolver import resolve_ablation_config
+from acda3d.experiments.ablations import (
     APPROVED_ABLATIONS,
     build_equivalence_reference,
     execute,

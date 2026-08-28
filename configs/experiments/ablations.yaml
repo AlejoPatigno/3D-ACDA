@@ -1,8 +1,8 @@
 # Phase 17 synthetic-only CLI contract. This file never authorizes real data.
 experiment:
-  name: pada3dacb_ablations_synthetic
+  name: acda3d_ablations_synthetic
   method: ablation
-  base_method: PADA-3DACB
+  base_method: 3D-ACDA
   source_domain: ADNI
   target_domain: OASIS
   directions: [ADNI_to_OASIS, OASIS_to_ADNI]
@@ -45,7 +45,7 @@ losses:
 
 # Small dimensions are explicitly synthetic fixture values, not publication settings.
 model:
-  name: PADA-3DACB
+  name: 3D-ACDA
   contextual_encoder: false
   input_channels: 1
   num_classes: 3

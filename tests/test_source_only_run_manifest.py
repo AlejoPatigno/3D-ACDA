@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.exceptions import ExperimentValidationError
-from pada3dacb.experiments.run_manifest import (
+from acda3d.exceptions import ExperimentValidationError
+from acda3d.experiments.run_manifest import (
     create_run_manifest,
     update_run_manifest,
 )

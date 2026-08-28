@@ -4,13 +4,13 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.models import PADA3DACBOutput
-from pada3dacb.training import FixedEpochTrainingConfig, SourceOnlyTrainer
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.models import ACDA3DOutput
+from acda3d.training import FixedEpochTrainingConfig, SourceOnlyTrainer
 
 
-class TinyPADA3DACB(nn.Module):
-    public_name = "PADA-3DACB"
+class TinyACDA3D(nn.Module):
+    public_name = "3D-ACDA"
 
     def __init__(self, num_rois: int = 2):
         super().__init__()
@@ -30,7 +30,7 @@ class TinyPADA3DACB(nn.Module):
         attention = torch.full(
             (x.shape[0], self.num_rois), 1 / self.num_rois, device=x.device
         )
-        return PADA3DACBOutput(
+        return ACDA3DOutput(
             F=x,
             T=tokens,
             U=tokens,
@@ -67,7 +67,7 @@ def make_trainer(
     seed: int = 11,
 ):
     torch.manual_seed(seed)
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     config = FixedEpochTrainingConfig(
         warmup_epochs=warmup_epochs,
         full_epochs=full_epochs,
@@ -79,7 +79,7 @@ def make_trainer(
     )
     return SourceOnlyTrainer(
         model,
-        CorePADA3DACBLoss(2),
+        CoreACDA3DLoss(2),
         torch.ones(2, 1, 1, 1),
         run_dir,
         config=config,

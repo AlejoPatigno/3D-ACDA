@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.adaptation.domain_discriminator import DomainDiscriminator, DomainDiscriminatorConfig
-from pada3dacb.exceptions import ConfigurationError, LossContractError
+from acda3d.adaptation.domain_discriminator import DomainDiscriminator, DomainDiscriminatorConfig
+from acda3d.exceptions import ConfigurationError, LossContractError
 
 
 def test_domain_discriminator_returns_one_raw_logit_per_sample_without_sigmoid():

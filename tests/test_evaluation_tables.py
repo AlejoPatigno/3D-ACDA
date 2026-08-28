@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CheckpointPolicy,
     ConfusionResult,
@@ -15,7 +15,7 @@ from pada3dacb.evaluation.schemas import (
     MetricValue,
     SubjectPrediction,
 )
-from pada3dacb.evaluation.tables import (
+from acda3d.evaluation.tables import (
     atomic_write,
     bind_subject_table_hash,
     computational_summary_bytes,

@@ -8,12 +8,12 @@ from pathlib import Path
 import yaml
 
 PHASE16_SOURCES = (
-    *Path("src/pada3dacb/evaluation/concepts").glob("*.py"),
+    *Path("src/acda3d/evaluation/concepts").glob("*.py"),
     Path("scripts/evaluate_concepts.py"),
 )
 FORBIDDEN_IMPORT_PREFIXES = (
-    "pada3dacb.training",
-    "pada3dacb.experiments",
+    "acda3d.training",
+    "acda3d.experiments",
 )
 
 

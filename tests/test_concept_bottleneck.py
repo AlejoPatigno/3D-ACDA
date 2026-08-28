@@ -1,6 +1,6 @@
 import torch
 
-from pada3dacb.models import ConceptBottleneck
+from acda3d.models import ConceptBottleneck
 
 
 def test_active_per_roi_concept_mlp_contract_and_gradients():

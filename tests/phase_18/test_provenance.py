@@ -6,7 +6,7 @@ import json
 import pytest
 import yaml
 
-from pada3dacb.publication.provenance import (
+from acda3d.publication.provenance import (
     ManifestValidation,
     ProvenanceStatus,
     check_assignment_disjointness,
@@ -14,7 +14,7 @@ from pada3dacb.publication.provenance import (
     validate_target_adaptation_batch,
     validate_target_evaluation_metadata,
 )
-from pada3dacb.publication.validation import aggregate_validators
+from acda3d.publication.validation import aggregate_validators
 
 
 def _write_json(tmp_path, name: str, payload: object) -> tuple[object, str]:

@@ -7,8 +7,8 @@ import json
 from dataclasses import asdict, is_dataclass
 from types import SimpleNamespace
 
-from pada3dacb.evaluation.concepts.report import evaluate_binary_concept_records
-from pada3dacb.evaluation.concepts.schemas import BINARY_CONCEPT_TASK_ID
+from acda3d.evaluation.concepts.report import evaluate_binary_concept_records
+from acda3d.evaluation.concepts.schemas import BINARY_CONCEPT_TASK_ID
 
 
 def _synthetic_records() -> list[SimpleNamespace]:

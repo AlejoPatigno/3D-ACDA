@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pada3dacb.evaluation.concepts.figures import (
+from acda3d.evaluation.concepts.figures import (
     plot_concept_fidelity_roi_heatmap,
     plot_head_agreement_matrix,
 )
@@ -46,8 +46,8 @@ def test_head_agreement_handles_zero_support_rows(tmp_path) -> None:
 def test_generate_all_figures_writes_fixed_protocol_names(tmp_path) -> None:
     import numpy as np
 
-    from pada3dacb.evaluation.concepts.figures import generate_all_figures
-    from pada3dacb.evaluation.concepts.stability import compute_all_stability
+    from acda3d.evaluation.concepts.figures import generate_all_figures
+    from acda3d.evaluation.concepts.stability import compute_all_stability
 
     profiles = np.array([[0.1, 0.3], [0.2, 0.4]], dtype=float)
     stability = compute_all_stability(profiles, profiles, profiles, profiles, k_values=[1])

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.evaluation.multiple_testing import adjust_holm
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.multiple_testing import adjust_holm
+from acda3d.evaluation.schemas import (
     COMPARATOR_METHODS,
     McNemarResult,
     MethodId,

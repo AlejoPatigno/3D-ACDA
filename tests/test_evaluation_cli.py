@@ -343,7 +343,7 @@ def test_default_dispatch_reuse_never_returns_false_success(tmp_path: Path) -> N
 
 def test_cli_has_no_training_or_statistical_implementation_imports() -> None:
     source = SCRIPT.read_text(encoding="utf-8")
-    assert "pada3dacb.training" not in source
-    assert "pada3dacb.experiments" not in source
+    assert "acda3d.training" not in source
+    assert "acda3d.experiments" not in source
     for module in ("metrics", "bootstrap", "paired_statistics", "multiple_testing", "confusion_matrices"):
         assert f"evaluation.{module}" not in source

@@ -15,25 +15,25 @@ from typing import Any, NamedTuple
 
 import yaml
 
-from pada3dacb.evaluation.aggregation import (
+from acda3d.evaluation.aggregation import (
     AggregationError,
     aggregate_source_oof,
     aggregate_target_ensemble,
 )
-from pada3dacb.evaluation.discovery import (
+from acda3d.evaluation.discovery import (
     ADAPTER_REGISTRY,
     BaselineCombinedAdapter,
     SharedMethodAdapter,
     discover_candidates,
 )
-from pada3dacb.evaluation.report import (
+from acda3d.evaluation.report import (
     build_output_plan,
     build_report_statistics,
     extract_computational_values,
     project_and_commit_output,
     verify_reuse,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     ANALYSIS_CLASS_LABELS,
     PROTOCOL_VERSION,
     SCHEMA_VERSION,

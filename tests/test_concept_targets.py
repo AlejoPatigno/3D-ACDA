@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.artifacts.atlas import AtlasConfig, AtlasROIManager
-from pada3dacb.artifacts.concepts import (
+from acda3d.artifacts.atlas import AtlasConfig, AtlasROIManager
+from acda3d.artifacts.concepts import (
     ConceptNormalizer,
     ConceptTargetConfig,
     build_subject_concept_target,

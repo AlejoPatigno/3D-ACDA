@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.exceptions import ModelContractError
-from pada3dacb.models import Encoder3D
+from acda3d.exceptions import ModelContractError
+from acda3d.models import Encoder3D
 
 
 def test_encoder_shape_finiteness_determinism_and_inference():

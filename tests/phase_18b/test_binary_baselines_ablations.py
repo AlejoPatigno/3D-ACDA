@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from pada3dacb.binary import (
+from acda3d.binary import (
     BINARY_ABLATIONS,
     BINARY_BASELINES,
     BINARY_CLASS_ORDER,
@@ -16,8 +16,8 @@ from pada3dacb.binary import (
     build_binary_identity,
     validate_binary_baseline,
 )
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.publication.binary_runtime import BinaryPublicationRuntime
+from acda3d.exceptions import ConfigurationError
+from acda3d.publication.binary_runtime import BinaryPublicationRuntime
 
 CONFIG_PATH = Path("configs/publication/phase18b_binary.yaml")
 
@@ -57,7 +57,7 @@ def test_binary_baseline_validation_is_cpu_validate_only_and_prediction_schema_i
 
 
 def test_historical_baseline_registry_and_configs_remain_three_class_and_reject_binary_entry_point() -> None:
-    from pada3dacb.models.baselines import build_baseline, get_baseline_spec
+    from acda3d.models.baselines import build_baseline, get_baseline_spec
 
     assert get_baseline_spec("aagn").output_classes == 3
     assert get_baseline_spec("faster_snn").output_classes == 3

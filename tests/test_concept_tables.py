@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import csv
 
-from pada3dacb.evaluation.concepts.tables import holm_adjusted_rows, write_all_tables
-from pada3dacb.evaluation.schemas import HolmRow, MethodId, ValueStatus
+from acda3d.evaluation.concepts.tables import holm_adjusted_rows, write_all_tables
+from acda3d.evaluation.schemas import HolmRow, MethodId, ValueStatus
 
 
 def test_holm_rows_do_not_mutate_the_input_collection() -> None:
@@ -44,7 +44,7 @@ def test_write_all_tables_preserves_first_row_column_order(tmp_path) -> None:
 
 
 def test_write_required_tables_creates_complete_protocol_set(tmp_path) -> None:
-    from pada3dacb.evaluation.concepts.tables import write_required_tables
+    from acda3d.evaluation.concepts.tables import write_required_tables
 
     write_required_tables(tmp_path, {"method_status": [{"method": "aagn"}]})
 

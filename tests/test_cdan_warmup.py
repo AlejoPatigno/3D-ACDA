@@ -1,18 +1,18 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation import (
+from acda3d.adaptation import (
     CDANAdaptationMethod,
     DomainDiscriminator,
     DomainDiscriminatorConfig,
 )
-from pada3dacb.training.trainer import BaseFixedEpochTrainer
-from pada3dacb.training.uda_trainer import UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.training.trainer import BaseFixedEpochTrainer
+from acda3d.training.uda_trainer import UDATrainer
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_cdan_warmup_loss_is_zero_and_has_no_domain_diagnostics():
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     masks = torch.ones(2, 1, 1, 1)
     output = model(torch.ones(2, 1, 2, 2, 2), masks)
     method = CDANAdaptationMethod(DomainDiscriminator(DomainDiscriminatorConfig(12, (4,), "relu", 0.0)), 1.0)

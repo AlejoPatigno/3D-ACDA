@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torch
 
-from pada3dacb.training.reproducibility import (
+from acda3d.training.reproducibility import (
     collect_reproducibility_metadata,
     make_torch_generator,
     seed_everything,

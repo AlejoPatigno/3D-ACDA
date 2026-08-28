@@ -8,7 +8,7 @@ from tests.phase11_helpers import make_mmd_environment
 def make_cdan_environment(tmp_path: Path, *, weight: float | None = 1.0) -> Path:
     source = make_mmd_environment(tmp_path)
     payload = yaml.safe_load(source.read_text(encoding="utf-8"))
-    payload["experiment"].update({"name": "synthetic_cdan", "display_name": "PADA-3DACB + CDAN", "method": "cdan"})
+    payload["experiment"].update({"name": "synthetic_cdan", "display_name": "3D-ACDA + CDAN", "method": "cdan"})
     payload["adaptation"] = {
         "name": "cdan", "feature": "z", "probability_source": "latent_probabilities",
         "conditional_mode": "exact_outer_product", "weight": weight, "active_during_warmup": False,

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from pada3dacb.experiments import SourceOnlyExperimentRunner, load_source_only_config
+from acda3d.experiments import SourceOnlyExperimentRunner, load_source_only_config
 from tests.phase9_helpers import make_source_only_environment
 
 

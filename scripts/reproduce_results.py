@@ -1,6 +1,6 @@
 """Placeholder entry point for result reproduction."""
 
-from pada3dacb.exceptions import PhaseNotImplementedError
+from acda3d.exceptions import PhaseNotImplementedError
 
 
 def main() -> None:

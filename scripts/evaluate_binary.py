@@ -5,7 +5,7 @@ import argparse
 import json
 import sys
 
-from pada3dacb.evaluation.binary import binary_evaluation_payload
+from acda3d.evaluation.binary import binary_evaluation_payload
 
 
 def _synthetic_rows() -> list[dict[str, object]]:

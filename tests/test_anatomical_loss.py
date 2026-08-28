@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.exceptions import LossContractError
-from pada3dacb.losses import AnatomicalConsistencyLoss
+from acda3d.exceptions import LossContractError
+from acda3d.losses import AnatomicalConsistencyLoss
 
 
 def test_anatomical_exact_weighted_mse_no_extra_K_division():

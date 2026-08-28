@@ -1,6 +1,6 @@
 experiment:
-  name: pada3dacb_cdan
-  display_name: PADA-3DACB + CDAN
+  name: acda3d_cdan
+  display_name: 3D-ACDA + CDAN
   method: cdan
   source_domain: ADNI
   target_domain: OASIS
@@ -14,8 +14,8 @@ paths:
   roi_masks: null
   output_root: null
 model:
-  config: configs/model/pada3dacb.yaml
-  name: PADA-3DACB
+  config: configs/model/acda3d.yaml
+  name: 3D-ACDA
   contextual_encoder: false
   num_classes: 3
   num_rois: 102

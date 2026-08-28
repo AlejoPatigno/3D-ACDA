@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.experiments.cdan import load_cdan_config
-from pada3dacb.training.checkpointing import load_training_checkpoint
+from acda3d.experiments.cdan import load_cdan_config
+from acda3d.training.checkpointing import load_training_checkpoint
 from scripts import train
 from tests.phase12_helpers import make_cdan_environment
 

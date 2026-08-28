@@ -4,14 +4,14 @@ from collections.abc import Mapping
 
 import pytest
 
-import pada3dacb.evaluation.report as report_module
-from pada3dacb.evaluation.report import (
+import acda3d.evaluation.report as report_module
+from acda3d.evaluation.report import (
     ReportState,
     build_report_statistics,
     extract_computational_values,
     orchestrate_report,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     AuthorizationGateError,
     CheckpointPolicy,

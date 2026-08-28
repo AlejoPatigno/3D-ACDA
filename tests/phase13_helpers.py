@@ -10,9 +10,9 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from pada3dacb.experiments.prediction_export import PREDICTION_COLUMNS
-from pada3dacb.experiments.prototype_pseudo import load_prototype_pseudo_config
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.experiments.prediction_export import PREDICTION_COLUMNS
+from acda3d.experiments.prototype_pseudo import load_prototype_pseudo_config
+from tests.phase8_helpers import TinyACDA3D
 from tests.test_proposed_method_config import make_proposed_environment
 
 FORBIDDEN_PREDICTION_EXPORT_FIELDS = {
@@ -50,16 +50,16 @@ def target_monitoring_loader() -> DataLoader:
     return DataLoader(rows, batch_size=2, shuffle=False)
 
 
-def tiny_prediction_model() -> TinyPADA3DACB:
+def tiny_prediction_model() -> TinyACDA3D:
     torch.manual_seed(13013)
-    return TinyPADA3DACB()
+    return TinyACDA3D()
 
 
 def assert_phase13_prediction_frame(frame: pd.DataFrame) -> None:
     assert tuple(frame.columns) == PREDICTION_COLUMNS
     assert not (set(frame.columns) & FORBIDDEN_PREDICTION_EXPORT_FIELDS)
     assert frame["method"].eq("prototype_pseudo").all()
-    assert frame["model"].eq("PADA-3DACB").all()
+    assert frame["model"].eq("3D-ACDA").all()
     assert set(frame["split"]) == {"target_monitoring"}
     assert "target_adaptation" not in set(frame["split"])
     probabilities = torch.tensor(

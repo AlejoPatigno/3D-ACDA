@@ -8,13 +8,13 @@ import sys
 import time
 from pathlib import Path
 
-from pada3dacb.data.derivative_verification import (
+from acda3d.data.derivative_verification import (
     VerificationStatus,
     load_verification_config,
     verify_inventory,
 )
-from pada3dacb.exceptions import ConfigurationError, InvalidPathError, PADA3DACBError
-from pada3dacb.training.experiment_logging import setup_experiment_logger
+from acda3d.exceptions import ACDA3DError, ConfigurationError, InvalidPathError
+from acda3d.training.experiment_logging import setup_experiment_logger
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     start = time.time()
     args = parse_args()
-    logger = setup_experiment_logger("pada3dacb.verify_derivatives", level=logging.INFO)
+    logger = setup_experiment_logger("acda3d.verify_derivatives", level=logging.INFO)
     try:
         cfg, paths = load_verification_config(args.config)
         inventory = Path(args.inventory) if args.inventory else paths["inventory_csv"]
@@ -74,7 +74,7 @@ def main() -> int:
         if cfg.fail_on_subject_failure and counts.get(VerificationStatus.FAILED.value, 0):
             return 2
         return 0
-    except (PADA3DACBError, OSError, ValueError) as exc:
+    except (ACDA3DError, OSError, ValueError) as exc:
         logger.error("%s", exc)
         if isinstance(exc, ConfigurationError):
             return 3

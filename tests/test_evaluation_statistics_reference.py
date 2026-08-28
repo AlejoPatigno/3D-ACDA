@@ -5,10 +5,10 @@ import pytest
 from scipy.stats import binomtest
 from statsmodels.stats.multitest import multipletests
 
-from pada3dacb.evaluation.bootstrap import bootstrap_metrics
-from pada3dacb.evaluation.multiple_testing import adjust_holm
-from pada3dacb.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.bootstrap import bootstrap_metrics
+from acda3d.evaluation.multiple_testing import adjust_holm
+from acda3d.evaluation.paired_statistics import exact_mcnemar, paired_bootstrap
+from acda3d.evaluation.schemas import (
     COMPARATOR_METHODS,
     CheckpointPolicy,
     Direction,

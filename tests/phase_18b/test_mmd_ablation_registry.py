@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.binary import (
+from acda3d.binary import (
     BINARY_ABLATIONS,
     MMD_BINARY_ABLATIONS,
     apply_binary_ablation_loss_plan,

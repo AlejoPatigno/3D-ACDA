@@ -6,14 +6,14 @@ import numpy as np
 import pytest
 import torch
 
-from pada3dacb.evaluation.concepts.dataset import (
+from acda3d.evaluation.concepts.dataset import (
     ConceptEvaluationDataset,
     ConceptEvaluationSample,
     aggregate_folds,
     aggregate_seeds,
     build_concept_evaluation_dataset,
 )
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     AtlasROIOrderHash,
     CheckpointPolicy,
     ConceptNormalizerHash,
@@ -276,7 +276,7 @@ class TestFoldEnsemble:
     def _make_subject_record(self, fold: int, seed: int = 42) -> SubjectConceptRecord:
         return SubjectConceptRecord(
             method_id=MethodId.SOURCE_ONLY,
-            model="PADA-3DACB",
+            model="3D-ACDA",
             direction=Direction.ADNI_TO_OASIS,
             source_domain="ADNI",
             target_domain="OASIS",
@@ -328,7 +328,7 @@ class TestFoldEnsemble:
         fold_records = [self._make_subject_record(fold=f) for f in range(2)]
         fold_records[1] = SubjectConceptRecord(
             method_id=MethodId.SOURCE_ONLY,
-            model="PADA-3DACB",
+            model="3D-ACDA",
             direction=Direction.ADNI_TO_OASIS,
             source_domain="ADNI",
             target_domain="OASIS",
@@ -388,7 +388,7 @@ class TestBuildConceptEvaluationDataset:
         subject_records = [
             SubjectConceptRecord(
                 method_id=MethodId.SOURCE_ONLY,
-                model="PADA-3DACB",
+                model="3D-ACDA",
                 direction=Direction.ADNI_TO_OASIS,
                 source_domain="ADNI",
                 target_domain="OASIS",

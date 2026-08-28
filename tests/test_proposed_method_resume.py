@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.training.checkpointing import load_training_checkpoint
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.training.checkpointing import load_training_checkpoint
 from tests.phase8_helpers import make_loader
 from tests.test_cdan_trainer import _BatchLoader
 from tests.test_proposed_method_checkpoint_policy import make_fit_trainer

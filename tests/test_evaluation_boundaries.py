@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.evaluation.report import (
+from acda3d.evaluation.report import (
     build_completion_manifest,
     build_output_plan,
     commit_output,
     extract_computational_values,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     CheckpointPolicy,
     Direction,
@@ -93,10 +93,10 @@ def test_missing_computational_values_are_explicit_nulls_not_zero() -> None:
 def test_phase15_boundaries_exclude_training_concepts_manuscript_and_phase16() -> None:
     sources = "\n".join(
         path.read_text(encoding="utf-8")
-        for path in Path("src/pada3dacb/evaluation").glob("*.py")
+        for path in Path("src/acda3d/evaluation").glob("*.py")
     ) + Path("scripts/evaluate.py").read_text(encoding="utf-8")
-    assert "pada3dacb.training" not in sources
-    assert "pada3dacb.experiments" not in sources
+    assert "acda3d.training" not in sources
+    assert "acda3d.experiments" not in sources
     assert "ContextualROIEncoder" not in sources
     assert "manuscript" not in sources.lower()
     assert "phase 16" not in sources.lower()

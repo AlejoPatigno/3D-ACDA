@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.evaluation.concepts.report import build_concept_output_plan
+from acda3d.evaluation.concepts.report import build_concept_output_plan
 from scripts.evaluate_concepts import ExitCode, main
 from tests.phase16_integration_fixtures import fixture_matrix
 
@@ -61,7 +61,7 @@ def test_complete_synthetic_method_direction_policy_matrix(tmp_path) -> None:
             "--artifact-root", str(artifacts),
             "--output-root", str(output),
             "--both-directions",
-            "--all-pada-methods",
+            "--all-acda-methods",
             "--include-sensitivity",
             "--bootstrap-replicates", "100",
             "--bootstrap-seed", "17",
@@ -94,12 +94,12 @@ def test_complete_synthetic_method_direction_policy_matrix(tmp_path) -> None:
     included = [row for row in rows if row["status"] == "included"]
     not_applicable = [
         row for row in rows
-        if row["status"] == "not_applicable_no_pada3dacb_concept_head"
+        if row["status"] == "not_applicable_no_acda3d_concept_head"
     ]
     assert len(included) == len(matrix.methods) * len(matrix.directions) * len(matrix.policies)
     assert len(not_applicable) == len(matrix.not_applicable) * len(matrix.directions) * len(matrix.policies)
     assert {row["method"] for row in not_applicable} == {method.value for method in matrix.not_applicable}
-    assert {row["status"] for row in not_applicable} == {"not_applicable_no_pada3dacb_concept_head"}
+    assert {row["status"] for row in not_applicable} == {"not_applicable_no_acda3d_concept_head"}
 
 
 def test_synthetic_reuse_rejects_mismatched_method_and_direction_selection(tmp_path) -> None:
@@ -156,7 +156,7 @@ def test_synthetic_reuse_rejects_mismatched_method_and_direction_selection(tmp_p
         [
             *reuse_args,
             "--direction", "adni_to_oasis",
-            "--all-pada-methods",
+            "--all-acda-methods",
         ]
     ) == ExitCode.REUSE_REJECTED
 

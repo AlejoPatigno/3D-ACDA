@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-from pada3dacb.data.artifact_wiring import load_artifact_index
-from pada3dacb.data.splits import (
+from acda3d.data.artifact_wiring import load_artifact_index
+from acda3d.data.splits import (
     Direction,
     SplitConfig,
     assignment_hash,
@@ -11,7 +11,7 @@ from pada3dacb.data.splits import (
     generate_target_split,
     validate_split_assignments,
 )
-from pada3dacb.exceptions import SplitValidationError
+from acda3d.exceptions import SplitValidationError
 from tests.phase6_helpers import make_artifact_index
 
 

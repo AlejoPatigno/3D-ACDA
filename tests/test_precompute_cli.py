@@ -35,6 +35,6 @@ def test_cli_concept_jacobian_and_combined_modes(tmp_path):
 def test_no_forbidden_phase_six_symbols():
     from pathlib import Path
 
-    text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/pada3dacb/artifacts").glob("*.py"))
+    text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/acda3d/artifacts").glob("*.py"))
     for forbidden in ("ContextualROIEncoder", "CORAL", "MMD", "CDAN", "pseudo-label"):
         assert forbidden not in text

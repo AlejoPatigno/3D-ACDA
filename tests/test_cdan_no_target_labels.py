@@ -1,7 +1,7 @@
 import pytest
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.training import UDATrainer
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.training import UDATrainer
 
 
 def test_cdan_target_batch_rejects_diagnostic_label_keys():

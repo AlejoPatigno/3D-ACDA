@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import pada3dacb.evaluation.concepts.report as report_module
-from pada3dacb.evaluation.concepts.report import (
+import acda3d.evaluation.concepts.report as report_module
+from acda3d.evaluation.concepts.report import (
     ConceptEvaluationPlan,
     CooperativeReaderPolicy,
     CooperativeReadResult,
@@ -33,7 +33,7 @@ from pada3dacb.evaluation.concepts.report import (
     serialize_canonical_publication_identity,
     verify_completed_output,
 )
-from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId
+from acda3d.evaluation.schemas import CheckpointPolicy, Direction, MethodId
 from scripts import evaluate_concepts
 
 

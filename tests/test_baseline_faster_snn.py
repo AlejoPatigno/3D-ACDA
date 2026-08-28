@@ -5,8 +5,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from pada3dacb.models.baselines import build_baseline
-from pada3dacb.models.baselines.faster_snn import FasterSNNBaseline, SpikeAct
+from acda3d.models.baselines import build_baseline
+from acda3d.models.baselines.faster_snn import FasterSNNBaseline, SpikeAct
 
 
 class _NotebookSpikeFn(torch.autograd.Function):

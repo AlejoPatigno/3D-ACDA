@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.binary import (
+from acda3d.binary import (
     BINARY_MAPPING_CONTRACT,
     OASIS_POLICY_HASH,
     OASIS_SEMANTIC_AUTHORITY_MARKER,
@@ -17,13 +17,13 @@ from pada3dacb.binary import (
     oasis_evidence_hash,
     validate_oasis_semantic_approval,
 )
-from pada3dacb.data.records import SubjectRecord, binary_record_from_subject_record
-from pada3dacb.data.splits import (
+from acda3d.data.records import SubjectRecord, binary_record_from_subject_record
+from acda3d.data.splits import (
     generate_binary_source_folds_for_records,
     generate_binary_target_partition_for_records,
     validate_binary_split_manifest,
 )
-from pada3dacb.exceptions import DatasetContractError
+from acda3d.exceptions import DatasetContractError
 
 TEST_SUBJECT_HASH_KEY = b"phase18b-test-subject-hmac-key!!"
 

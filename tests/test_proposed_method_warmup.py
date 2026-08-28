@@ -1,6 +1,6 @@
 import pytest
 
-from pada3dacb.training.trainer import BaseFixedEpochTrainer
+from acda3d.training.trainer import BaseFixedEpochTrainer
 from tests.test_proposed_method_trainer import make_proposed_epoch_trainer
 
 

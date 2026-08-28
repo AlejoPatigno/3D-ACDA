@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from pada3dacb.publication.canonical_json import (
+from acda3d.publication.canonical_json import (
     CANONICALIZATION_PROFILE,
     canonical_json_bytes,
     identity_sha256,

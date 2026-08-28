@@ -5,8 +5,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from pada3dacb.adaptation.cdan import CDANAdaptationMethod
-from pada3dacb.exceptions import LossContractError
+from acda3d.adaptation.cdan import CDANAdaptationMethod
+from acda3d.exceptions import LossContractError
 
 
 class QueueDiscriminator(nn.Module):

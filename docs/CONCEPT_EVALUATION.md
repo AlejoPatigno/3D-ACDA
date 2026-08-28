@@ -13,14 +13,14 @@ python scripts/evaluate_concepts.py \
   --config /tmp/concepts-synthetic.yaml \
   --runs-root /tmp/phase16/runs \
   --artifact-root /tmp/phase16/artifacts \
-  --both-directions --all-pada-methods --include-sensitivity \
+  --both-directions --all-acda-methods --include-sensitivity \
   --dry-run
 
 python scripts/evaluate_concepts.py \
   --config /tmp/concepts-synthetic.yaml \
   --runs-root /tmp/phase16/runs \
   --artifact-root /tmp/phase16/artifacts \
-  --both-directions --all-pada-methods --include-sensitivity \
+  --both-directions --all-acda-methods --include-sensitivity \
   --validate-only
 
 python scripts/evaluate_concepts.py \
@@ -28,7 +28,7 @@ python scripts/evaluate_concepts.py \
   --runs-root /tmp/phase16/runs \
   --artifact-root /tmp/phase16/artifacts \
   --output-root /tmp/phase16/results \
-  --both-directions --all-pada-methods --include-sensitivity \
+  --both-directions --all-acda-methods --include-sensitivity \
   --bootstrap-replicates 100 --bootstrap-seed 17
 ```
 
@@ -54,7 +54,7 @@ For reuse, add the completed output path to `completed_reuse.approved_output_roo
 | Class profiles | Descriptive CN/MCI/AD means and subject-bootstrap intervals |
 | Method inference | `prototype_pseudo` versus `{source_only, coral, mmd, cdan}` with paired diagnosis-stratified subject bootstrap and four-comparator Holm families |
 
-AAGN and FasterSNN are `not_applicable_no_pada3dacb_concept_head`; they never enter concept comparisons.
+AAGN and FasterSNN are `not_applicable_no_acda3d_concept_head`; they never enter concept comparisons.
 
 ## Input and provenance rules
 

@@ -1,8 +1,8 @@
 
 import pytest
 
-from pada3dacb.data.records import CLASS_ORDER, CLASS_TO_INDEX, SubjectRecord, requirement_profile
-from pada3dacb.exceptions import DatasetContractError
+from acda3d.data.records import CLASS_ORDER, CLASS_TO_INDEX, SubjectRecord, requirement_profile
+from acda3d.exceptions import DatasetContractError
 
 
 def test_class_mapping_identity_and_roundtrip(tmp_path):

@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 import scripts.evaluate_concepts as concept_cli
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     CheckpointPolicy,
     ConfigurationError,
     Direction,
@@ -63,8 +63,8 @@ def test_parse_cli_exposes_deterministic_synthetic_controls() -> None:
     assert selection.device == "cpu"
 
 
-def test_all_pada_methods_excludes_non_concept_baselines() -> None:
-    selection = parse_cli([*BASE, "--all-pada-methods", "--dry-run"])
+def test_all_acda_methods_excludes_non_concept_baselines() -> None:
+    selection = parse_cli([*BASE, "--all-acda-methods", "--dry-run"])
 
     assert selection.methods == (
         MethodId.SOURCE_ONLY,
@@ -103,7 +103,7 @@ def test_parse_cli_accepts_all_evaluation_controls_and_case_insensitive_directio
             "--artifact-root", str(tmp_path / "artifacts"),
             "--output-root", str(tmp_path / "results"),
             "--both-directions",
-            "--all-pada-methods",
+            "--all-acda-methods",
             "--checkpoint-policy", "best_source_f1",
             "--include-sensitivity",
             "--bootstrap-replicates", "25",

@@ -1,7 +1,7 @@
 import torch
 
-from pada3dacb.adaptation import MMDAdaptationMethod, mmd_loss
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.adaptation import MMDAdaptationMethod, mmd_loss
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_mmd_gradients_reach_both_features_and_shared_encoder_under_autocast():
@@ -13,7 +13,7 @@ def test_mmd_gradients_reach_both_features_and_shared_encoder_under_autocast():
     loss.backward()
     assert torch.isfinite(source.grad).all() and torch.isfinite(target.grad).all()
 
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     masks = torch.ones(2, 1, 1, 1)
     output = MMDAdaptationMethod([0.5, 1.0, 2.0]).compute(
         model(torch.rand(3, 1, 2, 2, 2), masks),

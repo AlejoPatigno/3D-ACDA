@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 import torch
 
-from pada3dacb.ablations import resolve_ablation_config
-from pada3dacb.exceptions import ModelContractError
-from pada3dacb.models.ablations import (
+from acda3d.ablations import resolve_ablation_config
+from acda3d.exceptions import ModelContractError
+from acda3d.models.ablations import (
     MEAN_POOL_MODEL_VARIANT,
-    MeanPoolPADA3DACB,
+    MeanPoolACDA3D,
     build_mean_pool_model,
     mean_pool_model_variant_hash,
 )
@@ -34,8 +34,8 @@ PRIMARY_LOSSES = {
 
 def base_config() -> dict[str, object]:
     return {
-        "base_method": "PADA-3DACB",
-        "model": {"name": "PADA-3DACB", "contextual_encoder": False},
+        "base_method": "3D-ACDA",
+        "model": {"name": "3D-ACDA", "contextual_encoder": False},
         "losses": PRIMARY_LOSSES,
         "approval": {"status": "approved", "approval_id": "maintainer-phase17"},
         "epochs": {"warm": 1, "full": 1},
@@ -63,7 +63,7 @@ def fixture_inputs(*, dtype: torch.dtype = torch.float32) -> tuple[torch.Tensor,
     return x, roi_masks
 
 
-def build_fixture_model() -> MeanPoolPADA3DACB:
+def build_fixture_model() -> MeanPoolACDA3D:
     return build_mean_pool_model(
         num_rois=3,
         feature_dim=8,
@@ -150,7 +150,7 @@ def test_mean_pool_has_no_contextual_encoder_or_runtime_switch() -> None:
 def test_mean_pool_variant_identity_matches_registry_and_differs_from_base() -> None:
     resolved = resolve_ablation_config(base_config(), "mean_pool")
 
-    assert MEAN_POOL_MODEL_VARIANT.name == "PADA-3DACB+MeanPoolAggregator"
+    assert MEAN_POOL_MODEL_VARIANT.name == "3D-ACDA+MeanPoolAggregator"
     assert MEAN_POOL_MODEL_VARIANT.aggregator == "MeanPoolAggregator"
     assert mean_pool_model_variant_hash() == resolved.model_variant_hash
     assert resolved.model_variant_hash != resolve_ablation_config(base_config(), "no_proto").model_variant_hash

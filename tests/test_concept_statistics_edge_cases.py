@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.fidelity import compute_per_roi_fidelity
-from pada3dacb.evaluation.concepts.statistics import bootstrap_metric, paired_bootstrap_diff
-from pada3dacb.evaluation.schemas import MethodId, ValueStatus
+from acda3d.evaluation.concepts.fidelity import compute_per_roi_fidelity
+from acda3d.evaluation.concepts.statistics import bootstrap_metric, paired_bootstrap_diff
+from acda3d.evaluation.schemas import MethodId, ValueStatus
 
 
 def test_constant_roi_correlation_is_unavailable_not_zero() -> None:
@@ -36,7 +36,7 @@ def test_single_subject_bootstrap_tracks_all_invalid_replicates() -> None:
 
 
 def test_non_concept_baseline_cannot_enter_paired_family() -> None:
-    with pytest.raises(ValueError, match="four PADA-3DACB comparators"):
+    with pytest.raises(ValueError, match="four 3D-ACDA comparators"):
         paired_bootstrap_diff(
             np.array([0.1, 0.2]),
             np.array([0.2, 0.1]),
@@ -53,7 +53,7 @@ def test_correlation_numerical_failure_is_unavailable(monkeypatch) -> None:
         raise FloatingPointError("reference failure")
 
     monkeypatch.setattr(
-        "pada3dacb.evaluation.concepts.fidelity.stats.pearsonr",
+        "acda3d.evaluation.concepts.fidelity.stats.pearsonr",
         fail_pearson,
     )
     rows = compute_per_roi_fidelity(

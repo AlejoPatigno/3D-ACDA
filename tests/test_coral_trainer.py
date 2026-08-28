@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from pada3dacb.exceptions import TrainingRuntimeError
+from acda3d.exceptions import TrainingRuntimeError
 from tests.phase8_helpers import make_loader
 from tests.phase10_helpers import make_coral_trainer, make_target_loader
 

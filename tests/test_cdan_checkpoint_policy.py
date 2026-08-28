@@ -1,6 +1,6 @@
 import yaml
 
-from pada3dacb.experiments import CDANExperimentRunner, load_cdan_config
+from acda3d.experiments import CDANExperimentRunner, load_cdan_config
 from tests.phase12_helpers import make_cdan_environment
 
 

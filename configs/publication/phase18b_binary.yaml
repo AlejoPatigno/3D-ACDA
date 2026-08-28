@@ -11,7 +11,7 @@ class_to_index:
   Impaired: 1
 n_classes: 2
 model:
-  name: PADA-3DACB
+  name: 3D-ACDA
   num_classes: 2
 mapping_contract: phase-18b-binary-v1
 split_disposition: REGENERATE_BINARY_SPLITS_REQUIRED

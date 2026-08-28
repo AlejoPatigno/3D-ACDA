@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.exceptions import InvalidPathError
-from pada3dacb.paths import ensure_directory, is_forbidden_hardcoded_path, resolve_path
+from acda3d.exceptions import InvalidPathError
+from acda3d.paths import ensure_directory, is_forbidden_hardcoded_path, resolve_path
 
 
 def test_environment_variable_expansion(tmp_path, monkeypatch):
-    monkeypatch.setenv("PADA_TEST_ROOT", str(tmp_path))
-    assert resolve_path("$PADA_TEST_ROOT/example") == (tmp_path / "example").resolve()
+    monkeypatch.setenv("ACDA3D_TEST_ROOT", str(tmp_path))
+    assert resolve_path("$ACDA3D_TEST_ROOT/example") == (tmp_path / "example").resolve()
 
 
 def test_user_home_expansion():

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pada3dacb.evaluation.provenance import (
+from acda3d.evaluation.provenance import (
     confined_relative_path,
     hydrate_provenance,
     inspect_input_file,
@@ -16,7 +16,7 @@ from pada3dacb.evaluation.provenance import (
     validate_prediction_rows,
     verify_identity_mapping,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     CandidateStatus,
     Direction,
     IdentityMapping,
@@ -209,8 +209,8 @@ def test_duplicate_and_inconsistent_labels_are_rejected() -> None:
 
 
 def test_provenance_module_does_not_import_training_code() -> None:
-    import pada3dacb.evaluation.provenance as provenance
+    import acda3d.evaluation.provenance as provenance
 
     tree = ast.parse(inspect.getsource(provenance))
     imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
-    assert all(module is None or not module.startswith("pada3dacb.training") for module in imported)
+    assert all(module is None or not module.startswith("acda3d.training") for module in imported)

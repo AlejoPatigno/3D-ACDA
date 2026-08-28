@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pada3dacb.evaluation.concepts.agreement import (
+from acda3d.evaluation.concepts.agreement import (
     compute_all_agreement,
     compute_consistency_direction,
     compute_head_predictive_metrics,
@@ -13,7 +13,7 @@ from pada3dacb.evaluation.concepts.agreement import (
     compute_per_class_disagreement,
     compute_top1_agreement,
 )
-from pada3dacb.evaluation.schemas import ValueStatus
+from acda3d.evaluation.schemas import ValueStatus
 
 
 def test_top1_and_js_match_direct_reference() -> None:

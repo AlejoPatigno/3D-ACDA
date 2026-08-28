@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation import gaussian_rbf_kernel_matrix, mmd_loss
-from pada3dacb.exceptions import LossContractError
+from acda3d.adaptation import gaussian_rbf_kernel_matrix, mmd_loss
+from acda3d.exceptions import LossContractError
 
 
 def test_biased_mmd_matches_direct_kernel_means_and_includes_diagonal():

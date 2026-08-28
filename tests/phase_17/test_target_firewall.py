@@ -8,10 +8,10 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.ablations import AblationResolutionError, validate_target_adaptation_batch
-from pada3dacb.ablations.schemas import AssignmentManifest, sha256_payload
-from pada3dacb.training.monitoring import TARGET_MONITORING_LABEL, evaluate_labeled_loader
-from pada3dacb.training.uda_trainer import UDATrainer
+from acda3d.ablations import AblationResolutionError, validate_target_adaptation_batch
+from acda3d.ablations.schemas import AssignmentManifest, sha256_payload
+from acda3d.training.monitoring import TARGET_MONITORING_LABEL, evaluate_labeled_loader
+from acda3d.training.uda_trainer import UDATrainer
 
 
 @pytest.fixture

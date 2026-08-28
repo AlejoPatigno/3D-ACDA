@@ -1,20 +1,20 @@
 import os
 from pathlib import Path
 
-from pada3dacb.adaptation import CDANAdaptationMethod, CORALAdaptationMethod, MMDAdaptationMethod
-from pada3dacb.experiments.cdan import CDAN_DISPLAY_NAME, CDANExperimentRunner, load_cdan_config
-from pada3dacb.experiments.coral import (
+from acda3d.adaptation import CDANAdaptationMethod, CORALAdaptationMethod, MMDAdaptationMethod
+from acda3d.experiments.cdan import CDAN_DISPLAY_NAME, CDANExperimentRunner, load_cdan_config
+from acda3d.experiments.coral import (
     CORAL_DISPLAY_NAME,
     load_coral_config,
     run_coral_both_directions,
 )
-from pada3dacb.experiments.mmd import (
+from acda3d.experiments.mmd import (
     MMD_DISPLAY_NAME,
     load_mmd_config,
     run_mmd_both_directions,
 )
-from pada3dacb.experiments.runner import SourceOnlyExperimentRunner, run_both_directions
-from pada3dacb.experiments.source_only import DISPLAY_NAME, load_source_only_config
+from acda3d.experiments.runner import SourceOnlyExperimentRunner, run_both_directions
+from acda3d.experiments.source_only import DISPLAY_NAME, load_source_only_config
 from tests.phase9_helpers import make_source_only_environment
 from tests.phase10_helpers import make_coral_environment
 from tests.phase11_helpers import make_mmd_environment
@@ -32,7 +32,7 @@ def test_source_only_regression_keeps_no_target_adaptation_and_all_fold_planning
     outputs = run_both_directions(config, dry_run=True)
 
     assert config.method == "source_only"
-    assert config.display_name == DISPLAY_NAME == "PADA-3DACB Source-Only"
+    assert config.display_name == DISPLAY_NAME == "3D-ACDA Source-Only"
     assert SourceOnlyExperimentRunner.uses_target_adaptation is False
     assert_two_direction_dry_run(outputs, expected_folds=list(range(5)))
     assert all("planned_target_adaptation" not in result.metrics for results in outputs.values() for result in results)
@@ -45,7 +45,7 @@ def test_coral_regression_keeps_identity_target_firewall_and_direction_planning(
     outputs = run_coral_both_directions(config, dry_run=True)
 
     assert CORALAdaptationMethod.name == "coral"
-    assert config.display_name == CORAL_DISPLAY_NAME == "PADA-3DACB + CORAL"
+    assert config.display_name == CORAL_DISPLAY_NAME == "3D-ACDA + CORAL"
     assert config.adaptation.resolved_dict()["covariance"] == {
         "estimator": "unbiased",
         "normalization": "four_d_squared",
@@ -62,7 +62,7 @@ def test_mmd_regression_keeps_kernel_identity_target_firewall_and_direction_plan
     outputs = run_mmd_both_directions(config, dry_run=True)
 
     assert MMDAdaptationMethod.name == "mmd"
-    assert config.display_name == MMD_DISPLAY_NAME == "PADA-3DACB + MMD"
+    assert config.display_name == MMD_DISPLAY_NAME == "3D-ACDA + MMD"
     assert config.adaptation.kernel.resolved_dict() == {
         "name": "gaussian_rbf_mixture",
         "bandwidths": [0.5, 1.0, 2.0],
@@ -96,7 +96,7 @@ def test_cdan_regression_keeps_conditional_identity_target_firewall_and_fold_pla
         skip_if_cdan_discriminator_contract_is_externalized(exc)
 
     assert CDANAdaptationMethod.name == "cdan"
-    assert config.display_name == CDAN_DISPLAY_NAME == "PADA-3DACB + CDAN"
+    assert config.display_name == CDAN_DISPLAY_NAME == "3D-ACDA + CDAN"
     assert config.adaptation.resolved_dict()["conditional_mode"] == "exact_outer_product"
     assert config.adaptation.resolved_dict()["probability_source"] == "latent_probabilities"
     assert [result.fold for result in outputs[config.direction]] == [0, 3]

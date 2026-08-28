@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import torch
 
-import pada3dacb.experiments.ablations as ablations
-from pada3dacb.experiments.ablations import (
+import acda3d.experiments.ablations as ablations
+from acda3d.experiments.ablations import (
     APPROVED_ABLATIONS,
     MONITORING_LABEL,
     build_equivalence_reference,
@@ -17,7 +17,7 @@ from pada3dacb.experiments.ablations import (
     load_ablation_config,
     planned_run_path,
 )
-from pada3dacb.experiments.prediction_export import (
+from acda3d.experiments.prediction_export import (
     export_ablation_predictions,
     validate_ablation_prediction_records,
 )
@@ -135,8 +135,8 @@ def test_validate_only_reports_disabled_terms_and_mean_pool_variant(tmp_path: Pa
     assert plans["no_cons"]["validated"] is True
     assert plans["no_concept"]["validated"] is True
     assert plans["no_anat"]["validated"] is True
-    assert plans["mean_pool"]["model_variant"] == "PADA-3DACB+MeanPoolAggregator"
-    assert all(plan["model_variant"] == "PADA-3DACB" for name, plan in plans.items() if name != "mean_pool")
+    assert plans["mean_pool"]["model_variant"] == "3D-ACDA+MeanPoolAggregator"
+    assert all(plan["model_variant"] == "3D-ACDA" for name, plan in plans.items() if name != "mean_pool")
     assert all(plan["target_monitoring_enabled"] is True for plan in plans.values())
 
 
@@ -164,7 +164,7 @@ def test_supported_output_path_prediction_and_equivalence_schemas(tmp_path: Path
             "target_label_usage": "forbidden",
             "direction": "ADNI_to_OASIS",
             "method": "ablation",
-            "model": "PADA-3DACB",
+            "model": "3D-ACDA",
             "fold": 0,
             "seed": 42,
             "checkpoint_name": "checkpoint_last.pt",
@@ -184,7 +184,7 @@ def test_supported_output_path_prediction_and_equivalence_schemas(tmp_path: Path
             "target_label_usage": "monitoring_only",
             "direction": "ADNI_to_OASIS",
             "method": "ablation",
-            "model": "PADA-3DACB",
+            "model": "3D-ACDA",
             "fold": 0,
             "seed": 42,
             "checkpoint_name": "checkpoint_best_source_f1.pt",

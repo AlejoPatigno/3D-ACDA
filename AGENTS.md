@@ -1,8 +1,8 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 ## Repository
 
-This repository implements the research code for **PADA-3DACB**, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimer's disease diagnosis from 3D MRI.
+This repository implements the research code for **3D-ACDA**, an anatomically interpretable unsupervised domain-adaptation framework for Alzheimer's disease diagnosis from 3D MRI.
 
 The repository is being prepared for a reproducible scientific publication targeting **Medical & Biological Engineering & Computing**.
 
@@ -13,7 +13,7 @@ The codebase is derived from four canonical notebooks:
 - `notebooks/archive/training_original.ipynb`
 - `notebooks/archive/baselines_original.ipynb`
 
-These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/pada3dacb/`.
+These notebooks remain historical scientific references. Production behavior belongs in the Python package under `src/acda3d/`.
 
 ---
 
@@ -185,7 +185,7 @@ The only proposed production architecture is:
 
 ```text
 
-PADA-3DACB
+3D-ACDA
 
 ```
 
@@ -193,8 +193,8 @@ It is the former Lite / no-contextual-encoder architecture.
 
 The following are forbidden in production:
 
-- `PADA-3DACB-Full`
-- `PADA-3DACB-Lite` as a public model name
+- `3D-ACDA-Full`
+- `3D-ACDA-Lite` as a public model name
 - `ContextualROIEncoder`
 - `ctx_enc`
 - Transformer-based ROI contextual mixing
@@ -242,9 +242,9 @@ MONITORING ONLY — NOT A TRAINING LOSS
 
 The following methods are already approved and regression-protected:
 
-- `PADA-3DACB Source-Only`
-- `PADA-3DACB + CORAL`
-- `PADA-3DACB + MMD`
+- `3D-ACDA Source-Only`
+- `3D-ACDA + CORAL`
+- `3D-ACDA + MMD`
 
 Later work must not silently alter their:
 
@@ -331,7 +331,7 @@ notebooks/archive/training_original.ipynb
 
 Responsibilities:
 
-- latest PADA-3DACB components;
+- latest 3D-ACDA components;
 - core losses;
 - warm-up/full-stage behavior;
 - adaptation behavior originally present in the notebook.
@@ -362,7 +362,7 @@ Expected main layout:
 
 ```text
 
-src/pada3dacb/
+src/acda3d/
 ├── adaptation/
 ├── artifacts/
 ├── data/
@@ -421,7 +421,7 @@ for generated outputs, subject to the existing project conventions.
 - Keep differentiable computations in PyTorch.
 - Do not use NumPy inside differentiable losses.
 - Avoid unnecessary tensor clones and `repeat()`.
-- Use one shared PADA-3DACB model for source and target adaptation passes.
+- Use one shared 3D-ACDA model for source and target adaptation passes.
 - Never detach features or probabilities unless the approved specification explicitly requires it.
 - Check non-finite losses before backward.
 - Preserve deterministic seeds and loader-generator states.
@@ -529,7 +529,7 @@ At the end of every phase run:
 ```bash
 
 python -m pip install -e .
-python -c "import pada3dacb; print(pada3dacb.__version__)"
+python -c "import acda3d; print(acda3d.__version__)"
 python -m pytest -q
 python -m ruff check .
 git diff --check

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.ablations import (
+from acda3d.ablations import (
     AblationResolutionError,
     list_ablations,
     resolve_ablation_config,
@@ -31,8 +31,8 @@ PRIMARY_LOSSES = {
 
 def base_config(**overrides: object) -> dict[str, object]:
     config: dict[str, object] = {
-        "base_method": "PADA-3DACB",
-        "model": {"name": "PADA-3DACB", "contextual_encoder": False},
+        "base_method": "3D-ACDA",
+        "model": {"name": "3D-ACDA", "contextual_encoder": False},
         "losses": PRIMARY_LOSSES,
         "approval": {"status": "approved", "approval_id": "maintainer-phase17"},
         "epochs": {"warm": 1, "full": 1},
@@ -170,7 +170,7 @@ def test_multiple_override_and_contextual_model_fail_closed() -> None:
 
     with pytest.raises(AblationResolutionError) as error:
         resolve_ablation_config(
-            base_config(model={"name": "PADA-3DACB", "contextual_encoder": True}),
+            base_config(model={"name": "3D-ACDA", "contextual_encoder": True}),
             "no_proto",
         )
     assert error.value.reason == "architecture_disposition_blocked"

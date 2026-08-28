@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from pada3dacb.evaluation.concepts.class_profiles import compute_class_profiles
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.class_profiles import compute_class_profiles
+from acda3d.evaluation.concepts.schemas import (
     Direction,
     FoldEnsembleRecord,
     MethodId,
 )
-from pada3dacb.evaluation.schemas import ValueStatus
+from acda3d.evaluation.schemas import ValueStatus
 
 
 def _record(subject: str, concepts: tuple[float, float]) -> FoldEnsembleRecord:

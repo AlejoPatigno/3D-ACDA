@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from pada3dacb.exceptions import TrainingRuntimeError
+from acda3d.exceptions import TrainingRuntimeError
 from tests.phase8_helpers import make_loader
 from tests.phase11_helpers import make_mmd_target_loader, make_mmd_trainer
 

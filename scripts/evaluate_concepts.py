@@ -17,22 +17,22 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from pada3dacb.artifacts.concepts import ConceptNormalizer
-from pada3dacb.evaluation.concepts.agreement import compute_all_agreement
-from pada3dacb.evaluation.concepts.anatomy import compute_global_anatomy
-from pada3dacb.evaluation.concepts.discovery import (
+from acda3d.artifacts.concepts import ConceptNormalizer
+from acda3d.evaluation.concepts.agreement import compute_all_agreement
+from acda3d.evaluation.concepts.anatomy import compute_global_anatomy
+from acda3d.evaluation.concepts.discovery import (
     NOT_APPLICABLE_STATUS,
     DiscoveryConfig,
     discover_candidates,
 )
-from pada3dacb.evaluation.concepts.fidelity import compute_global_fidelity
-from pada3dacb.evaluation.concepts.inference import (
+from acda3d.evaluation.concepts.fidelity import compute_global_fidelity
+from acda3d.evaluation.concepts.inference import (
     load_checkpoint,
     run_real_evaluation,
     run_subject_inference,
 )
-from pada3dacb.evaluation.concepts.provenance import load_provenance_manifest
-from pada3dacb.evaluation.concepts.report import (
+from acda3d.evaluation.concepts.provenance import load_provenance_manifest
+from acda3d.evaluation.concepts.report import (
     CooperativeReaderPolicy,
     PublicationBlocked,
     build_synthetic_fixture_bundle,
@@ -40,18 +40,18 @@ from pada3dacb.evaluation.concepts.report import (
     read_cooperative_publication,
     verify_completed_output,
 )
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     VerifiedFixtureManifest,
     _is_verified_fixture_manifest,
     issue_real_evaluation_capability,
     verify_fixture_manifest,
 )
-from pada3dacb.evaluation.concepts.stability import compute_all_stability
-from pada3dacb.evaluation.concepts.statistics import (
+from acda3d.evaluation.concepts.stability import compute_all_stability
+from acda3d.evaluation.concepts.statistics import (
     bootstrap_metric,
     paired_bootstrap_diff,
 )
-from pada3dacb.evaluation.schemas import (
+from acda3d.evaluation.schemas import (
     AnalysisMode,
     AuthorizationGateError,
     CheckpointPolicy,
@@ -66,9 +66,9 @@ from pada3dacb.evaluation.schemas import (
     UnsafePathError,
     canonical_sha256,
 )
-from pada3dacb.models.pada3dacb import PADA3DACB
+from acda3d.models.acda3d import ACDA3D
 
-PADA_CONCEPT_METHODS = (
+ACDA_CONCEPT_METHODS = (
     MethodId.SOURCE_ONLY,
     MethodId.CORAL,
     MethodId.MMD,
@@ -156,7 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     methods = parser.add_mutually_exclusive_group(required=True)
     methods.add_argument("--method", action="append", choices=[item.value for item in MethodId])
-    methods.add_argument("--all-pada-methods", action="store_true")
+    methods.add_argument("--all-acda-methods", action="store_true")
 
     parser.add_argument(
         "--checkpoint-policy",
@@ -235,8 +235,8 @@ def parse_cli(argv: Sequence[str] | None = None) -> CliSelection:
 
     selected_directions = tuple(Direction) if args.both_directions else (Direction(args.direction),)
     selected_methods = (
-        PADA_CONCEPT_METHODS
-        if args.all_pada_methods
+        ACDA_CONCEPT_METHODS
+        if args.all_acda_methods
         else tuple(MethodId(item) for item in args.method)
     )
     primary = CheckpointPolicy.PRIMARY_BEST_SOURCE_F1 if args.checkpoint_policy == "best_source_f1" else CheckpointPolicy.SENSITIVITY_LAST
@@ -390,7 +390,7 @@ def _validate_synthetic_fixture(
         "concept_dropout": 0.0,
         "validate_inputs": True,
     }
-    model = PADA3DACB(**model_config)
+    model = ACDA3D(**model_config)
     checkpoint = {
         "model_state_dict": model.state_dict(),
         "experiment_hash": "1" * 64,
@@ -408,7 +408,7 @@ def _validate_synthetic_fixture(
         def get_binary_masks() -> torch.Tensor:
             return torch.ones(3, 2, 2, 2, dtype=torch.float32)
 
-    with TemporaryDirectory(prefix="pada3dacb-validate-only-") as directory:
+    with TemporaryDirectory(prefix="acda3d-validate-only-") as directory:
         checkpoint_path = Path(directory) / "checkpoint.pt"
         torch.save(checkpoint, checkpoint_path)
         bundle = load_checkpoint(checkpoint_path, device)

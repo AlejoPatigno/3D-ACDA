@@ -1,9 +1,9 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation import CORALAdaptationMethod, coral_loss, covariance_matrix
-from pada3dacb.exceptions import LossContractError
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.adaptation import CORALAdaptationMethod, coral_loss, covariance_matrix
+from acda3d.exceptions import LossContractError
+from tests.phase8_helpers import TinyACDA3D
 
 
 def test_coral_matches_direct_equation_and_unbiased_covariance():
@@ -30,7 +30,7 @@ def test_coral_ignores_mean_shift_and_computes_float32():
 
 
 def test_coral_reaches_shared_encoder_and_stays_float32_under_cpu_autocast():
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     source = torch.rand(2, 1, 2, 2, 2)
     target = torch.rand(2, 1, 2, 2, 2) * 2
     masks = torch.ones(2, 1, 1, 1)

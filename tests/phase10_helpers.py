@@ -4,10 +4,10 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from pada3dacb.adaptation import CORALAdaptationMethod
-from pada3dacb.losses import CorePADA3DACBLoss
-from pada3dacb.training import FixedEpochTrainingConfig, UDATrainer
-from tests.phase8_helpers import TinyPADA3DACB
+from acda3d.adaptation import CORALAdaptationMethod
+from acda3d.losses import CoreACDA3DLoss
+from acda3d.training import FixedEpochTrainingConfig, UDATrainer
+from tests.phase8_helpers import TinyACDA3D
 from tests.phase9_helpers import make_source_only_environment
 
 
@@ -17,7 +17,7 @@ def make_coral_environment(tmp_path: Path, *, weight: float | None = 1.0) -> Pat
     payload["experiment"].update(
         {
             "name": "synthetic_coral",
-            "display_name": "PADA-3DACB + CORAL",
+            "display_name": "3D-ACDA + CORAL",
             "method": "coral",
         }
     )
@@ -62,7 +62,7 @@ def make_coral_trainer(
     weight: float = 1.0,
 ) -> UDATrainer:
     torch.manual_seed(seed)
-    model = TinyPADA3DACB()
+    model = TinyACDA3D()
     config = FixedEpochTrainingConfig(
         warmup_epochs=warmup_epochs,
         full_epochs=full_epochs,
@@ -86,7 +86,7 @@ def make_coral_trainer(
     }
     return UDATrainer(
         model,
-        CorePADA3DACBLoss(2),
+        CoreACDA3DLoss(2),
         torch.ones(2, 1, 1, 1),
         run_dir,
         config=config,

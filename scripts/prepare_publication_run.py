@@ -14,13 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import yaml  # noqa: E402
 
-from pada3dacb.publication.authorization import check_authorization, format_blockers  # noqa: E402
-from pada3dacb.publication.experiment_matrix import (  # noqa: E402
+from acda3d.publication.authorization import check_authorization, format_blockers  # noqa: E402
+from acda3d.publication.experiment_matrix import (  # noqa: E402
     RowState,
     build_ablation_plan,
     generate_matrix,
 )
-from pada3dacb.publication.freeze import (  # noqa: E402
+from acda3d.publication.freeze import (  # noqa: E402
     FreezeValidationError,
     build_freeze_payload,
     write_freeze,

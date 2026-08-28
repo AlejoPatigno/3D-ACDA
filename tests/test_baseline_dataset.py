@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from pada3dacb.data.baseline_dataset import ClassificationOnlyMRIDataset
-from pada3dacb.exceptions import DatasetContractError
+from acda3d.data.baseline_dataset import ClassificationOnlyMRIDataset
+from acda3d.exceptions import DatasetContractError
 
 
 def _row(path: Path, label: str = "MCI") -> dict[str, object]:

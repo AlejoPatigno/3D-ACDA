@@ -1,4 +1,4 @@
-from pada3dacb.adaptation import CORALAdaptationMethod, MMDAdaptationMethod
+from acda3d.adaptation import CORALAdaptationMethod, MMDAdaptationMethod
 
 
 def test_prior_approved_adaptation_methods_remain_importable():

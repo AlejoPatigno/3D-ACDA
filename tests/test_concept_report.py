@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-import pada3dacb.evaluation.concepts.report as report_module
-from pada3dacb.evaluation.concepts.report import (
+import acda3d.evaluation.concepts.report as report_module
+from acda3d.evaluation.concepts.report import (
     ConceptEvaluationPlan,
     _synthetic_status_rows,
     build_artifact_index,
@@ -17,11 +17,11 @@ from pada3dacb.evaluation.concepts.report import (
     commit_output,
     verify_completed_output,
 )
-from pada3dacb.evaluation.schemas import CheckpointPolicy, Direction, MethodId
+from acda3d.evaluation.schemas import CheckpointPolicy, Direction, MethodId
 
 
 def _write_owner_metadata(entry, *, pid: int, token: str) -> None:
-    (entry / ".pada3dacb-owner.json").write_text(
+    (entry / ".acda3d-owner.json").write_text(
         json.dumps({"schema_version": "1", "pid": pid, "token": token}), encoding="utf-8"
     )
 
@@ -62,7 +62,7 @@ def test_synthetic_status_rows_do_not_duplicate_not_applicable_methods() -> None
 
     statuses = [row for row in rows if row["method"] == MethodId.AAGN.value]
     assert len(statuses) == 1
-    assert statuses[0]["status"] == "not_applicable_no_pada3dacb_concept_head"
+    assert statuses[0]["status"] == "not_applicable_no_acda3d_concept_head"
 
 
 def test_output_plan_contains_files_only_and_is_deterministic() -> None:
@@ -230,7 +230,7 @@ def test_unrecognized_allocation_lock_is_preserved_during_publication(tmp_path) 
     assert output == tmp_path / "results"
     assert output.is_dir()
     assert stale_lock.is_dir()
-    assert json.loads((stale_lock / ".pada3dacb-owner.json").read_text()) == {
+    assert json.loads((stale_lock / ".acda3d-owner.json").read_text()) == {
         "schema_version": "1", "pid": 101, "token": "crashed-lock"
     }
 
@@ -284,7 +284,7 @@ def test_recovery_does_not_delete_arbitrary_namespace_directories(tmp_path, monk
 def test_controlled_entry_cleanup_retries_windows_permission_error(tmp_path, monkeypatch) -> None:
     entry = tmp_path / ".results.stage.owner"
     entry.mkdir()
-    (entry / ".pada3dacb-owner.json").write_text("{}", encoding="utf-8")
+    (entry / ".acda3d-owner.json").write_text("{}", encoding="utf-8")
     calls = 0
     sleeps = []
     real_rmtree = report_module.shutil.rmtree

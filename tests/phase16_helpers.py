@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import yaml
 
-from pada3dacb.evaluation.concepts.schemas import (
+from acda3d.evaluation.concepts.schemas import (
     CheckpointPolicy,
     ConceptSubjectRecord,
     Direction,

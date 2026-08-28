@@ -6,21 +6,21 @@ import pytest
 import torch
 from torch import nn
 
-from pada3dacb.binary import BINARY_MAPPING_CONTRACT, BinarySubjectRecord
-from pada3dacb.data.datasets import (
+from acda3d.binary import BINARY_MAPPING_CONTRACT, BinarySubjectRecord
+from acda3d.data.datasets import (
     BinaryLabeledSourceDataset,
     BinaryTargetAdaptationDataset,
 )
-from pada3dacb.data.records import SubjectRecord, binary_record_from_subject_record
-from pada3dacb.data.splits import (
+from acda3d.data.records import SubjectRecord, binary_record_from_subject_record
+from acda3d.data.splits import (
     generate_binary_source_folds_for_records,
     generate_binary_target_partition_for_records,
     validate_binary_split_manifest,
 )
-from pada3dacb.exceptions import DatasetContractError, SplitValidationError, TrainingRuntimeError
-from pada3dacb.models.checkpoint_migration import load_binary_checkpoint
-from pada3dacb.training.checkpointing import validate_binary_checkpoint_metadata
-from pada3dacb.training.uda_trainer import UDATrainer
+from acda3d.exceptions import DatasetContractError, SplitValidationError, TrainingRuntimeError
+from acda3d.models.checkpoint_migration import load_binary_checkpoint
+from acda3d.training.checkpointing import validate_binary_checkpoint_metadata
+from acda3d.training.uda_trainer import UDATrainer
 
 TEST_SUBJECT_HASH_KEY = b"phase18b-test-subject-hmac-key!!"
 
@@ -122,7 +122,7 @@ def test_binary_checkpoint_metadata_is_complete_and_tamper_evident() -> None:
         "split_identity": "a" * 64,
         "split_assignment_hash": "b" * 64,
         "configuration_payload": configuration,
-        "configuration_payload_hash": __import__("pada3dacb.training.checkpointing", fromlist=["configuration_hash"]).configuration_hash(configuration),
+        "configuration_payload_hash": __import__("acda3d.training.checkpointing", fromlist=["configuration_hash"]).configuration_hash(configuration),
         "binary_classifier_cardinality": 2,
     }
     validate_binary_checkpoint_metadata(metadata)
@@ -146,7 +146,7 @@ def test_binary_checkpoint_rejects_historical_or_partial_state() -> None:
         "split_identity": "a" * 64,
         "split_assignment_hash": "b" * 64,
         "configuration_payload": {"task_id": "cn_vs_impaired"},
-        "configuration_payload_hash": __import__("pada3dacb.training.checkpointing", fromlist=["configuration_hash"]).configuration_hash({"task_id": "cn_vs_impaired"}),
+        "configuration_payload_hash": __import__("acda3d.training.checkpointing", fromlist=["configuration_hash"]).configuration_hash({"task_id": "cn_vs_impaired"}),
         "binary_classifier_cardinality": 2,
     }
     with pytest.raises(Exception, match="historical|cardinality|metadata"):

@@ -3,13 +3,13 @@ import copy
 import torch
 from torch import nn
 
-from pada3dacb.models import PADA3DACB
+from acda3d.models import ACDA3D
 
 
 class NotebookLiteReference(nn.Module):
     """Former identity_ctx execution, transcribed from training cell 7/18."""
 
-    def __init__(self, production: PADA3DACB):
+    def __init__(self, production: ACDA3D):
         super().__init__()
         self.encoder = copy.deepcopy(production.encoder)
         self.tokenizer = copy.deepcopy(production.tokenizer)
@@ -35,7 +35,7 @@ class NotebookLiteReference(nn.Module):
 
 def test_complete_former_lite_float32_parity():
     torch.manual_seed(17)
-    production = PADA3DACB(3, 8, 6, base_channels=4, concept_hidden_dim=4).eval()
+    production = ACDA3D(3, 8, 6, base_channels=4, concept_hidden_dim=4).eval()
     reference = NotebookLiteReference(production).eval()
     x = torch.randn(2, 1, 16, 16, 16)
     roi_masks = torch.ones(3, 2, 2, 2) / 8

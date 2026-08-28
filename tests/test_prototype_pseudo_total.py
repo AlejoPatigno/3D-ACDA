@@ -4,12 +4,12 @@ import pytest
 import torch
 from torch.nn import functional as F
 
-from pada3dacb.adaptation.prototype_pseudo import (
+from acda3d.adaptation.prototype_pseudo import (
     PrototypePseudoAdaptationConfig,
     PrototypePseudoAdaptationLoss,
     prototype_pseudo_adaptation_loss,
 )
-from pada3dacb.exceptions import LossContractError
+from acda3d.exceptions import LossContractError
 
 
 def _reference_tensors():

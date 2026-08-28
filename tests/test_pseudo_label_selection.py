@@ -4,13 +4,13 @@ import pytest
 import torch
 from torch.nn import functional as F
 
-from pada3dacb.adaptation.pseudo_label import (
+from acda3d.adaptation.pseudo_label import (
     DEFAULT_PSEUDO_LABEL_CLASS_COUNT,
     DEFAULT_TAU_P,
     PseudoLabelLoss,
     select_pseudo_labels,
 )
-from pada3dacb.exceptions import LossContractError
+from acda3d.exceptions import LossContractError
 
 
 def test_select_pseudo_labels_uses_concept_logits_softmax_argmax_confidence():

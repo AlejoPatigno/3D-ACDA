@@ -20,7 +20,7 @@ class_order:
   MCI: 1
   AD: 2
 
-# Eligible methods for concept evaluation (PADA-3DACB family only)
+# Eligible methods for concept evaluation (3D-ACDA family only)
 methods:
   - source_only
   - coral
@@ -28,7 +28,7 @@ methods:
   - cdan
   - prototype_pseudo
 
-# Baselines without PADA-3DACB concept head (evaluated for predictive only)
+# Baselines without 3D-ACDA concept head (evaluated for predictive only)
 baselines:
   - aagn
   - faster_snn

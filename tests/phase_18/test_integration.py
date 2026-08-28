@@ -8,15 +8,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.publication.authorization import check_authorization
-from pada3dacb.publication.canonical_json import canonical_json_bytes, identity_sha256
-from pada3dacb.publication.experiment_matrix import (
+from acda3d.publication.authorization import check_authorization
+from acda3d.publication.canonical_json import canonical_json_bytes, identity_sha256
+from acda3d.publication.experiment_matrix import (
     MatrixValidationError,
     RowKind,
     generate_matrix,
     matrix_content_hash,
 )
-from pada3dacb.publication.feasibility import (
+from acda3d.publication.feasibility import (
     EvidenceType,
     ProductionShapeMetadata,
     ResourceBudgetStatus,
@@ -24,25 +24,25 @@ from pada3dacb.publication.feasibility import (
     run_synthetic_feasibility,
     validate_budget_closure,
 )
-from pada3dacb.publication.freeze import (
+from acda3d.publication.freeze import (
     build_freeze_payload,
     read_freeze,
     write_freeze,
 )
-from pada3dacb.publication.provenance import (
+from acda3d.publication.provenance import (
     ProvenanceStatus,
     check_assignment_disjointness,
     validate_manifest,
 )
-from pada3dacb.publication.schemas import ValueClass, ValueClassification
-from pada3dacb.publication.validation import (
+from acda3d.publication.schemas import ValueClass, ValueClassification
+from acda3d.publication.validation import (
     aggregate_validators,
     validate_target_adaptation_batch,
     validate_target_evaluation_metadata,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PUBLICATION_ROOT = ROOT / "src" / "pada3dacb" / "publication"
+PUBLICATION_ROOT = ROOT / "src" / "acda3d" / "publication"
 CLI_PATHS = (
     ROOT / "scripts" / "prepare_publication_run.py",
     ROOT / "scripts" / "check_real_run_authorization.py",
@@ -263,7 +263,7 @@ def test_synthetic_feasibility_and_resource_evidence_cannot_close_real_budget() 
 
 
 def test_publication_package_and_clis_have_no_real_runtime_import_boundary() -> None:
-    forbidden_modules = {"torch", "nibabel", "pada3dacb.training", "pada3dacb.data"}
+    forbidden_modules = {"torch", "nibabel", "acda3d.training", "acda3d.data"}
     paths = tuple(PUBLICATION_ROOT.glob("*.py")) + CLI_PATHS
     for path in paths:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -279,12 +279,12 @@ def test_publication_package_and_clis_have_no_real_runtime_import_boundary() -> 
             for alias in node.names
         )
         assert not any(
-            module in forbidden_modules or module.startswith("pada3dacb.training")
+            module in forbidden_modules or module.startswith("acda3d.training")
             for module in imported
         ), path
         source = path.read_text(encoding="utf-8")
         assert "MRI loader" not in source
-        assert "pada3dacb.experiments" not in source
+        assert "acda3d.experiments" not in source
         assert "optimizer.step(" not in source
 
 

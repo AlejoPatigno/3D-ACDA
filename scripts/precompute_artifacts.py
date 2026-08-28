@@ -6,9 +6,9 @@ import argparse
 import logging
 from pathlib import Path
 
-from pada3dacb.artifacts.cache import ensure_artifact_cache, load_precompute_config
-from pada3dacb.training.experiment_logging import setup_experiment_logger
-from pada3dacb.training.reproducibility import seed_everything
+from acda3d.artifacts.cache import ensure_artifact_cache, load_precompute_config
+from acda3d.training.experiment_logging import setup_experiment_logger
+from acda3d.training.reproducibility import seed_everything
 
 
 def parser() -> argparse.ArgumentParser:
@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         config.execution.seed = args.seed
     if args.workers is not None:
         config.execution.number_of_workers = args.workers
-    setup_experiment_logger("pada3dacb.precompute", level=logging.INFO)
+    setup_experiment_logger("acda3d.precompute", level=logging.INFO)
     seed_everything(config.execution.seed)
     index = ensure_artifact_cache(config, subjects=set(args.subjects or []), cohorts=set(args.cohorts or []), limit=args.limit)
     print(f"Phase 5 artifact planning/computation completed for {len(index)} subjects.")

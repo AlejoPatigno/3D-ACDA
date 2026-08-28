@@ -4,9 +4,9 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from pada3dacb.exceptions import ExperimentValidationError
-from pada3dacb.experiments.cdan import CDAN_DISPLAY_NAME, CDANExperimentRunner, load_cdan_config
-from pada3dacb.experiments.prediction_export import PREDICTION_COLUMNS, validate_prediction_frame
+from acda3d.exceptions import ExperimentValidationError
+from acda3d.experiments.cdan import CDAN_DISPLAY_NAME, CDANExperimentRunner, load_cdan_config
+from acda3d.experiments.prediction_export import PREDICTION_COLUMNS, validate_prediction_frame
 from tests.phase12_helpers import make_cdan_environment
 
 
@@ -43,7 +43,7 @@ def test_cdan_reuses_subject_level_prediction_schema_with_phase12_identity():
 
     validate_prediction_frame(frame)
     assert frame.loc[0, "method"] == "cdan"
-    assert frame.loc[0, "model"] == "PADA-3DACB + CDAN"
+    assert frame.loc[0, "model"] == "3D-ACDA + CDAN"
     assert frame.loc[0, "split"] != "target_adaptation"
 
 

@@ -1,12 +1,12 @@
 import pytest
 import torch
 
-from pada3dacb.adaptation.prototype import (
+from acda3d.adaptation.prototype import (
     DEFAULT_PROTOTYPE_CLASS_COUNT,
     build_source_prototypes,
     build_target_prototypes,
 )
-from pada3dacb.exceptions import LossContractError
+from acda3d.exceptions import LossContractError
 
 
 def test_source_prototypes_are_current_batch_per_class_means_with_absent_mask():

@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 
-from pada3dacb.adaptation.pseudo_label import PseudoLabelLoss
+from acda3d.adaptation.pseudo_label import PseudoLabelLoss
 
 
 def test_pseudo_label_loss_gradients_flow_through_accepted_logits_only():

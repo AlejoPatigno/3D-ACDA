@@ -1,8 +1,8 @@
 def test_required_imports():
-    import pada3dacb
-    import pada3dacb.config
-    import pada3dacb.paths
-    import pada3dacb.training.experiment_logging
-    import pada3dacb.training.reproducibility
+    import acda3d
+    import acda3d.config
+    import acda3d.paths
+    import acda3d.training.experiment_logging
+    import acda3d.training.reproducibility
 
-    assert pada3dacb.__version__
+    assert acda3d.__version__

@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pada3dacb.exceptions import ConfigurationError
-from pada3dacb.experiments import load_mmd_config
+from acda3d.exceptions import ConfigurationError
+from acda3d.experiments import load_mmd_config
 from tests.phase11_helpers import make_mmd_environment
 
 

@@ -1,7 +1,7 @@
 import nibabel as nib
 import numpy as np
 
-from pada3dacb.data.derivative_verification import (
+from acda3d.data.derivative_verification import (
     VerificationConfig,
     VerificationStatus,
     affine_diagnostics,

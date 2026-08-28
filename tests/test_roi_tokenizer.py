@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from pada3dacb.exceptions import ModelContractError
-from pada3dacb.models import ROITokenizer
+from acda3d.exceptions import ModelContractError
+from acda3d.models import ROITokenizer
 
 
 def test_roi_tokenizer_preserves_order_and_gradients():

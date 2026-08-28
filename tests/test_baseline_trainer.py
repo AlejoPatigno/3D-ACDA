@@ -7,8 +7,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from pada3dacb.exceptions import TrainingRuntimeError
-from pada3dacb.training.baseline_trainer import (
+from acda3d.exceptions import TrainingRuntimeError
+from acda3d.training.baseline_trainer import (
     BaselineTrainConfig,
     ClassificationOnlyLoss,
     ClassificationOnlyTrainer,
