@@ -1,5 +1,6 @@
 import pytest
 import torch
+from torch.nn import functional as F
 
 from acda3d.adaptation.prototype import (
     DEFAULT_PROTOTYPE_CLASS_COUNT,
@@ -9,7 +10,7 @@ from acda3d.adaptation.prototype import (
 from acda3d.exceptions import LossContractError
 
 
-def test_source_prototypes_are_current_batch_per_class_means_with_absent_mask():
+def test_source_prototypes_are_means_of_normalized_batch_rows_with_absent_mask():
     z_src = torch.tensor(
         [
             [1.0, 2.0],
@@ -21,12 +22,13 @@ def test_source_prototypes_are_current_batch_per_class_means_with_absent_mask():
 
     prototypes, valid = build_source_prototypes(z_src, y_src, class_count=DEFAULT_PROTOTYPE_CLASS_COUNT)
 
-    expected = torch.tensor(
-        [
-            [2.0, 3.0],
-            [0.0, 0.0],
-            [10.0, 20.0],
-        ]
+    normalized = F.normalize(z_src, p=2, dim=1)
+    expected = torch.stack(
+        (
+            normalized[:2].mean(dim=0),
+            torch.zeros_like(normalized[0]),
+            normalized[2],
+        )
     )
     torch.testing.assert_close(prototypes, expected)
     assert valid.tolist() == [True, False, True]
@@ -61,7 +63,7 @@ def test_target_prototypes_use_softmax_argmax_and_confidence_threshold_boundary(
 
     assert accepted.tolist() == [True, True, True, False]
     assert pseudo.tolist() == [0, 1, 2, 0]
-    torch.testing.assert_close(prototypes, z_tgt[:3])
+    torch.testing.assert_close(prototypes, F.normalize(z_tgt[:3], p=2, dim=1))
     assert valid.tolist() == [True, True, True]
 
 
@@ -72,7 +74,8 @@ def test_target_prototypes_mark_absent_accepted_classes_zero_invalid():
     prototypes, valid, _pseudo, accepted = build_target_prototypes(z_tgt, logits_c_tgt, tau_p=0.95)
 
     assert accepted.tolist() == [True, True]
-    torch.testing.assert_close(prototypes[0], torch.tensor([3.0, 6.0]))
+    expected_class_0 = F.normalize(z_tgt, p=2, dim=1).mean(dim=0)
+    torch.testing.assert_close(prototypes[0], expected_class_0)
     torch.testing.assert_close(prototypes[1:], torch.zeros(2, 2))
     assert valid.tolist() == [True, False, False]
 

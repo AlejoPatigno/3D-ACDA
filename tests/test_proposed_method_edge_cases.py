@@ -53,9 +53,9 @@ def test_absent_source_and_absent_target_classes_do_not_contribute_to_alignment(
 
 
 def test_no_accepted_target_rows_zero_target_terms_but_keep_source_separation_equation():
-    z_src = torch.tensor([[0.0], [0.5]], dtype=torch.float64)
+    z_src = torch.tensor([[1.0, 0.0], [1.0, 1.0]], dtype=torch.float64)
     y_src = torch.tensor([0, 1])
-    z_tgt = torch.tensor([[100.0], [200.0]], dtype=torch.float64)
+    z_tgt = torch.tensor([[100.0, 1.0], [200.0, 1.0]], dtype=torch.float64)
     logits_c_tgt = torch.zeros(2, 3, dtype=torch.float64)
     config = PrototypePseudoAdaptationConfig(
         tau_p=0.95,
@@ -67,7 +67,9 @@ def test_no_accepted_target_rows_zero_target_terms_but_keep_source_separation_eq
 
     output = PrototypePseudoAdaptationLoss(config)(z_src, y_src, z_tgt, logits_c_tgt, stage="full")
 
-    expected_separation = torch.tensor((1.0 - 0.5) ** 2, dtype=torch.float64)
+    normalized_source = F.normalize(z_src, p=2, dim=1)
+    source_distance = (normalized_source[0] - normalized_source[1]).norm(p=2)
+    expected_separation = torch.relu(1.0 - source_distance).square()
     expected_proto = 0.2 * expected_separation
     assert output.accepted_count == 0
     assert output.rejected_count == 2
@@ -81,9 +83,9 @@ def test_no_accepted_target_rows_zero_target_terms_but_keep_source_separation_eq
 
 
 def test_gradients_match_independent_references_and_rejected_logits_get_no_ce_gradient():
-    z_src = torch.tensor([[0.0], [2.0], [5.0]], dtype=torch.float64, requires_grad=True)
+    z_src = torch.tensor([[1.0, 1.0], [2.0, 1.0], [0.0, 1.0]], dtype=torch.float64, requires_grad=True)
     y_src = torch.tensor([0, 0, 1])
-    z_tgt = torch.tensor([[4.0], [6.0], [100.0]], dtype=torch.float64, requires_grad=True)
+    z_tgt = torch.tensor([[1.0, 2.0], [2.0, 3.0], [100.0, 100.0]], dtype=torch.float64, requires_grad=True)
     logits_c_tgt = torch.tensor(
         [
             [4.0, 0.0, 0.0],
@@ -106,9 +108,9 @@ def test_gradients_match_independent_references_and_rejected_logits_get_no_ce_gr
     z_src_ref = z_src.detach().clone().requires_grad_(True)
     z_tgt_ref = z_tgt.detach().clone().requires_grad_(True)
     logits_ref = logits_c_tgt.detach().clone().requires_grad_(True)
-    src_mu_0 = z_src_ref[[0, 1]].mean(dim=0)
-    tgt_mu_0 = z_tgt_ref[[0, 1]].mean(dim=0)
-    reference_proto = (src_mu_0 - tgt_mu_0).square().sum()
+    src_mu_0 = F.normalize(z_src_ref, p=2, dim=1)[[0, 1]].mean(dim=0)
+    tgt_mu_0 = F.normalize(z_tgt_ref, p=2, dim=1)[[0, 1]].mean(dim=0)
+    reference_proto = (src_mu_0 - tgt_mu_0).square().sum() / 4.0
     reference_ce = F.cross_entropy(logits_ref[[0, 1]], torch.tensor([0, 0]))
     reference_total = 2.0 * reference_proto + 0.25 * reference_ce
     reference_total.backward()

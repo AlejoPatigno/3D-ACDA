@@ -56,12 +56,17 @@ def test_hand_computed_prototype_and_weighted_objective_reference():
         config=config,
     )
 
-    expected_source_class_0 = torch.tensor([1.0, 0.0], dtype=torch.float64)
-    expected_source_class_1 = torch.tensor([5.0, 0.0], dtype=torch.float64)
-    expected_target_class_0 = torch.tensor([5.0, 0.0], dtype=torch.float64)
-    expected_target_class_2 = torch.tensor([9.0, 0.0], dtype=torch.float64)
-    expected_alignment = torch.tensor(16.0, dtype=torch.float64)
-    expected_separation = torch.tensor(4.0, dtype=torch.float64)
+    normalized_source = F.normalize(z_src, p=2, dim=1)
+    normalized_target = F.normalize(z_tgt, p=2, dim=1)
+    expected_source_class_0 = normalized_source[[0, 1]].mean(dim=0)
+    expected_source_class_1 = normalized_source[2]
+    expected_target_class_0 = normalized_target[[0, 1]].mean(dim=0)
+    expected_target_class_2 = normalized_target[3]
+    expected_alignment = (expected_source_class_0 - expected_target_class_0).square().sum() / 4.0
+    source_distance = (expected_source_class_0 - expected_source_class_1).norm(p=2)
+    expected_separation = (
+        torch.relu(torch.tensor(config.proto_margin, dtype=torch.float64) - source_distance) / config.proto_margin
+    ).square()
     expected_proto = expected_alignment + 0.25 * expected_separation
     expected_pl = F.cross_entropy(logits_c_tgt[[0, 1, 3]], torch.tensor([0, 0, 2]))
     expected_total = 3.0 * expected_proto + 0.5 * expected_pl

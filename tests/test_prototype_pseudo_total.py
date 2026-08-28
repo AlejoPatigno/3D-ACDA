@@ -15,18 +15,18 @@ from acda3d.exceptions import LossContractError
 def _reference_tensors():
     z_src = torch.tensor(
         [
-            [0.0, 0.0],
-            [0.5, 0.0],
-            [2.0, 0.0],
+            [1.0, 1.0],
+            [1.0, 2.0],
+            [2.0, 1.0],
         ],
         requires_grad=True,
     )
     y_src = torch.tensor([0, 1, 2])
     z_tgt = torch.tensor(
         [
-            [1.0, 0.0],
-            [2.5, 0.0],
-            [4.0, 0.0],
+            [2.0, 1.0],
+            [1.0, 3.0],
+            [3.0, 1.0],
             [7.0, 7.0],
         ],
         requires_grad=True,
@@ -56,8 +56,11 @@ def test_full_stage_weighted_objective_matches_reference_without_duplicate_weigh
         config=config,
     )
 
-    expected_alignment = torch.tensor((1.0 + 4.0 + 4.0) / 3.0)
-    expected_separation = torch.tensor((((1.0 - 0.5) ** 2) + 0.0 + 0.0) / 3.0)
+    normalized_source = F.normalize(z_src, p=2, dim=1)
+    normalized_target = F.normalize(z_tgt[:3], p=2, dim=1)
+    expected_alignment = (normalized_source - normalized_target).square().sum() / (4.0 * 3.0)
+    source_distances = torch.pdist(normalized_source, p=2)
+    expected_separation = torch.relu(1.0 - source_distances).square().mean()
     expected_proto_raw = expected_alignment + 0.25 * expected_separation
     expected_pl_raw = F.cross_entropy(logits_c_tgt[:3], torch.tensor([0, 1, 2]))
     expected_total = 2.0 * expected_proto_raw + 0.5 * expected_pl_raw
@@ -104,7 +107,9 @@ def test_diagnostics_report_accepted_rejected_and_prototype_classes():
     assert output.classes_with_source_prototypes == [0, 1, 2]
     assert output.classes_with_target_prototypes == [0, 1, 2]
     assert output.classes_with_both_prototypes == [0, 1, 2]
-    assert output.prototype_distance_mean == pytest.approx(torch.tensor([1.0, 2.0, 2.0]).mean().item())
+    source_prototypes = F.normalize(z_src, p=2, dim=1)
+    target_prototypes = F.normalize(z_tgt[:3], p=2, dim=1)
+    assert output.prototype_distance_mean == pytest.approx((source_prototypes - target_prototypes).norm(p=2, dim=1).mean().item())
     assert output.adaptation_active is True
 
 
