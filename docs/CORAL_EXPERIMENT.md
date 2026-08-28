@@ -1,8 +1,8 @@
-# PADA-3DACB + CORAL
+# 3D-ACDA + CORAL
 
 ## Scientific role
 
-`PADA-3DACB + CORAL` is the first classical unsupervised domain-adaptation
+`3D-ACDA + CORAL` is the first classical unsupervised domain-adaptation
 comparison in this repository. It preserves the Phase 9 model, source folds,
 target split, source core objective, optimizer, fixed epochs, gradient clipping,
 checkpoint policy and prediction schema. CORAL is new engineering work and was
@@ -15,7 +15,7 @@ they are not loaded by `TargetAdaptationDataset`. The fixed, disjoint
 
 ## Representation and equation
 
-CORAL operates only on the shared PADA-3DACB subject embedding `z` with shape
+CORAL operates only on the shared 3D-ACDA subject embedding `z` with shape
 `(batch, token_dim)`. It does not operate on MRI voxels, feature maps, ROI
 tokens, attention, concepts, logits or probabilities.
 

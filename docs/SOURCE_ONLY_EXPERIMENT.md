@@ -1,9 +1,9 @@
-# PADA-3DACB Source-Only Experiment
+# 3D-ACDA Source-Only Experiment
 
 ## Scientific role
 
-**PADA-3DACB Source-Only** is the no-domain-adaptation comparison. It uses the
-same explicit PADA-3DACB architecture and source-supervised core losses that
+**3D-ACDA Source-Only** is the no-domain-adaptation comparison. It uses the
+same explicit 3D-ACDA architecture and source-supervised core losses that
 later adaptation experiments will use, but has no adaptation loss or target
 training operation.
 

@@ -3,14 +3,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pada3dacb"
+name = "3d-acda"
 version = "0.1.0"
 description = "Anatomically interpretable domain adaptation for 3D MRI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "LicenseRef-Repository" }
 authors = [
-  { name = "PADA-3DACB contributors" }
+  { name = "3D-ACDA contributors" }
 ]
 dependencies = [
   "numpy",

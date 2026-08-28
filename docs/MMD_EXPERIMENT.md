@@ -1,8 +1,8 @@
-# PADA-3DACB + MMD
+# 3D-ACDA + MMD
 
 ## Scientific role
 
-`PADA-3DACB + MMD` is the second classical unsupervised domain-adaptation
+`3D-ACDA + MMD` is the second classical unsupervised domain-adaptation
 comparison. It is newly added and was not extracted from the notebooks. The
 architecture, immutable partitions, source core losses, warm-up, fixed epochs,
 optimizer, clipping, source checkpoint criterion, monitoring and prediction
@@ -46,7 +46,7 @@ L_mmd = mean(K_ss) + mean(K_tt) - 2 mean(K_st)
 It is the biased empirical estimator and includes diagonal self-kernel entries.
 The final loss is not clamped. Source and target may have unequal batch sizes,
 but each batch must contain at least two examples. Gradients remain connected
-to both forwards through the same PADA-3DACB model.
+to both forwards through the same 3D-ACDA model.
 
 ## Objective and warm-up
 

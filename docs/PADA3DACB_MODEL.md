@@ -1,11 +1,11 @@
-# PADA-3DACB Production Model
+# 3D-ACDA Production Model
 
 ## Decision and provenance
 
 The scientific source is `notebooks/archive/training_original.ipynb`, chiefly
 the active model definitions in cell 7 and the `identity_ctx` ablation in cell
 18. The architecture formerly called Lite, `no_ctx_encoder` or `identity_ctx`
-is now the only proposed model and its public name is **PADA-3DACB**.
+is now the only proposed model and its public name is **3D-ACDA**.
 
 The former Full architecture is not implemented. There is no contextual ROI
 encoder, Transformer ROI mixer, `ctx_enc`, identity patch, mean-pool ablation,

@@ -1,6 +1,8 @@
-# PADA-3DACB
+# 3D-ACDA
 
-Package scaffold for the PADA-3DACB research codebase.
+3D-ACDA is a research framework for anatomically interpretable domain
+adaptation in 3D brain MRI.
 
-Phase 2 provides configuration, path, reproducibility and logging utilities.
-Scientific implementation modules are added in later phases.
+The repository provides reproducible data contracts, training workflows,
+adaptation baselines, ablations, and evaluation tooling for cross-domain MRI
+experiments.
